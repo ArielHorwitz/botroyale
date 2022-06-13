@@ -1,4 +1,3 @@
-import random
 from gui import kex
 import gui.kex.widgets as widgets
 
@@ -7,13 +6,12 @@ FPS = 20
 TURN_CAP = 1_000_000
 COLORS = [
     (0.6, 0.1, 0.1),
-    (0.1, 0.6, 0.1),
+    (0.2, 0.6, 0.1),
     (0.1, 0.3, 0.8),
     (0.5, 0.1, 0.8),
-    (0.1, 0.6, 0.8),
     (0.7, 0.5, 0.1),
+    (0.1, 0.7, 0.7),
 ]
-random.shuffle(COLORS)
 
 
 class App(widgets.App):
@@ -29,18 +27,29 @@ class App(widgets.App):
         self.make_widgets()
         self.im = widgets.InputManager(app_control_defaults=True, logger=print)
         self.im.register('toggle_autoplay', key='spacebar', callback=lambda *a: self.toggle_autoplay())
+        self.im.register('next_turn', key='t', callback=lambda *a: self.next_turn())
         self.hook_mainloop(FPS)
 
     def make_widgets(self):
         self.root.orientation = 'vertical'
         controls = self.add(widgets.BoxLayout())
-        controls.set_size(y=30)
-        controls.add(widgets.Button(text='Next turn', on_release=self.next_turn))
-        self.autoplay_widget = controls.add(widgets.ToggleButton(text='Autoplay'))
+        controls.set_size(y=45)
+        controls.add(widgets.Button(
+            text='Next turn ([i]t[/i])', markup=True,
+            on_release=self.next_turn,
+        ))
+        self.autoplay_widget = controls.add(widgets.ToggleButton(
+            text='Autoplay ([i]spacebar[/i])', markup=True))
         self.autoplay_widget.bind(state=lambda w, *a: self._set_autoplay(w.active))
         controls.add(widgets.Button(text='Play all', on_release=self.play_all))
-        controls.add(widgets.Button(text='Restart', on_release=lambda *a: kex.restart_script()))
-        controls.add(widgets.Button(text='Quit', on_release=lambda *a: quit()))
+        controls.add(widgets.Button(
+            text='Restart ([i]ctrl + w[/i])', markup=True,
+            on_release=lambda *a: kex.restart_script(),
+        ))
+        controls.add(widgets.Button(
+            text='Quit ([i]ctrl + q[/i])', markup=True,
+            on_release=lambda *a: quit(),
+        ))
 
         window = self.add(widgets.BoxLayout())
         self.main_text = window.add(widgets.Label(valign='top', halign='left'))
