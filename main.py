@@ -1,14 +1,12 @@
 from logic.battle import Battle
+from gui.gui import App
 
 
-def run_battle():
+def start_gui():
     b = Battle()
-    while not b.game_over:
-        print(b.get_map_state())
-        b.next_turn()
-    print(b.get_map_state())
-    print('Game over!')
+    app = App(logic_api=b)
+    app.run()
 
 
 if __name__ == '__main__':
-    run_battle()
+    start_gui()

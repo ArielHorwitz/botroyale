@@ -38,6 +38,7 @@ class Battle:
             initial_state = np.zeros((self.num_of_bots, 2), dtype='int8')
         self.positions = initial_state
         self.turn_count = 0
+        self.map_size = MAP_SIZE, MAP_SIZE
 
     def next_turn(self):
         if self.game_over:
@@ -85,4 +86,3 @@ class RandomBot:
 
 def make_bots(num_of_bots):
     return [RandomBot(i) for i in range(num_of_bots)]
-
