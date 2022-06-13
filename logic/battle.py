@@ -24,20 +24,32 @@ DIRECTIONS = [
     Direction.SW,
     Direction.SE,
     Direction.HOLD]
+MAX_TURNS = 1000
+MAP_SIZE = 10
 
 
 class Battle:
-    def __init__(self, bots, initial_state=None):
+    def __init__(self, bots=None, initial_state=None):
+        if bots is None:
+            bots = make_bots(2)
         self.bots = bots
         self.num_of_bots = len(bots)
         if initial_state is None:
-            self.positions = np.zeros((self.num_of_bots, 2), dtype='int8')
-        else:
-            self.positions = initial_state
+            initial_state = np.zeros((self.num_of_bots, 2), dtype='int8')
+        self.positions = initial_state
+        self.turn_count = 0
 
     def next_turn(self):
+        if self.game_over:
+            raise RuntimeError('Game over, no turns left')
         diff = self.get_changes()
+        # check legal moves
         self.positions += diff
+        self.positions.reshape(-1)
+        self.positions[self.positions < 0] = 0
+        self.positions[self.positions > MAP_SIZE - 1] = MAP_SIZE - 1
+        self.positions.reshape((self.num_of_bots, 2))
+        self.turn_count += 1
 
     def get_changes(self):
         diff = np.zeros((self.num_of_bots, 2), dtype='int8')
@@ -46,11 +58,21 @@ class Battle:
         return diff
 
     def get_map_state(self):
-        return f'map state:\n{self.positions}'
+        lines = [[' '] * 10 for i in range(MAP_SIZE)]
+        for i, (x, y) in enumerate(self.positions):
+            lines[y][x] = str(i)
+        border = '--------------------'
+        map = '|\n'.join('|'.join(line) for line in lines) + '|'
+        turn = f'turn: {self.turn_count}'
+        return '\n'.join([
+            turn,
+            border,
+            map,
+            border])
 
     @property
     def game_over(self):
-        return True
+        return self.turn_count >= MAX_TURNS
 
 
 class RandomBot:
@@ -60,4 +82,7 @@ class RandomBot:
     def move(self):
         return random.choice(DIRECTIONS)
 
+
+def make_bots(num_of_bots):
+    return [RandomBot(i) for i in range(num_of_bots)]
 
