@@ -24,21 +24,22 @@ DIRECTIONS = [
     Direction.SW,
     Direction.SE,
     Direction.HOLD]
-MAX_TURNS = 1000
-MAP_SIZE = 10
+MAX_TURNS = 100
+MAP_SIZE = 5
 
 
 class Battle:
     def __init__(self, bots=None, initial_state=None):
         if bots is None:
-            bots = make_bots(2)
+            bots = make_bots(9)
         self.bots = bots
         self.num_of_bots = len(bots)
         if initial_state is None:
             initial_state = np.zeros((self.num_of_bots, 2), dtype='int8')
         self.positions = initial_state
         self.turn_count = 0
-        self.map_size = MAP_SIZE, MAP_SIZE
+        self.map_size = (MAP_SIZE, MAP_SIZE)
+        self.walls = np.asarray([[1, 1], [1, 0], [1, 2]])
 
     def next_turn(self):
         if self.game_over:
@@ -46,24 +47,31 @@ class Battle:
         diff = self.get_changes()
         # check legal moves
         self.positions += diff
-        self.positions.reshape(-1)
-        self.positions[self.positions < 0] = 0
-        self.positions[self.positions > MAP_SIZE - 1] = MAP_SIZE - 1
-        self.positions.reshape((self.num_of_bots, 2))
         self.turn_count += 1
 
     def get_changes(self):
         diff = np.zeros((self.num_of_bots, 2), dtype='int8')
         for i in range(self.num_of_bots):
-            diff[i] += self.bots[i].move()
+            move_diff = self.bots[i].move()
+            if self.check_legal_move(move_diff, self.positions[i]):
+                diff[i] += move_diff
         return diff
 
+    def check_legal_move(self, diff, position):
+        new_position = position + diff
+        if np.sum(new_position < 0) or np.sum(new_position > MAP_SIZE - 1):
+            return False
+        twos = np.ones(len(self.walls), dtype='int8') + 1
+        if ((self.walls == new_position).sum(axis=1) >= twos).sum() > 0:
+            return False
+        return True
+
     def get_map_state(self):
-        lines = [[' '] * 10 for i in range(MAP_SIZE)]
+        lines = [[' '] * MAP_SIZE for i in range(MAP_SIZE)]
         for i, (x, y) in enumerate(self.positions):
             lines[y][x] = str(i)
-        border = '--------------------'
-        map = '|\n'.join('|'.join(line) for line in lines) + '|'
+        border = '-' * (MAP_SIZE * 2)
+        map = '\n'.join(' '.join(line) for line in lines)
         turn = f'turn: {self.turn_count}'
         return '\n'.join([
             turn,
