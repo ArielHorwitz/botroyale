@@ -1,5 +1,6 @@
 import random
 import numpy as np
+from itertools import permutations
 
 
 class Direction:
@@ -30,15 +31,18 @@ RNG = np.random.default_rng()
 
 class Battle:
     def __init__(self):
-        bots = make_bots(9)
+        bots = make_bots(10)
         self.bots = bots
         self.num_of_bots = len(bots)
         self.positions = np.zeros((self.num_of_bots, 2), dtype='int8')
         self.turn_count = 0
-        self.axis_size, self.walls = random_map()  # must have shape (num_walls, 2)
+        self.ap = np.zeros(self.num_of_bots)
+        self.axis_size, self.walls, self.pits = random_map()  # must have shape (num_walls, 2)
         self.map_size = int(self.axis_size), int(self.axis_size)
 
     def next_turn(self):
+        self.ap += 50
+        self.ap[self.ap > 100] = 100
         if self.game_over:
             raise RuntimeError('Game over, no turns left')
         diff = self.get_changes()
@@ -87,12 +91,22 @@ class RandomBot:
         return random.choice(DIRECTIONS)
 
 
-def random_map(self):
+def random_map():
     axis_size = RNG.integers(low=5, high=15, size=1)[0]
+    diagonal = list(zip(range(axis_size), range(axis_size)))
+    coords_tuples = list(permutations(range(axis_size), 2))
+    coords = diagonal + coords_tuples
+    random.shuffle(coords)
+
     num_of_walls = RNG.integers(
         low=axis_size, high=2*axis_size, size=1)[0]
-    walls = RNG.integers(low=0, high=axis_size, size=(num_of_walls, 2))
-    return axis_size, walls
+    walls = [coords.pop() for _ in range(num_of_walls)]
+
+    num_of_pits = RNG.integers(
+        low=axis_size, high=2*axis_size, size=1)[0]
+    pits = [coords.pop() for _ in range(num_of_pits)]
+
+    return axis_size, walls, pits
 
 
 def make_bots(num_of_bots):
