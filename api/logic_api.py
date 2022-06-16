@@ -16,6 +16,7 @@ class BaseLogicAPI:
     # Positions is a sequence of 2D coordinates (a 2-sequence)
     positions = [[0, 0], [1, 1]]
     walls = RNG.integers(low=0, high=AXIS_SIZE, size=(20, 2))
+    pits = RNG.integers(low=0, high=AXIS_SIZE, size=(20, 2))
 
     def next_turn(self):
         """This method is called when a single turn is to be played."""

@@ -13,6 +13,7 @@ COLORS = [
     (0.1, 0.7, 0.7),
 ]
 WALL_LABEL = '╔═╗\n╚═╝'
+PIT_LABEL = '▒█▒\n▒█▒'
 
 
 class App(widgets.App):
@@ -23,6 +24,7 @@ class App(widgets.App):
         assert hasattr(logic_api, 'game_over')
         assert hasattr(logic_api, 'positions')
         assert hasattr(logic_api, 'walls')
+        assert hasattr(logic_api, 'pits')
         assert hasattr(logic_api, 'get_map_state')
         self.logic = logic_api
         self.autoplay = False
@@ -54,7 +56,7 @@ class App(widgets.App):
         ))
 
         window = self.add(widgets.BoxLayout())
-        self.map = window.add(Map(map_size=self.logic.map_size))
+        self.map = window.add(Map(api=self.logic))
         main_text_frame = window.add(widgets.AnchorLayout(
             anchor_x='left', anchor_y='top', padding=(15, 15)))
         main_text_frame.set_size(hx=0.5)
@@ -86,14 +88,15 @@ class App(widgets.App):
         if self.autoplay:
             self.next_turn()
         self.main_text.text = self.logic.get_map_state()
-        self.map.update(self.logic.positions, self.logic.walls)
+        self.map.update()
 
 
 class Map(widgets.AnchorLayout):
     DEFAULT_CELL_BG = (0.2, 0.2, 0.2)
-    def __init__(self, map_size, **kwargs):
+    def __init__(self, api, **kwargs):
+        self.api = api
         super().__init__(**kwargs)
-        self.map_size = rows, cols = map_size
+        self.map_size = rows, cols = api.map_size
         assert isinstance(rows, int)
         assert isinstance(cols, int)
         self.grid_cells = []
@@ -108,10 +111,11 @@ class Map(widgets.AnchorLayout):
                 cell.make_bg(self.DEFAULT_CELL_BG)
                 self.grid_cells[-1].append(cell)
 
-    def update(self, positions, walls):
+    def update(self):
         self.clear_cells()
-        self.update_walls(walls)
-        self.update_positions(positions)
+        self.update_walls(self.api.walls)
+        self.update_positions(self.api.positions)
+        self.update_pits(self.api.pits)
 
     def clear_cells(self):
         for row in self.grid_cells:
@@ -123,6 +127,12 @@ class Map(widgets.AnchorLayout):
         for i, pos in enumerate(walls):
             x, y = pos
             self.grid_cells[y][x].text = WALL_LABEL
+            self.grid_cells[y][x].make_bg((0,0,0))
+
+    def update_pits(self, pits):
+        for i, pos in enumerate(pits):
+            x, y = pos
+            self.grid_cells[y][x].text = PIT_LABEL
             self.grid_cells[y][x].make_bg((0,0,0))
 
     def update_positions(self, positions):
