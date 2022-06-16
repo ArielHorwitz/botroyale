@@ -25,27 +25,23 @@ DIRECTIONS = [
     Direction.SE,
     Direction.HOLD]
 MAX_TURNS = 100
-MAP_SIZE = 5
+RNG = np.random.default_rng()
 
 
 class Battle:
-    def __init__(self, bots=None, initial_state=None):
-        if bots is None:
-            bots = make_bots(9)
+    def __init__(self):
+        bots = make_bots(9)
         self.bots = bots
         self.num_of_bots = len(bots)
-        if initial_state is None:
-            initial_state = np.zeros((self.num_of_bots, 2), dtype='int8')
-        self.positions = initial_state
+        self.positions = np.zeros((self.num_of_bots, 2), dtype='int8')
         self.turn_count = 0
-        self.map_size = (MAP_SIZE, MAP_SIZE)
-        self.walls = np.asarray([[1, 1], [1, 0], [1, 2]])
+        self.axis_size, self.walls = random_map()  # must have shape (num_walls, 2)
+        self.map_size = int(self.axis_size), int(self.axis_size)
 
     def next_turn(self):
         if self.game_over:
             raise RuntimeError('Game over, no turns left')
         diff = self.get_changes()
-        # check legal moves
         self.positions += diff
         self.turn_count += 1
 
@@ -59,18 +55,17 @@ class Battle:
 
     def check_legal_move(self, diff, position):
         new_position = position + diff
-        if np.sum(new_position < 0) or np.sum(new_position > MAP_SIZE - 1):
+        if np.sum(new_position < 0) or np.sum(new_position > self.axis_size - 1):
             return False
-        twos = np.ones(len(self.walls), dtype='int8') + 1
-        if ((self.walls == new_position).sum(axis=1) >= twos).sum() > 0:
+        if ((self.walls == new_position).sum(axis=1) >= 2).sum() > 0:
             return False
         return True
 
     def get_map_state(self):
-        lines = [[' '] * MAP_SIZE for i in range(MAP_SIZE)]
+        lines = [[' '] * self.axis_size for i in range(self.axis_size)]
         for i, (x, y) in enumerate(self.positions):
             lines[y][x] = str(i)
-        border = '-' * (MAP_SIZE * 2)
+        border = '-' * (self.axis_size * 2)
         map = '\n'.join(' '.join(line) for line in lines)
         turn = f'turn: {self.turn_count}'
         return '\n'.join([
@@ -90,6 +85,14 @@ class RandomBot:
 
     def move(self):
         return random.choice(DIRECTIONS)
+
+
+def random_map(self):
+    axis_size = RNG.integers(low=5, high=15, size=1)[0]
+    num_of_walls = RNG.integers(
+        low=axis_size, high=2*axis_size, size=1)[0]
+    walls = RNG.integers(low=0, high=axis_size, size=(num_of_walls, 2))
+    return axis_size, walls
 
 
 def make_bots(num_of_bots):
