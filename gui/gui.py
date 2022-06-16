@@ -12,6 +12,7 @@ COLORS = [
     (0.7, 0.5, 0.1),
     (0.1, 0.7, 0.7),
 ]
+WALL_LABEL = '╔═╗\n╚═╝'
 
 
 class App(widgets.App):
@@ -21,6 +22,7 @@ class App(widgets.App):
         assert hasattr(logic_api, 'next_turn')
         assert hasattr(logic_api, 'game_over')
         assert hasattr(logic_api, 'positions')
+        assert hasattr(logic_api, 'walls')
         assert hasattr(logic_api, 'get_map_state')
         self.logic = logic_api
         self.autoplay = False
@@ -84,7 +86,7 @@ class App(widgets.App):
         if self.autoplay:
             self.next_turn()
         self.main_text.text = self.logic.get_map_state()
-        self.map.update(self.logic.positions)
+        self.map.update(self.logic.positions, self.logic.walls)
 
 
 class Map(widgets.AnchorLayout):
@@ -106,14 +108,24 @@ class Map(widgets.AnchorLayout):
                 cell.make_bg(self.DEFAULT_CELL_BG)
                 self.grid_cells[-1].append(cell)
 
+    def update(self, positions, walls):
+        self.clear_cells()
+        self.update_walls(walls)
+        self.update_positions(positions)
+
     def clear_cells(self):
         for row in self.grid_cells:
             for cell in row:
                 cell.text = ''
                 cell.make_bg(self.DEFAULT_CELL_BG)
 
-    def update(self, positions):
-        self.clear_cells()
+    def update_walls(self, walls):
+        for i, pos in enumerate(walls):
+            x, y = pos
+            self.grid_cells[y][x].text = WALL_LABEL
+            self.grid_cells[y][x].make_bg((0,0,0))
+
+    def update_positions(self, positions):
         for i, pos in enumerate(positions):
             x, y = pos
             self.grid_cells[y][x].text = f'{i}'
