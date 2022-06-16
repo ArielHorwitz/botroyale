@@ -19,8 +19,10 @@ PIT_LABEL = '▒█▒\n▒█▒'
 
 
 class App(widgets.App):
-    def __init__(self, logic_api, **kwargs):
+    def __init__(self, logic_api, gui_dev_mode=False, **kwargs):
+        print('Starting app...')
         super().__init__(**kwargs)
+        self.logger = print if gui_dev_mode else lambda *a: None
         kex.resize_window(WINDOW_SIZE)
         assert hasattr(logic_api, 'debug')
         assert hasattr(logic_api, 'map_size')
@@ -33,10 +35,11 @@ class App(widgets.App):
         self.logic = logic_api
         self.autoplay = False
         self.make_widgets()
-        self.im = widgets.InputManager(app_control_defaults=True, logger=print)
+        self.im = widgets.InputManager(app_control_defaults=True, logger=self.logger)
         self.im.register('toggle_autoplay', key='spacebar', callback=lambda *a: self.toggle_autoplay())
         self.im.register('next_turn', key='t', callback=lambda *a: self.next_turn())
         self.hook_mainloop(FPS)
+        print('GUI initialized.')
 
     def make_widgets(self):
         self.root.orientation = 'vertical'

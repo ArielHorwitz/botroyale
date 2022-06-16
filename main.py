@@ -1,3 +1,5 @@
+print('Welcome to Bot Royale.')
+
 import argparse
 
 from api.logic_api import BaseLogicAPI
@@ -23,7 +25,7 @@ def run():
         print(f'Running in GUI dev mode')
         logic_api_cls = BaseLogicAPI
     logic_api = logic_api_cls()
-    app = App(logic_api=logic_api)
+    app = App(logic_api=logic_api, gui_dev_mode=args.gui_dev_mode)
     app.run()
 
 
