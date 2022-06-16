@@ -25,7 +25,7 @@ DIRECTIONS = [
     Direction.SW,
     Direction.SE,
     Direction.HOLD]
-MAX_TURNS = 100
+MAX_TURNS = 1000
 RNG = np.random.default_rng()
 
 
@@ -39,22 +39,32 @@ class Battle:
         self.ap = np.zeros(self.num_of_bots)
         self.axis_size, self.walls, self.pits = random_map()  # must have shape (num_walls, 2)
         self.map_size = int(self.axis_size), int(self.axis_size)
+        # when round_priority is empty, round is over.
+        self.round_remaining_turns = []
 
-    def next_turn(self):
+    def next_round(self):
+        self.round_remaining_turns = list(range(self.num_of_bots))
         self.ap += 50
         self.ap[self.ap > 100] = 100
-        if self.game_over:
-            raise RuntimeError('Game over, no turns left')
-        diff = self.get_changes()
+
+    def apply_diff(self, diff):
         self.positions += diff
         self.turn_count += 1
 
-    def get_changes(self):
+    def next_turn(self):
+        if self.game_over:
+            return
+        if len(self.round_remaining_turns) == 0:
+            self.next_round()
+        bot_id = self.round_remaining_turns.pop(0)
+        diff = self.get_changes(bot_id)
+        self.apply_diff(diff)
+
+    def get_changes(self, bot_id):
         diff = np.zeros((self.num_of_bots, 2), dtype='int8')
-        for i in range(self.num_of_bots):
-            move_diff = self.bots[i].move()
-            if self.check_legal_move(move_diff, self.positions[i]):
-                diff[i] += move_diff
+        move_diff = self.bots[bot_id].move()
+        if self.check_legal_move(move_diff, self.positions[bot_id]):
+            diff[bot_id] += move_diff
         return diff
 
     def check_legal_move(self, diff, position):
@@ -100,11 +110,11 @@ def random_map():
 
     num_of_walls = RNG.integers(
         low=axis_size, high=2*axis_size, size=1)[0]
-    walls = [coords.pop() for _ in range(num_of_walls)]
+    walls = [coords.pop(0) for _ in range(num_of_walls)]
 
     num_of_pits = RNG.integers(
         low=axis_size, high=2*axis_size, size=1)[0]
-    pits = [coords.pop() for _ in range(num_of_pits)]
+    pits = [coords.pop(0) for _ in range(num_of_pits)]
 
     return axis_size, walls, pits
 
