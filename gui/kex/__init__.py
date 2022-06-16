@@ -7,6 +7,9 @@ import time
 import enum
 import random
 import numpy as np
+
+# Prevent kivy consuming script arguments (must be done before importing kivy)
+os.environ['KIVY_NO_ARGS'] = '1'
 import kivy
 from kivy.clock import Clock
 from kivy.uix.widget import Widget
