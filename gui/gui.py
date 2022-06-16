@@ -52,9 +52,13 @@ class App(widgets.App):
         ))
 
         window = self.add(widgets.BoxLayout())
-        self.main_text = window.add(widgets.Label(valign='top', halign='left'))
-        self.main_text.set_size(hx=0.5)
         self.map = window.add(Map(map_size=self.logic.map_size))
+        main_text_frame = window.add(widgets.AnchorLayout(
+            anchor_x='left', anchor_y='top', padding=(15, 15)))
+        main_text_frame.set_size(hx=0.5)
+        main_text_frame.make_bg((0.05, 0.2, 0.35))
+        self.main_text = main_text_frame.add(
+            widgets.Label(valign='top', halign='left'))
 
     def toggle_autoplay(self, set_to=None):
         if set_to is None:
