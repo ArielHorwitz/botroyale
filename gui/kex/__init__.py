@@ -197,3 +197,13 @@ def ping():
 
 def pong(ping_):
     return time.time() * 1000 - ping_
+
+def resize_window(new_size):
+    old_size = widgets.kvWindow.size
+    t, l = widgets.kvWindow.top, widgets.kvWindow.left
+    b, r = t + old_size[1], l + old_size[0]
+    center = np.asarray([(t+b) / 2, (l+r) / 2])
+    center_offset = np.asarray([new_size[1], new_size[0]]) / 2
+    new_top_left = tuple(int(_) for _ in (center - center_offset))
+    widgets.kvWindow.size = new_size
+    widgets.kvWindow.top, widgets.kvWindow.left = new_top_left

@@ -1,8 +1,10 @@
+import numpy as np
 from gui import kex
 import gui.kex.widgets as widgets
 
 
 FPS = 20
+WINDOW_SIZE = 1400, 900
 TURN_CAP = 1_000_000
 COLORS = [
     (0.6, 0.1, 0.1),
@@ -19,6 +21,7 @@ PIT_LABEL = '▒█▒\n▒█▒'
 class App(widgets.App):
     def __init__(self, logic_api, **kwargs):
         super().__init__(**kwargs)
+        kex.resize_window(WINDOW_SIZE)
         assert hasattr(logic_api, 'map_size')
         assert hasattr(logic_api, 'next_turn')
         assert hasattr(logic_api, 'game_over')
