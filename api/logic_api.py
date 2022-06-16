@@ -32,3 +32,6 @@ class BaseLogicAPI:
         """This method returns an arbritrary string to be displayed in the GUI."""
         game_over = 'GAME OVER' if self.game_over else ''
         return f'Turn: {self.turn_count}\n{game_over}'
+
+    def debug(self):
+        print(f'Override the method BaseLogicAPI.debug() to use this feature.')

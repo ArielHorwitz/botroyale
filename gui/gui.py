@@ -22,6 +22,7 @@ class App(widgets.App):
     def __init__(self, logic_api, **kwargs):
         super().__init__(**kwargs)
         kex.resize_window(WINDOW_SIZE)
+        assert hasattr(logic_api, 'debug')
         assert hasattr(logic_api, 'map_size')
         assert hasattr(logic_api, 'next_turn')
         assert hasattr(logic_api, 'game_over')
@@ -49,6 +50,7 @@ class App(widgets.App):
             text='Autoplay ([i]spacebar[/i])', markup=True))
         self.autoplay_widget.bind(state=lambda w, *a: self._set_autoplay(w.active))
         controls.add(widgets.Button(text='Play all', on_release=self.play_all))
+        controls.add(widgets.Button(text='Logic debug', on_release=self.logic_debug))
         controls.add(widgets.Button(
             text='Restart ([i]ctrl + w[/i])', markup=True,
             on_release=lambda *a: kex.restart_script(),
@@ -92,6 +94,9 @@ class App(widgets.App):
             self.next_turn()
         self.main_text.text = self.logic.get_map_state()
         self.map.update()
+
+    def logic_debug(self, *a):
+        self.logic.debug()
 
 
 class Map(widgets.AnchorLayout):
