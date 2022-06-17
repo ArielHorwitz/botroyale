@@ -40,7 +40,8 @@ class Battle(BaseLogicAPI):
         self.turn_count = 0
         self.round_count = 0
         self.ap = np.zeros(self.num_of_bots)
-        self.axis_size, self.walls, self.pits = random_map()  # must have shape (num_walls, 2)
+        # walls and pits are sequences of 2D coordinates (a 2-sequence)
+        self.axis_size, self.walls, self.pits = random_map()
         self.map_size = int(self.axis_size), int(self.axis_size)
         # when round_priority is empty, round is over.
         self.round_remaining_turns = []
@@ -66,8 +67,7 @@ class Battle(BaseLogicAPI):
             self._next_round()
             return
         bot_id = self.round_remaining_turns.pop(0)
-        diff = self._get_bot_move(bot_id)
-        ap_spent = self._calc_ap(diff)
+        diff, ap_spent = self._get_bot_move(bot_id)
         self._apply_diff(bot_id, diff, ap_spent)
 
     def _calc_ap(self, diff):
@@ -79,11 +79,14 @@ class Battle(BaseLogicAPI):
     def _get_bot_move(self, bot_id):
         diff = np.zeros((self.num_of_bots, 2), dtype='int8')
         move_diff = self.bots[bot_id].get_move()
-        if self._check_legal_move(move_diff, self.positions[bot_id]):
+        ap_spent = self._calc_ap(move_diff)
+        if self._check_legal_move(bot_id, move_diff, self.positions[bot_id], ap_spent):
             diff[bot_id] += move_diff
-        return diff
+        return diff, ap_spent
 
-    def _check_legal_move(self, diff, position):
+    def _check_legal_move(self, bot_id, diff, position, spent_ap):
+        if self.ap[bot_id] - spent_ap < 0:
+            return False
         new_position = position + diff
         if np.sum(new_position < 0) or np.sum(new_position > self.axis_size - 1):
             return False

@@ -125,8 +125,8 @@ class Map(widgets.AnchorLayout):
     def update(self):
         self.clear_cells()
         self.update_walls(self.api.walls)
-        self.update_positions(self.api.positions)
         self.update_pits(self.api.pits)
+        self.update_positions(self.api.positions)
 
     def clear_cells(self):
         for row in self.grid_cells:
