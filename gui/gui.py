@@ -1,8 +1,10 @@
+import numpy as np
 from gui import kex
 import gui.kex.widgets as widgets
 
 
 FPS = 20
+WINDOW_SIZE = 1400, 900
 TURN_CAP = 1_000_000
 COLORS = [
     (0.6, 0.1, 0.1),
@@ -13,24 +15,31 @@ COLORS = [
     (0.1, 0.7, 0.7),
 ]
 WALL_LABEL = '╔═╗\n╚═╝'
+PIT_LABEL = '▒█▒\n▒█▒'
 
 
 class App(widgets.App):
-    def __init__(self, logic_api, **kwargs):
+    def __init__(self, logic_api, gui_dev_mode=False, **kwargs):
+        print('Starting app...')
         super().__init__(**kwargs)
+        self.logger = print if gui_dev_mode else lambda *a: None
+        kex.resize_window(WINDOW_SIZE)
+        assert hasattr(logic_api, 'debug')
         assert hasattr(logic_api, 'map_size')
         assert hasattr(logic_api, 'next_turn')
         assert hasattr(logic_api, 'game_over')
         assert hasattr(logic_api, 'positions')
         assert hasattr(logic_api, 'walls')
+        assert hasattr(logic_api, 'pits')
         assert hasattr(logic_api, 'get_map_state')
         self.logic = logic_api
         self.autoplay = False
         self.make_widgets()
-        self.im = widgets.InputManager(app_control_defaults=True, logger=print)
+        self.im = widgets.InputManager(app_control_defaults=True, logger=self.logger)
         self.im.register('toggle_autoplay', key='spacebar', callback=lambda *a: self.toggle_autoplay())
         self.im.register('next_turn', key='t', callback=lambda *a: self.next_turn())
         self.hook_mainloop(FPS)
+        print('GUI initialized.')
 
     def make_widgets(self):
         self.root.orientation = 'vertical'
@@ -44,6 +53,7 @@ class App(widgets.App):
             text='Autoplay ([i]spacebar[/i])', markup=True))
         self.autoplay_widget.bind(state=lambda w, *a: self._set_autoplay(w.active))
         controls.add(widgets.Button(text='Play all', on_release=self.play_all))
+        controls.add(widgets.Button(text='Logic debug', on_release=self.logic_debug))
         controls.add(widgets.Button(
             text='Restart ([i]ctrl + w[/i])', markup=True,
             on_release=lambda *a: kex.restart_script(),
@@ -54,7 +64,7 @@ class App(widgets.App):
         ))
 
         window = self.add(widgets.BoxLayout())
-        self.map = window.add(Map(map_size=self.logic.map_size))
+        self.map = window.add(Map(api=self.logic))
         main_text_frame = window.add(widgets.AnchorLayout(
             anchor_x='left', anchor_y='top', padding=(15, 15)))
         main_text_frame.set_size(hx=0.5)
@@ -86,14 +96,18 @@ class App(widgets.App):
         if self.autoplay:
             self.next_turn()
         self.main_text.text = self.logic.get_map_state()
-        self.map.update(self.logic.positions, self.logic.walls)
+        self.map.update()
+
+    def logic_debug(self, *a):
+        self.logic.debug()
 
 
 class Map(widgets.AnchorLayout):
     DEFAULT_CELL_BG = (0.2, 0.2, 0.2)
-    def __init__(self, map_size, **kwargs):
+    def __init__(self, api, **kwargs):
+        self.api = api
         super().__init__(**kwargs)
-        self.map_size = rows, cols = map_size
+        self.map_size = rows, cols = api.map_size
         assert isinstance(rows, int)
         assert isinstance(cols, int)
         self.grid_cells = []
@@ -108,10 +122,11 @@ class Map(widgets.AnchorLayout):
                 cell.make_bg(self.DEFAULT_CELL_BG)
                 self.grid_cells[-1].append(cell)
 
-    def update(self, positions, walls):
+    def update(self):
         self.clear_cells()
-        self.update_walls(walls)
-        self.update_positions(positions)
+        self.update_walls(self.api.walls)
+        self.update_positions(self.api.positions)
+        self.update_pits(self.api.pits)
 
     def clear_cells(self):
         for row in self.grid_cells:
@@ -123,6 +138,12 @@ class Map(widgets.AnchorLayout):
         for i, pos in enumerate(walls):
             x, y = pos
             self.grid_cells[y][x].text = WALL_LABEL
+            self.grid_cells[y][x].make_bg((0,0,0))
+
+    def update_pits(self, pits):
+        for i, pos in enumerate(pits):
+            x, y = pos
+            self.grid_cells[y][x].text = PIT_LABEL
             self.grid_cells[y][x].make_bg((0,0,0))
 
     def update_positions(self, positions):
