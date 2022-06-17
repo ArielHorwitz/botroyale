@@ -26,7 +26,7 @@ DIRECTIONS = [
     Direction.SW,
     Direction.SE,
     Direction.HOLD]
-MAX_TURNS = 1000
+MAX_TURNS = 100
 RNG = np.random.default_rng()
 
 
@@ -53,8 +53,9 @@ class Battle(BaseLogicAPI):
         self.ap[self.ap > 100] = 100
         self.round_count += 1
 
-    def _apply_diff(self, diff):
+    def _apply_diff(self, bot_id, diff, ap_spent):
         self.positions += diff
+        self.ap[bot_id] -= ap_spent
         self.turn_count += 1
         self.history.append(diff)
 
@@ -66,7 +67,14 @@ class Battle(BaseLogicAPI):
             return
         bot_id = self.round_remaining_turns.pop(0)
         diff = self._get_bot_move(bot_id)
-        self._apply_diff(diff)
+        ap_spent = self._calc_ap(diff)
+        self._apply_diff(bot_id, diff, ap_spent)
+
+    def _calc_ap(self, diff):
+        if diff.any() != 0:
+            return 10
+        else:
+            return 0
 
     def _get_bot_move(self, bot_id):
         diff = np.zeros((self.num_of_bots, 2), dtype='int8')
@@ -92,14 +100,16 @@ class Battle(BaseLogicAPI):
             ap = self.ap[i]
             pos = self.positions[i]
             units.append(f'Unit #{i} {ap}AP {pos}')
-
         units = '\n'.join(units)
-        return '\n'.join([
+        state_str = '\n'.join([
             f'Round #{self.round_count}',
             f'Turn #{self.turn_count}',
             f'Turn order: {self.round_remaining_turns}',
             units,
         ])
+        if self.game_over:
+            state_str = 'GAME OVER\n\n' + state_str
+        return state_str
 
     @property
     def game_over(self):
