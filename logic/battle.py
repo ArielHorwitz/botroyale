@@ -63,6 +63,7 @@ class Battle(BaseLogicAPI):
             return
         if len(self.round_remaining_turns) == 0:
             self._next_round()
+            return
         bot_id = self.round_remaining_turns.pop(0)
         diff = self._get_bot_move(bot_id)
         self._apply_diff(diff)
@@ -83,17 +84,22 @@ class Battle(BaseLogicAPI):
         return True
 
     def get_map_state(self):
-        lines = [[' '] * self.axis_size for i in range(self.axis_size)]
-        for i, (x, y) in enumerate(self.positions):
-            lines[y][x] = str(i)
-        border = '-' * (self.axis_size * 2)
-        map = '\n'.join(' '.join(line) for line in lines)
-        turn = f'turn: {self.turn_count}'
+        return self.get_match_state()
+
+    def get_match_state(self):
+        units = []
+        for i in range(self.num_of_bots):
+            ap = self.ap[i]
+            pos = self.positions[i]
+            units.append(f'Unit #{i} {ap}AP {pos}')
+
+        units = '\n'.join(units)
         return '\n'.join([
-            turn,
-            border,
-            map,
-            border])
+            f'Round #{self.round_count}',
+            f'Turn #{self.turn_count}',
+            f'Turn order: {self.round_remaining_turns}',
+            units,
+        ])
 
     @property
     def game_over(self):
