@@ -26,7 +26,7 @@ DIRECTIONS = [
     Direction.SW,
     Direction.SE,
     Direction.HOLD]
-MAX_TURNS = 100
+MAX_TURNS = 10000
 RNG = np.random.default_rng()
 
 
@@ -37,6 +37,7 @@ class Battle(BaseLogicAPI):
         self.num_of_bots = len(bots)
         # Positions is a sequence of 2D coordinates (a 2-sequence)
         self.positions = np.zeros((self.num_of_bots, 2), dtype='int8')
+        self.alive_mask = np.ones(self.num_of_bots, dtype=bool)
         self.turn_count = 0
         self.round_count = 0
         self.ap = np.zeros(self.num_of_bots)
@@ -46,19 +47,6 @@ class Battle(BaseLogicAPI):
         # when round_priority is empty, round is over.
         self.round_remaining_turns = []
         self.history = []
-
-    def _next_round(self):
-        self.round_remaining_turns = list(range(self.num_of_bots))
-        random.shuffle(self.round_remaining_turns)
-        self.ap += 50
-        self.ap[self.ap > 100] = 100
-        self.round_count += 1
-
-    def _apply_diff(self, bot_id, diff, ap_spent):
-        self.positions += diff
-        self.ap[bot_id] -= ap_spent
-        self.turn_count += 1
-        self.history.append(diff)
 
     def next_turn(self):
         if self.game_over:
@@ -70,11 +58,13 @@ class Battle(BaseLogicAPI):
         diff, ap_spent = self._get_bot_move(bot_id)
         self._apply_diff(bot_id, diff, ap_spent)
 
-    def _calc_ap(self, diff):
-        if diff.any() != 0:
-            return 10
-        else:
-            return 0
+    def _next_round(self):
+        bots_id = np.arange(self.num_of_bots)[self.alive_mask]
+        self.round_remaining_turns = list(bots_id)
+        random.shuffle(self.round_remaining_turns)
+        self.ap[self.alive_mask] += 50
+        self.ap[self.ap > 100] = 100
+        self.round_count += 1
 
     def _get_bot_move(self, bot_id):
         diff = np.zeros((self.num_of_bots, 2), dtype='int8')
@@ -83,6 +73,12 @@ class Battle(BaseLogicAPI):
         if self._check_legal_move(bot_id, move_diff, self.positions[bot_id], ap_spent):
             diff[bot_id] += move_diff
         return diff, ap_spent
+
+    def _calc_ap(self, diff):
+        if diff.any() != 0:
+            return 10
+        else:
+            return 0
 
     def _check_legal_move(self, bot_id, diff, position, spent_ap):
         if self.ap[bot_id] - spent_ap < 0:
@@ -94,6 +90,19 @@ class Battle(BaseLogicAPI):
             return False
         return True
 
+    def _apply_diff(self, bot_id, diff, ap_spent):
+        self.positions += diff
+        self._apply_mortality()
+        self.ap[bot_id] -= ap_spent
+        self.turn_count += 1
+        self.history.append(diff)
+
+    def _apply_mortality(self):
+        modified_positions = self.positions[:, None, :]
+        mortality = ((self.pits == modified_positions).sum(axis=-1) >= 2).sum(axis=-1)
+        mortality = mortality != 0
+        self.alive_mask[mortality] = False
+
     def get_map_state(self):
         return self.get_match_state()
 
@@ -104,19 +113,27 @@ class Battle(BaseLogicAPI):
             pos = self.positions[i]
             units.append(f'Unit #{i} {ap}AP {pos}')
         units = '\n'.join(units)
+        casualties = np.arange(self.num_of_bots)[self.alive_mask != True]
         state_str = '\n'.join([
             f'Round #{self.round_count}',
             f'Turn #{self.turn_count}',
             f'Turn order: {self.round_remaining_turns}',
             units,
+            f'Casualties: {casualties}',
         ])
         if self.game_over:
-            state_str = 'GAME OVER\n\n' + state_str
+            winner_str = ''
+            if self.alive_mask.sum() == 1:
+                winner = np.arange(self.num_of_bots)[self.alive_mask]
+                winner_str = f'\n\n This game winner is: {winner}'
+            state_str = 'GAME OVER\n\n' + state_str + winner_str
         return state_str
 
     @property
     def game_over(self):
-        return self.turn_count >= MAX_TURNS
+        cond1 = self.turn_count >= MAX_TURNS
+        cond2 = self.alive_mask.sum() <= 1
+        return cond1 or cond2
 
 
 class RandomBot:
@@ -144,7 +161,8 @@ def random_map():
     num_of_pits = RNG.integers(
         low=axis_size, high=2*axis_size, size=1)[0]
     pits = [coords.pop(0) for _ in range(num_of_pits)]
-
+    if (0, 0) in pits:
+        pits.remove((0, 0))
     return axis_size, walls, pits
 
 
