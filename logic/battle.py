@@ -1,7 +1,7 @@
 import random
 import numpy as np
 from itertools import permutations
-from api.logic_api import BaseLogicAPI
+from api.logic_api import BaseLogicAPI, EventDeath
 
 
 class Direction:
@@ -32,6 +32,7 @@ RNG = np.random.default_rng()
 
 class Battle(BaseLogicAPI):
     def __init__(self):
+        super().__init__()
         bots = make_bots(10)
         self.bots = bots
         self.num_of_bots = len(bots)
@@ -57,7 +58,11 @@ class Battle(BaseLogicAPI):
             return
         bot_id = self.round_remaining_turns.pop(0)
         diff, ap_spent = self._get_bot_move(bot_id)
+        last_alive = set(np.flatnonzero(self.alive_mask))
         self._apply_diff(bot_id, diff, ap_spent)
+        now_alive = set(np.flatnonzero(self.alive_mask))
+        for dead_unit in last_alive - now_alive:
+            self.add_event(EventDeath(dead_unit))
 
     def _next_round(self):
         self._next_round_order()
