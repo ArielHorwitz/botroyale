@@ -127,20 +127,20 @@ class Battle(BaseLogicAPI):
             pos = self.positions[i]
             units.append(f'Unit #{i} {ap}AP {pos}')
         units = '\n'.join(units)
-        casualties = np.arange(self.num_of_bots)[self.alive_mask != True]
+        casualties = np.arange(self.num_of_bots)[~self.alive_mask]
         state_str = '\n'.join([
             f'Round #{self.round_count}',
             f'Turn #{self.turn_count}',
             f'Turn order: {self.round_remaining_turns}',
-            units,
             f'Casualties: {casualties}',
+            f'\n{units}',
         ])
         if self.game_over:
             winner_str = ''
             if self.alive_mask.sum() == 1:
                 winner = np.arange(self.num_of_bots)[self.alive_mask]
-                winner_str = f'\n\n This game winner is: unit #{winner[0]}'
-            state_str = 'GAME OVER\n\n' + state_str + winner_str
+                winner_str = f'This game winner is: unit #{winner[0]}\n\n'
+            state_str = 'GAME OVER\n' + winner_str + state_str
         return state_str
 
     @property
