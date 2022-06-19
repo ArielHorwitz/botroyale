@@ -1,7 +1,7 @@
 import random
 import numpy as np
-from itertools import permutations
 from api.logic_api import BaseLogicAPI, EventDeath
+from logic import maps
 
 
 class Direction:
@@ -33,18 +33,21 @@ RNG = np.random.default_rng()
 class Battle(BaseLogicAPI):
     def __init__(self):
         super().__init__()
-        bots = make_bots(10)
-        self.bots = bots
-        self.num_of_bots = len(bots)
-        # Positions is a sequence of 2D coordinates (a 2-sequence)
-        self.positions = np.zeros((self.num_of_bots, 2), dtype='int8')
+        map = maps.basic_map()
+        # Bots
+        self.num_of_bots = len(map.spawns)
+        self.bots = make_bots(self.num_of_bots)
+        # Map
+        self.positions = np.asarray(map.spawns)
+        self.axis_size = np.asarray(map.axis_size)
+        self.walls = np.asarray(map.walls)
+        self.pits = np.asarray(map.pits)
+        # Metadata
         self.alive_mask = np.ones(self.num_of_bots, dtype=bool)
         self.turn_count = 0
         self.round_count = 0
         self.ap = np.zeros(self.num_of_bots)
         self.round_ap_spent = np.zeros(self.num_of_bots)
-        # walls and pits are sequences of 2D coordinates (a 2-sequence)
-        self.axis_size, self.walls, self.pits = random_map()
         self.map_size = int(self.axis_size), int(self.axis_size)
         # when round_priority is empty, round is over.
         self.round_remaining_turns = []
@@ -164,25 +167,6 @@ class RandomBot:
 
     def get_move(self):
         return self.move()
-
-
-def random_map():
-    axis_size = RNG.integers(low=5, high=15, size=1)[0]
-    diagonal = list(zip(range(axis_size), range(axis_size)))
-    coords_tuples = list(permutations(range(axis_size), 2))
-    coords = diagonal + coords_tuples
-    random.shuffle(coords)
-
-    num_of_walls = RNG.integers(
-        low=axis_size, high=2*axis_size, size=1)[0]
-    walls = [coords.pop(0) for _ in range(num_of_walls)]
-
-    num_of_pits = RNG.integers(
-        low=axis_size, high=2*axis_size, size=1)[0]
-    pits = [coords.pop(0) for _ in range(num_of_pits)]
-    if (0, 0) in pits:
-        pits.remove((0, 0))
-    return axis_size, walls, pits
 
 
 def make_bots(num_of_bots):
