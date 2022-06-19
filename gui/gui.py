@@ -1,6 +1,7 @@
 import numpy as np
 from gui import kex
 import gui.kex.widgets as widgets
+from api.logic_api import BaseLogicAPI
 
 
 FPS = 20
@@ -24,14 +25,7 @@ class App(widgets.App):
         super().__init__(**kwargs)
         self.logger = print if gui_dev_mode else lambda *a: None
         kex.resize_window(WINDOW_SIZE)
-        assert hasattr(logic_api, 'debug')
-        assert hasattr(logic_api, 'map_size')
-        assert hasattr(logic_api, 'next_turn')
-        assert hasattr(logic_api, 'game_over')
-        assert hasattr(logic_api, 'positions')
-        assert hasattr(logic_api, 'walls')
-        assert hasattr(logic_api, 'pits')
-        assert hasattr(logic_api, 'get_map_state')
+        assert isinstance(logic_api, BaseLogicAPI)
         self.logic = logic_api
         self.autoplay = False
         self.make_widgets()
@@ -95,7 +89,7 @@ class App(widgets.App):
     def mainloop_hook(self, dt):
         if self.autoplay:
             self.next_turn()
-        self.main_text.text = self.logic.get_map_state()
+        self.main_text.text = self.logic.get_match_state()
         self.map.update()
 
     def logic_debug(self, *a):
@@ -124,9 +118,9 @@ class Map(widgets.AnchorLayout):
 
     def update(self):
         self.clear_cells()
-        self.update_walls(self.api.walls)
-        self.update_pits(self.api.pits)
-        self.update_positions(self.api.positions)
+        self.update_walls()
+        self.update_pits()
+        self.update_positions()
 
     def clear_cells(self):
         for row in self.grid_cells:
@@ -134,20 +128,20 @@ class Map(widgets.AnchorLayout):
                 cell.text = ''
                 cell.make_bg(self.DEFAULT_CELL_BG)
 
-    def update_walls(self, walls):
-        for i, pos in enumerate(walls):
+    def update_walls(self):
+        for i, pos in enumerate(self.api.walls):
             x, y = pos
             self.grid_cells[y][x].text = WALL_LABEL
             self.grid_cells[y][x].make_bg((0,0,0))
 
-    def update_pits(self, pits):
-        for i, pos in enumerate(pits):
+    def update_pits(self):
+        for i, pos in enumerate(self.api.pits):
             x, y = pos
             self.grid_cells[y][x].text = PIT_LABEL
             self.grid_cells[y][x].make_bg((0,0,0))
 
-    def update_positions(self, positions):
-        for i, pos in enumerate(positions):
+    def update_positions(self):
+        for i, pos in enumerate(self.api.positions):
             x, y = pos
             self.grid_cells[y][x].text = f'{i}'
             self.grid_cells[y][x].make_bg(COLORS[i%len(COLORS)])
