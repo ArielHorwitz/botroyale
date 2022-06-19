@@ -1,7 +1,7 @@
 import numpy as np
 from gui import kex
 import gui.kex.widgets as widgets
-from api.logic_api import BaseLogicAPI
+from api.logic_api import BaseLogicAPI, EventDeath
 
 
 FPS = 20
@@ -121,12 +121,21 @@ class Map(widgets.AnchorLayout):
         self.update_walls()
         self.update_pits()
         self.update_positions()
+        self.handle_events()
 
     def clear_cells(self):
         for row in self.grid_cells:
             for cell in row:
                 cell.text = ''
                 cell.make_bg(self.DEFAULT_CELL_BG)
+
+    def handle_events(self):
+        for event in self.api.flush_events():
+            print(f'Handling event on turn #{self.api.turn_count}: {event}')
+            if isinstance(event, EventDeath):
+                x, y = self.api.positions[event.unit]
+                color = self.get_unit_color(event.unit)
+                self.flash_cell(x, y, color)
 
     def update_walls(self):
         for i, pos in enumerate(self.api.walls):
@@ -146,4 +155,14 @@ class Map(widgets.AnchorLayout):
                 continue
             x, y = pos
             self.grid_cells[y][x].text = f'{i}'
-            self.grid_cells[y][x].make_bg(COLORS[i%len(COLORS)])
+            self.grid_cells[y][x].make_bg(self.get_unit_color(i))
+
+    def flash_cell(self, x, y, color, remaining=10, alternate=True):
+        new_bg = color if alternate else (0,0,0)
+        self.grid_cells[y][x].make_bg(new_bg)
+        if remaining:
+            p = lambda *a: self.flash_cell(x, y, color, remaining-1, not alternate)
+            kex.Clock.schedule_once(p, 0.1)
+
+    def get_unit_color(self, i):
+        return COLORS[i%len(COLORS)]
