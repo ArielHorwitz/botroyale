@@ -142,6 +142,8 @@ class Map(widgets.AnchorLayout):
 
     def update_positions(self):
         for i, pos in enumerate(self.api.positions):
+            if not self.api.alive_mask[i]:
+                continue
             x, y = pos
             self.grid_cells[y][x].text = f'{i}'
             self.grid_cells[y][x].make_bg(COLORS[i%len(COLORS)])
