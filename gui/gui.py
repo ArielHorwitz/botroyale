@@ -15,8 +15,8 @@ COLORS = [
     (0.7, 0.5, 0.1),
     (0.1, 0.7, 0.7),
 ]
-WALL_LABEL = '╔═╗\n╚═╝'
-PIT_LABEL = '▒█▒\n▒█▒'
+PIT_LABEL = '╔═╗\n╚═╝'
+WALL_LABEL = '███\n███'
 
 
 class App(widgets.App):
