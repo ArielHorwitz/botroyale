@@ -1,21 +1,12 @@
-import numpy as np
 from gui import kex
 import gui.kex.widgets as widgets
+from api.logic_api import BaseLogicAPI
+from gui.map import Map
 
 
 FPS = 20
 WINDOW_SIZE = 1400, 900
 TURN_CAP = 1_000_000
-COLORS = [
-    (0.6, 0.1, 0.1),
-    (0.2, 0.6, 0.1),
-    (0.1, 0.3, 0.8),
-    (0.5, 0.1, 0.8),
-    (0.7, 0.5, 0.1),
-    (0.1, 0.7, 0.7),
-]
-WALL_LABEL = '╔═╗\n╚═╝'
-PIT_LABEL = '▒█▒\n▒█▒'
 
 
 class App(widgets.App):
@@ -24,14 +15,7 @@ class App(widgets.App):
         super().__init__(**kwargs)
         self.logger = print if gui_dev_mode else lambda *a: None
         kex.resize_window(WINDOW_SIZE)
-        assert hasattr(logic_api, 'debug')
-        assert hasattr(logic_api, 'map_size')
-        assert hasattr(logic_api, 'next_turn')
-        assert hasattr(logic_api, 'game_over')
-        assert hasattr(logic_api, 'positions')
-        assert hasattr(logic_api, 'walls')
-        assert hasattr(logic_api, 'pits')
-        assert hasattr(logic_api, 'get_map_state')
+        assert isinstance(logic_api, BaseLogicAPI)
         self.logic = logic_api
         self.autoplay = False
         self.make_widgets()
@@ -95,59 +79,8 @@ class App(widgets.App):
     def mainloop_hook(self, dt):
         if self.autoplay:
             self.next_turn()
-        self.main_text.text = self.logic.get_map_state()
+        self.main_text.text = self.logic.get_match_state()
         self.map.update()
 
     def logic_debug(self, *a):
         self.logic.debug()
-
-
-class Map(widgets.AnchorLayout):
-    DEFAULT_CELL_BG = (0.2, 0.2, 0.2)
-    def __init__(self, api, **kwargs):
-        self.api = api
-        super().__init__(**kwargs)
-        self.map_size = rows, cols = api.map_size
-        assert isinstance(rows, int)
-        assert isinstance(cols, int)
-        self.grid_cells = []
-        map_grid = self.add(widgets.GridLayout(cols=cols))
-        for y in range(rows):
-            self.grid_cells.append([])
-            for x in range(cols):
-                cell_anchor = widgets.AnchorLayout()
-                cell_anchor.padding = 2, 2
-                cell = cell_anchor.add(widgets.Label())
-                map_grid.add(cell_anchor)
-                cell.make_bg(self.DEFAULT_CELL_BG)
-                self.grid_cells[-1].append(cell)
-
-    def update(self):
-        self.clear_cells()
-        self.update_walls(self.api.walls)
-        self.update_pits(self.api.pits)
-        self.update_positions(self.api.positions)
-
-    def clear_cells(self):
-        for row in self.grid_cells:
-            for cell in row:
-                cell.text = ''
-                cell.make_bg(self.DEFAULT_CELL_BG)
-
-    def update_walls(self, walls):
-        for i, pos in enumerate(walls):
-            x, y = pos
-            self.grid_cells[y][x].text = WALL_LABEL
-            self.grid_cells[y][x].make_bg((0,0,0))
-
-    def update_pits(self, pits):
-        for i, pos in enumerate(pits):
-            x, y = pos
-            self.grid_cells[y][x].text = PIT_LABEL
-            self.grid_cells[y][x].make_bg((0,0,0))
-
-    def update_positions(self, positions):
-        for i, pos in enumerate(positions):
-            x, y = pos
-            self.grid_cells[y][x].text = f'{i}'
-            self.grid_cells[y][x].make_bg(COLORS[i%len(COLORS)])
