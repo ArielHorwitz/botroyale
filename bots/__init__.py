@@ -58,6 +58,9 @@ BOTS = bot_importer()
 
 
 def make_bots(num_of_bots):
-    game_classes = random.choices(BOTS, k=num_of_bots)
+    if len(BOTS) == 0:
+        game_classes = [BaseBot] * num_of_bots
+    else:
+        game_classes = random.choices(BOTS, k=num_of_bots)
     bots_instances = [game_classes[i](i) for i in range(num_of_bots)]
     return bots_instances
