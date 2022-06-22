@@ -13,6 +13,8 @@ class Battle(BaseLogicAPI):
     def __init__(self):
         super().__init__()
         map = maps.basic_map()
+        assert len(map.pits) > 0
+        assert len(map.walls) > 0
         # Bots
         self.num_of_bots = len(map.spawns)
         self.bots = make_bots(self.num_of_bots)
@@ -72,7 +74,7 @@ class Battle(BaseLogicAPI):
         return diff, ap_spent
 
     def _calc_ap(self, diff):
-        if diff.any() != 0:
+        if any(diff):
             return 10
         else:
             return 0
@@ -81,13 +83,20 @@ class Battle(BaseLogicAPI):
         position = self.positions[bot_id]
         if self.ap[bot_id] - spent_ap < 0:
             return False
-        new_position = position + diff
-        # check if moving out of bounds
-        if np.sum(new_position < 0) or np.sum(new_position > self.axis_size - 1):
-            return False
-        # check if moving to a wall tile
-        if ((self.walls == new_position).sum(axis=1) >= 2).sum() > 0:
-            return False
+        if tuple(diff) != (0, 0):
+            new_position = position + diff
+
+            # check if moving out of bounds
+            if np.sum(new_position < 0) or np.sum(new_position > self.axis_size - 1):
+                return False
+
+            # check if moving to a wall tile
+            if ((self.walls == new_position).sum(axis=1) >= 2).sum() > 0:
+                return False
+
+            # check if moving on top of another bot
+            if ((self.positions == new_position).sum(axis=1) >= 2).sum() > 0:
+                return False
         return True
 
     def _apply_diff(self, bot_id, diff, ap_spent):
