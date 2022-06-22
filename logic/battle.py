@@ -1,31 +1,10 @@
 import random
 import numpy as np
 from api.logic_api import BaseLogicAPI, EventDeath
+from bots import make_bots
 from logic import maps
 
 
-class Direction:
-    N = np.asarray([1, 0])
-    S = np.asarray([-1, 0])
-    E = np.asarray([0, 1])
-    W = np.asarray([0, -1])
-    NW = np.asarray([1, -1])
-    NE = np.asarray([1, 1])
-    SW = np.asarray([-1, -1])
-    SE = np.asarray([-1, 1])
-    HOLD = np.asarray([0, 0])
-
-
-DIRECTIONS = [
-    Direction.N,
-    Direction.S,
-    Direction.E,
-    Direction.W,
-    Direction.NW,
-    Direction.NE,
-    Direction.SW,
-    Direction.SE,
-    Direction.HOLD]
 MAX_TURNS = 10000
 RNG = np.random.default_rng()
 
@@ -167,16 +146,4 @@ class Battle(BaseLogicAPI):
         return cond1 or cond2
 
 
-class RandomBot:
-    def __init__(self, id):
-        self.id = id
 
-    def move(self):
-        return random.choice(DIRECTIONS)
-
-    def get_move(self):
-        return self.move()
-
-
-def make_bots(num_of_bots):
-    return [RandomBot(i) for i in range(num_of_bots)]
