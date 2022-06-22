@@ -18,8 +18,8 @@ class App(widgets.App):
         assert isinstance(logic_api, BaseLogicAPI)
         self.logic = logic_api
         self.autoplay = False
-        self.make_widgets()
         self.im = widgets.InputManager(app_control_defaults=True, logger=self.logger)
+        self.make_widgets()
         self.im.register('toggle_autoplay', key='spacebar', callback=lambda *a: self.toggle_autoplay())
         self.im.register('next_turn', key='t', callback=lambda *a: self.next_turn())
         self.hook_mainloop(FPS)
@@ -48,7 +48,7 @@ class App(widgets.App):
         ))
 
         window = self.add(widgets.BoxLayout())
-        self.map = window.add(Map(api=self.logic))
+        self.map = window.add(Map(api=self.logic, app=self))
         main_text_frame = window.add(widgets.AnchorLayout(
             anchor_x='left', anchor_y='top', padding=(15, 15)))
         main_text_frame.set_size(hx=0.5)

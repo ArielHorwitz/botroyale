@@ -48,12 +48,20 @@ def random_map():
     return Map(axis_size, pits, walls, spawns.astype(np.int8))
 
 
-def basic_map(radius=7, edge_size=1, spawn_radius=2):
+def empty_map():
+    return Map(5, [], [], np.asarray([[0, 0]]))
+
+
+def basic_map(radius=7, edge_size=1, spawn_radius=2, pit_count=None, wall_count=None):
     assert radius >= 2
     assert edge_size >= 1
     assert spawn_radius <= radius
     axis_size = (edge_size + radius) * 2 + 1
     spawn_offset = edge_size + radius - spawn_radius
+    if pit_count is None:
+        pit_count = axis_size * 2
+    if wall_count is None:
+        wall_count = axis_size * 4
     # Spawns
     near = spawn_offset
     mid = axis_size // 2
@@ -66,14 +74,14 @@ def basic_map(radius=7, edge_size=1, spawn_radius=2):
     pit_edge = [*range(0, edge_size), *range(axis_size-1, axis_size-edge_size-1, -1)]
     pit_grid[:, pit_edge] = True
     pit_grid[pit_edge, :] = True
-    random_pits = RNG.integers(low=0, high=axis_size, size=(2, axis_size*2))
+    random_pits = RNG.integers(low=0, high=axis_size, size=(2, pit_count))
     pit_grid[random_pits[0], random_pits[1]] = True
     # Prevent pits generating at spawn points
     pit_grid[spawns[:, 0], spawns[:, 1]] = False
     pits = np.dstack(np.nonzero(pit_grid))[0]
     # Walls
     wall_grid = np.zeros((axis_size, axis_size), dtype=np.bool_)
-    random_walls = RNG.integers(low=0, high=axis_size, size=(2, axis_size*4))
+    random_walls = RNG.integers(low=0, high=axis_size, size=(2, wall_count))
     wall_grid[random_walls[0], random_walls[1]] = True
     # Prevent walls generating at spawn points or pits
     wall_grid[spawns[:, 0], spawns[:, 1]] = False
