@@ -14,14 +14,8 @@ class Direction:
 
 
 class WorldInfo:
-    round = 0
-    turn_order = []
-    live_units = []
-    pits = []
-    walls = []
-    items = []
-    units = []
-    ap = []
+    # TODO: Add info for the bots
+    pass
 
 
 class BaseBot:
