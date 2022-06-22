@@ -31,10 +31,15 @@ class BaseBot:
         Direction.SE,
         Direction.HOLD]
 
-    def __init__(self, id):
+    def __init__(self, id: int):
         self.id = id
 
     def get_move(self, world: WorldInfo = None):
+        """
+        Called by the Game Logic
+        :param world: state of world
+        :return: action to take
+        """
         return Direction.HOLD
 
 
@@ -57,7 +62,12 @@ def bot_importer():
 BOTS = bot_importer()
 
 
-def make_bots(num_of_bots):
+def make_bots(num_of_bots: int) -> list[BaseBot]:
+    """
+    makes bots using bots from BOTS
+    :param num_of_bots: number of bots to make
+    :return: list of instances of bots
+    """
     if len(BOTS) == 0:
         game_classes = [BaseBot] * num_of_bots
     else:
