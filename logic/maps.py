@@ -8,6 +8,26 @@ RNG = np.random.default_rng()
 Map = namedtuple('Map', ['axis_size', 'pits', 'walls', 'spawns'])
 
 
+def small_test_map():
+    axis_size = 2
+    # Spawns
+    spawns = RNG.integers(low=0, high=axis_size - 1, size=(2, 2))
+    # Map features
+    coords = list(itertools.product(range(axis_size), repeat=2))
+    for spawn in spawns:
+        if tuple(spawn) in coords:
+            coords.remove(tuple(spawn))
+    random.shuffle(coords)
+    # Walls
+    num_of_walls = 1
+    walls = [coords.pop(0) for _ in range(num_of_walls)]
+    # Pits
+    num_of_pits = 1
+    pits = [coords.pop(0) for _ in range(num_of_pits)]
+    # Return the map tuple
+    return Map(axis_size, pits, walls, spawns.astype(np.int8))
+
+
 def random_map():
     axis_size = random.randint(5, 15)
     # Spawns
