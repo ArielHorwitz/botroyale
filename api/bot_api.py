@@ -1,16 +1,5 @@
 import numpy as np
-
-
-class Direction:
-    N = np.asarray([1, 0])
-    S = np.asarray([-1, 0])
-    E = np.asarray([0, 1])
-    W = np.asarray([0, -1])
-    NW = np.asarray([1, -1])
-    NE = np.asarray([1, 1])
-    SW = np.asarray([-1, -1])
-    SE = np.asarray([-1, 1])
-    HOLD = np.asarray([0, 0])
+from util.hexagon import Hex
 
 
 class WorldInfo:
@@ -30,24 +19,8 @@ class WorldInfo:
 
 
 class BaseBot:
-    DIRECTIONS = [
-        Direction.N,
-        Direction.S,
-        Direction.E,
-        Direction.W,
-        Direction.NW,
-        Direction.NE,
-        Direction.SW,
-        Direction.SE,
-        Direction.HOLD]
-
     def __init__(self, id: int):
         self.id = id
 
-    def get_move(self, world: WorldInfo = None):
-        """
-        Called by the Game Logic
-        :param world: state of world
-        :return: action to take
-        """
-        return Direction.HOLD
+    def get_action(self, pos):
+        return Hex(0, 0)
