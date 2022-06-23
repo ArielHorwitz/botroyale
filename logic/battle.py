@@ -12,7 +12,7 @@ RNG = np.random.default_rng()
 class Battle(BaseLogicAPI):
     def __init__(self):
         super().__init__()
-        map = maps.basic_map()
+        map = maps.get_map()
         assert len(map.pits) > 0
         assert len(map.walls) > 0
         # Bots
@@ -144,6 +144,3 @@ class Battle(BaseLogicAPI):
         cond1 = self.turn_count >= MAX_TURNS
         cond2 = self.alive_mask.sum() <= 1
         return cond1 or cond2
-
-
-

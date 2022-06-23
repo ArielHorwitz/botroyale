@@ -1,20 +1,27 @@
+from util.settings import Settings
 from gui import kex
 import gui.kex.widgets as widgets
 from api.logic_api import BaseLogicAPI
 from gui.map import Map
 
 
-FPS = 20
-WINDOW_SIZE = 1400, 900
-TURN_CAP = 1_000_000
+# User-configurable settings
+FPS = Settings.get('fps', 5)
+WINDOW_SIZE = Settings.get('window_size', [1280, 720])
+START_MAXIMIZED = Settings.get('window_maximize', False)
+STEP_CAP = Settings.get('gui_step_cap', 1_000_000)
+LOG_HOTKEYS = Settings.get('gui_log_hotkeys', False)
 
 
 class App(widgets.App):
-    def __init__(self, logic_api, gui_dev_mode=False, **kwargs):
+    def __init__(self, logic_api, **kwargs):
         print('Starting app...')
         super().__init__(**kwargs)
-        self.logger = print if gui_dev_mode else lambda *a: None
+        self.title = 'Bot Royale'
+        self.logger = print if LOG_HOTKEYS else lambda *a: None
         kex.resize_window(WINDOW_SIZE)
+        if START_MAXIMIZED:
+            widgets.kvWindow.maximize()
         assert isinstance(logic_api, BaseLogicAPI)
         self.logic = logic_api
         self.autoplay = False
@@ -72,7 +79,7 @@ class App(widgets.App):
     def play_all(self, *args):
         print('Playing battle to completion...')
         count = 0
-        while not self.logic.game_over and count < TURN_CAP:
+        while not self.logic.game_over and count < STEP_CAP:
             count += 1
             self.logic.next_turn()
 
