@@ -3,6 +3,8 @@ import numpy as np
 from api.logic_api import BaseLogicAPI, EventDeath
 from bots import make_bots
 from logic import maps
+from api.bot_api import WorldInfo
+from util.hexagon import Hex
 
 
 MAX_TURNS = 10000
@@ -33,6 +35,7 @@ class Battle(BaseLogicAPI):
         # when round_priority is empty, round is over.
         self.round_remaining_turns = []
         self.history = []
+        self.world_info = WorldInfo(self.positions, self.walls, self.pits)
 
     def next_turn(self):
         if self.game_over:
@@ -72,12 +75,6 @@ class Battle(BaseLogicAPI):
         else:
             ap_spent = 0
         return diff, ap_spent
-
-    def _calc_ap(self, diff):
-        if any(diff):
-            return 10
-        else:
-            return 0
 
     def _check_legal_move(self, bot_id, diff, spent_ap):
         position = self.positions[bot_id]
@@ -139,11 +136,16 @@ class Battle(BaseLogicAPI):
             state_str = 'GAME OVER\n' + winner_str + state_str
         return state_str
 
+    @staticmethod
+    def _calc_ap(pos):
+        if any(pos) != 0:
+            return 10
+        else:
+            return 0
+
     @property
     def game_over(self):
         cond1 = self.turn_count >= MAX_TURNS
         cond2 = self.alive_mask.sum() <= 1
         return cond1 or cond2
-
-
 
