@@ -3,34 +3,44 @@ import numpy as np
 from gui import kex
 import gui.kex.widgets as widgets
 from api.logic_api import EventDeath
+from util.settings import Settings
 from util.hexagon import Hex
 
-COLORS = [
-    (0.6, 0.1, 0.1),
-    (0.2, 0.6, 0.1),
-    (0.1, 0.3, 0.8),
-    (0.5, 0.1, 0.8),
-    (0.7, 0.5, 0.1),
-    (0.1, 0.7, 0.7),
-]
+
+BG_COLOR = Settings.get('map_bg_color', (0,0,0))
+DEFAULT_CELL_BG = Settings.get('map_default_cell_color', (0.25, 0.1, 0))
+WALL_COLOR = Settings.get('map_wall_color', (1,1,1))
+PIT_COLOR = Settings.get('map_pit_color', (0,0,0))
+UNIT_COLORS = Settings.get('map_unit_colors', [
+    (0.6, 0, 0.1),  # Red
+    (0.8, 0.7, 0.1),  # Yellow
+    (0.1, 0.4, 0),  # Green
+    (0.1, 0.7, 0.7),  # Teal
+    (0, 0.1, 0.5),  # Navy
+    (0.7, 0.1, 0.9),  # Purple
+    (0.9, 0.3, 0.4),  # Pink
+    (0.7, 0.4, 0),  # Orange
+    (0.4, 0.7, 0.1),  # Lime
+    (0.1, 0.4, 0.9),  # Blue
+    (0.4, 0, 0.7),  # Violet
+    (0.7, 0, 0.5),  # Magenta
+])
+DIST_COLORS = Settings.get('map_distance_colors', [
+    (0, 0, 0),
+    (1, 0, 0),
+    (1, 0.5, 0),
+    (0.5, 0.5, 0),
+    (0.25, 0.75, 0),
+    (0, 0.5, 0.5),
+    (0, 0.5, 1),
+    (0, 0, 1),
+    (1, 0, 1),
+    (1, 0, 0.5),
+    (0, 0, 0),
+])
 
 
 class Map(widgets.AnchorLayout):
-    DEFAULT_CELL_BG = (0.25, 0.1, 0)
-    DIST_COLORS = [
-        (0, 0, 0),
-        (1, 0, 0),
-        (1, 0.5, 0),
-        (0.5, 0.5, 0),
-        (0.25, 0.75, 0),
-        (0, 0.5, 0.5),
-        (0, 0.5, 1),
-        (0, 0, 1),
-        (1, 0, 1),
-        (1, 0, 0.5),
-        (0, 0, 0),
-    ]
-
     def __init__(self, api, app, **kwargs):
         self.api = api
         super().__init__(**kwargs)
@@ -58,6 +68,7 @@ class Map(widgets.AnchorLayout):
     def make_map(self):
         rows, cols = self.map_size
         self.map_grid.clear_widgets()
+        self.map_grid.make_bg(BG_COLOR)
         self.grid_cells = {}
         for r in range(rows):
             row = self.map_grid.add(widgets.BoxLayout())
@@ -72,7 +83,7 @@ class Map(widgets.AnchorLayout):
                 cell.make_bg((1, 1, 1))
                 cell._bg.source = str(Path.cwd() / 'assets' / 'hex.png')
                 row.add(cell_anchor)
-                cell.make_bg(self.DEFAULT_CELL_BG)
+                cell.make_bg(DEFAULT_CELL_BG)
                 self.grid_cells[(c,r)] = cell
             if not r % 2:
                 offset = row.add(widgets.AnchorLayout())
@@ -92,10 +103,10 @@ class Map(widgets.AnchorLayout):
             c, r = coords
             tile = Hex(c, r)
             text = ''
-            color = self.DEFAULT_CELL_BG
+            color = DEFAULT_CELL_BG
             if self.debug_mode:
                 dist = tile.get_distance(self.selected_tile)
-                color = self.DIST_COLORS[min(dist, len(self.DIST_COLORS)-1)]
+                color = DIST_COLORS[min(dist, len(DIST_COLORS)-1)]
                 text = f'{tile.x}, {tile.y}\nD:{dist}'
             cell.text = text
             cell.make_bg(color)
@@ -113,14 +124,14 @@ class Map(widgets.AnchorLayout):
             x, y = pos
             if (x, y) not in self.grid_cells:
                 continue
-            self.grid_cells[(x,y)].make_bg((1,1,1))
+            self.grid_cells[(x,y)].make_bg(WALL_COLOR)
 
     def update_pits(self):
         for i, pos in enumerate(self.api.pits):
             x, y = pos
             if (x, y) not in self.grid_cells:
                 continue
-            self.grid_cells[(x,y)].make_bg((0,0,0))
+            self.grid_cells[(x,y)].make_bg(PIT_COLOR)
 
     def update_positions(self):
         for i, pos in enumerate(self.api.positions):
@@ -129,7 +140,7 @@ class Map(widgets.AnchorLayout):
             x, y = pos
             if (x, y) not in self.grid_cells:
                 continue
-            self.add_cell_label(x, y, f'<{i}>')
+            self.add_cell_label(x, y, f'{i}')
             self.grid_cells[(x,y)].make_bg(self.get_unit_color(i))
 
     def add_cell_label(self, x, y, label):
@@ -146,4 +157,4 @@ class Map(widgets.AnchorLayout):
             kex.Clock.schedule_once(p, 0.1)
 
     def get_unit_color(self, i):
-        return COLORS[i%len(COLORS)]
+        return UNIT_COLORS[i%len(UNIT_COLORS)]
