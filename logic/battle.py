@@ -3,8 +3,9 @@ import numpy as np
 from api.logic_api import BaseLogicAPI, EventDeath
 from bots import make_bots
 from logic import maps
-from api.bot_api import WorldInfo
+from api.bot_api import world_info
 from util.hexagon import Hex
+from copy import deepcopy
 
 
 MAX_TURNS = 10000
@@ -35,7 +36,6 @@ class Battle(BaseLogicAPI):
         # when round_priority is empty, round is over.
         self.round_remaining_turns = []
         self.history = []
-        self.world_info = WorldInfo(self.positions, self.walls, self.pits)
 
     def next_turn(self):
         if self.game_over:
@@ -72,7 +72,8 @@ class Battle(BaseLogicAPI):
     def _get_bot_move(self, bot_id):
         diff = np.zeros((self.num_of_bots, 2), dtype='int8')
         tile = Hex(*self.positions[bot_id])
-        target_tile = self.bots[bot_id].get_action(tile)  # Tile
+        world_state = self.set_world_info()
+        target_tile = self.bots[bot_id].get_action(world_state)
         ap_spent = self._calc_ap(tile, target_tile)
         if self._check_legal_move(bot_id, tile, target_tile, ap_spent):
             action_diff = np.asarray(target_tile.xy) - tile.xy
@@ -140,6 +141,18 @@ class Battle(BaseLogicAPI):
             state_str = 'GAME OVER\n' + winner_str + state_str
         return state_str
 
+    def set_world_info(self):
+        return world_info(
+            positions=deepcopy(self.positions),
+            walls=deepcopy(self.walls),
+            pits=deepcopy(self.pits),
+            alive_mask=deepcopy(self.alive_mask),
+            turn_count=self.turn_count,
+            round_count=self.round_count,
+            ap=deepcopy(self.ap),
+            round_remaining_turns=deepcopy(self.round_remaining_turns)
+            )
+
     @staticmethod
     def _calc_ap(pos, target):
         return 10 * (pos is not target)
@@ -149,4 +162,6 @@ class Battle(BaseLogicAPI):
         cond1 = self.turn_count >= MAX_TURNS
         cond2 = self.alive_mask.sum() <= 1
         return cond1 or cond2
+
+
 
