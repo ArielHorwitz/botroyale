@@ -6,9 +6,10 @@ from logic import maps
 from api.bot_api import world_info
 from util.hexagon import Hex
 from copy import deepcopy
+from util.settings import Settings
 
 
-MAX_TURNS = 10000
+MAX_TURNS = Settings.get('turn_cap', 10_000)
 RNG = np.random.default_rng()
 
 
