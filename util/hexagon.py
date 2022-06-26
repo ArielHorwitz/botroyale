@@ -113,3 +113,4 @@ if __name__ == '__main__':
     print(tile2 == tile3)
     print(tile2 is tile3)
     print(tile2 in tile1.neighbors)
+

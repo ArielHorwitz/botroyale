@@ -3,9 +3,13 @@ import numpy as np
 from api.logic_api import BaseLogicAPI, EventDeath
 from bots import make_bots
 from logic import maps
+from api.bot_api import world_info
+from util.hexagon import Hex
+from copy import deepcopy
+from util.settings import Settings
 
 
-MAX_TURNS = 10000
+MAX_TURNS = Settings.get('turn_cap', 10_000)
 RNG = np.random.default_rng()
 
 
@@ -44,6 +48,9 @@ class Battle(BaseLogicAPI):
         diff, ap_spent = self._get_bot_move(bot_id)
         last_alive = set(np.flatnonzero(self.alive_mask))
         self._apply_diff(bot_id, diff, ap_spent)
+        self.death_events(last_alive)
+
+    def death_events(self, last_alive):
         now_alive = set(np.flatnonzero(self.alive_mask))
         for dead_unit in last_alive - now_alive:
             self.add_event(EventDeath(dead_unit))
@@ -65,38 +72,34 @@ class Battle(BaseLogicAPI):
 
     def _get_bot_move(self, bot_id):
         diff = np.zeros((self.num_of_bots, 2), dtype='int8')
-        move_diff = self.bots[bot_id].get_move()
-        ap_spent = self._calc_ap(move_diff)
-        if self._check_legal_move(bot_id, move_diff, ap_spent):
-            diff[bot_id] += move_diff
+        tile = Hex(*self.positions[bot_id])
+        world_state = self.set_world_info()
+        target_tile = self.bots[bot_id].get_action(world_state)
+        ap_spent = self._calc_ap(tile, target_tile)
+        if self._check_legal_move(bot_id, tile, target_tile, ap_spent):
+            action_diff = np.asarray(target_tile.xy) - tile.xy
+            diff[bot_id] += action_diff
         else:
             ap_spent = 0
         return diff, ap_spent
 
-    def _calc_ap(self, diff):
-        if any(diff):
-            return 10
-        else:
-            return 0
-
-    def _check_legal_move(self, bot_id, diff, spent_ap):
-        position = self.positions[bot_id]
+    def _check_legal_move(self, bot_id, tile, target_tile, spent_ap):
+        # Check if has enough ap
         if self.ap[bot_id] - spent_ap < 0:
             return False
-        if tuple(diff) != (0, 0):
-            new_position = position + diff
 
-            # check if moving out of bounds
-            if np.sum(new_position < 0) or np.sum(new_position > self.axis_size - 1):
-                return False
+        # check if neighbors
+        if tile.get_distance(target_tile) > 1:
+            return False
 
-            # check if moving to a wall tile
-            if ((self.walls == new_position).sum(axis=1) >= 2).sum() > 0:
-                return False
+        target_pos = np.asarray(target_tile.xy)
+        # check if moving to a wall tile
+        if ((self.walls == target_pos).sum(axis=1) >= 2).sum() > 0:
+            return False
 
-            # check if moving on top of another bot
-            if ((self.positions == new_position).sum(axis=1) >= 2).sum() > 0:
-                return False
+        # check if moving on top of another bot
+        if ((self.positions == target_pos).sum(axis=1) >= 2).sum() > 0:
+            return False
         return True
 
     def _apply_diff(self, bot_id, diff, ap_spent):
@@ -138,6 +141,22 @@ class Battle(BaseLogicAPI):
                 winner_str = f'This game winner is: unit #{winner[0]}\n\n'
             state_str = 'GAME OVER\n' + winner_str + state_str
         return state_str
+
+    def set_world_info(self):
+        return world_info(
+            positions=deepcopy(self.positions),
+            walls=deepcopy(self.walls),
+            pits=deepcopy(self.pits),
+            alive_mask=deepcopy(self.alive_mask),
+            turn_count=self.turn_count,
+            round_count=self.round_count,
+            ap=deepcopy(self.ap),
+            round_remaining_turns=deepcopy(self.round_remaining_turns)
+            )
+
+    @staticmethod
+    def _calc_ap(pos, target):
+        return 10 * (pos is not target)
 
     @property
     def game_over(self):
