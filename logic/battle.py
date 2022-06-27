@@ -7,6 +7,7 @@ from api.bot_api import world_info
 from util.hexagon import Hex
 from copy import deepcopy
 from util.settings import Settings
+from api.actions import Move, Push
 
 
 MAX_TURNS = Settings.get('turn_cap', 10_000)
@@ -72,24 +73,35 @@ class Battle(BaseLogicAPI):
 
     def _get_bot_move(self, bot_id):
         diff = np.zeros((self.num_of_bots, 2), dtype='int8')
-        tile = Hex(*self.positions[bot_id])
+        bot_position = Hex(*self.positions[bot_id])
         world_state = self.set_world_info()
-        target_tile = self.bots[bot_id].get_action(world_state)
-        ap_spent = self._calc_ap(tile, target_tile)
-        if self._check_legal_move(bot_id, tile, target_tile, ap_spent):
-            action_diff = np.asarray(target_tile.xy) - tile.xy
-            diff[bot_id] += action_diff
-        else:
-            ap_spent = 0
+        action = self.bots[bot_id].get_action(world_state)
+        if not self.check_ap(bot_id, action.ap):
+            return diff, 0
+        ap_spent = action.ap
+        if isinstance(action, Move):
+            if self._check_legal_move(bot_id, action.target):
+                action_diff = np.asarray(action.target.xy) - bot_position.xy
+                diff[bot_id] += action_diff
+            else:
+                ap_spent = 0
+
+        elif isinstance(action, Push):
+            if self._check_legal_push(bot_id, bot_position, action.target):
+                action_diff = np.asarray(action.target.xy) - bot_position.xy
+                diff[bot_id] += action_diff
+            else:
+                ap_spent = 0
+
         return diff, ap_spent
 
-    def _check_legal_move(self, bot_id, tile, target_tile, spent_ap):
-        # Check if has enough ap
-        if self.ap[bot_id] - spent_ap < 0:
-            return False
+    def check_ap(self, bot_id, ap_cost):
+        return self.ap[bot_id] >= ap_cost
 
+    def _check_legal_move(self, bot_id, target_tile):
         # check if neighbors
-        if tile.get_distance(target_tile) > 1:
+        bot_position = Hex(*self.positions[bot_id])
+        if bot_position.get_distance(target_tile) > 1:
             return False
 
         target_pos = np.asarray(target_tile.xy)
