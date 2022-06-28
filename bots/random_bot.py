@@ -4,6 +4,8 @@ from util.hexagon import Hex
 
 
 class RandomBot(BaseBot):
+    NAME = "Random1"
+
     def __init__(self, id):
         super().__init__(id)
 
