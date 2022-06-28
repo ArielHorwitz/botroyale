@@ -77,11 +77,12 @@ class Battle(BaseLogicAPI):
 
     def _check_legal_action(self, bot_id, action):
         if not self.check_ap(bot_id, action.ap):
+            print(f'Unit #{bot_id} missing AP: {action}')
             return False
+        if isinstance(action, Push):
+            return self._check_legal_push(bot_id, action.target)
         if isinstance(action, Move):
             return self._check_legal_move(bot_id, action.target)
-        elif isinstance(action, Push):
-            return self._check_legal_push(bot_id, action.target)
         raise TypeError(f'Unknown action: {action}')
 
     def check_ap(self, bot_id, ap_cost):
@@ -90,49 +91,53 @@ class Battle(BaseLogicAPI):
     def _check_legal_move(self, bot_id, target_tile):
         # check if target is a neighbor
         self_position = self.positions[bot_id]
-        if self_position.get_distance(target_tile) > 1:
+        if not self_position.get_distance(target_tile) == 1:
+            print(f'Illegal move by Unit #{bot_id}: not neighbor {self_position} -> {target_tile}')
             return False
-
+        # check if moving into a wall
         if target_tile in self.walls:
+            print(f'Illegal move by Unit #{bot_id}: is wall {self_position} -> {target_tile}')
             return False
-
         # check if moving on top of another bot
         if target_tile in self.positions:
+            print(f'Illegal move by Unit #{bot_id}: is unit {self_position} -> {target_tile}')
             return False
         return True
 
     def _check_legal_push(self, bot_id, target_tile):
         # check if target is a neighbor
         self_position = self.positions[bot_id]
-        if self_position.get_distance(target_tile) > 1:
+        if not self_position.get_distance(target_tile) == 1:
+            print(f'Illegal push by Unit #{bot_id}: not neighbor {self_position} -> {target_tile}')
             return False
-
         # check if actually pushing a bot
         if not (target_tile in self.positions):
+            print(f'Illegal push by Unit #{bot_id}: no unit {self_position} -> {target_tile}')
             return False
-
         # check if pushing to a wall
         self_pos = self.positions[bot_id]
         push_end = next(self_pos.straight_line(target_tile))
         if push_end in self.walls:
+            print(f'Illegal move by Unit #{bot_id}: against wall {self_position} -> {target_tile}')
             return False
-
         # check if pushing on top of another bot
         if push_end in self.positions:
+            print(f'Illegal move by Unit #{bot_id}: against unit {self_position} -> {target_tile}')
             return False
-
         return True
 
     def _apply_action(self, bot_id, action):
         self.turn_count += 1
         if isinstance(action, IllegalAction):
             return
-        if isinstance(action, Move):
-            self.positions[bot_id] = action.target
-        elif isinstance(action, Push):
+        if isinstance(action, Push):
+            print(f'{bot_id} APPLY PUSH: {action}')
             opp_id = self.positions.index(action.target)
             self_pos = self.positions[bot_id]
             self.positions[opp_id] = next(self_pos.straight_line(action.target))
+        elif isinstance(action, Move):
+            print(f'{bot_id} APPLY MOVE: {action}')
+            self.positions[bot_id] = action.target
         self._apply_mortality()
         self.ap[bot_id] -= action.ap
         self.round_ap_spent[bot_id] += action.ap
