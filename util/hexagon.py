@@ -14,6 +14,15 @@ class _Hex:
         delta = self - tile
         return max(abs(c) for c in delta.cube)
 
+    def straight_line(self, neighbor, max_distance=20):
+        assert neighbor in self.neighbors
+        counter = 0
+        delta = neighbor - self
+        while counter < max_distance:
+            counter += 1
+            neighbor += delta
+            yield neighbor
+
     @property
     def neighbors(self):
         if self.__neighbors is None:
@@ -76,6 +85,9 @@ class _Hex:
     def __repr__(self):
         return f'<Hex {self.x}, {self.y}>'
 
+    def __hash__(self):
+        return hash(self.__cube)
+
 
 DIRECTIONS = [
     _Hex(+1, 0, -1),
@@ -98,19 +110,28 @@ def Hex(x, y):
     return new_hex
 
 
-# HEX API
+# Hex example usage
 if __name__ == '__main__':
     tile1 = Hex(1, 1)
-    print(tile1)
-    print(tile1.xy)
     tile2 = Hex(1, 2)
     tile3 = Hex(1, 2)
-    print(tile2)
-    print(tile2.x, tile2.y)
-    print(tile1.neighbors)
-    print(tile1.get_distance(tile2))
-    print(tile1 is tile2)
-    print(tile2 == tile3)
-    print(tile2 is tile3)
-    print(tile2 in tile1.neighbors)
-
+    print('=== Coordinates')
+    print(f'{tile1} xy: {tile1.xy}')
+    print(f'{tile2} x, y: {tile2.x}, {tile2.y}')
+    print('=== Neighbors')
+    print(f'{tile1} neighbors: {tile1.neighbors}')
+    print('=== Operations')
+    print(f'{tile2} in {tile1} neighbors: {tile2 in tile1.neighbors}')
+    print(f'{tile1} is {tile2}: {tile1 is tile2}')
+    print(f'{tile2} == {tile3}: {tile2 == tile3}')
+    print(f'{tile2} is {tile3}: {tile2 is tile3}')
+    print('=== Distances')
+    print(f'Distance {tile1} -> {tile2}: {tile1.get_distance(tile2)}')
+    print('=== Straight lines')
+    dir = tile2 - tile1
+    tile4 = tile2 + dir
+    print(f'Straight line from {tile1} -> {tile2} : {tile4}')
+    hex_set = {tile1, tile2, tile3, tile4}
+    print('=== Sets and containment')
+    print(f'Set: {hex_set}')
+    print(f'{tile1} in {hex_set} : {tile1 in hex_set}')
