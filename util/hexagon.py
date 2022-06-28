@@ -14,6 +14,15 @@ class _Hex:
         delta = self - tile
         return max(abs(c) for c in delta.cube)
 
+    def straight_line(self, neighbor, max_distance=20):
+        assert neighbor in self.neighbors
+        counter = 0
+        delta = neighbor - self
+        while counter < max_distance:
+            counter += 1
+            neighbor += delta
+            yield neighbor
+
     @property
     def neighbors(self):
         if self.__neighbors is None:
@@ -113,4 +122,8 @@ if __name__ == '__main__':
     print(tile2 == tile3)
     print(tile2 is tile3)
     print(tile2 in tile1.neighbors)
-
+    source = Hex(1, 1)
+    neighbor = Hex(1, 2)
+    dir = neighbor - source
+    target = neighbor + dir
+    print(f'{source} -> {neighbor} -> {target}')
