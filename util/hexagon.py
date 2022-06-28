@@ -85,6 +85,9 @@ class _Hex:
     def __repr__(self):
         return f'<Hex {self.x}, {self.y}>'
 
+    def __hash__(self):
+        return hash(self.__cube)
+
 
 DIRECTIONS = [
     _Hex(+1, 0, -1),
@@ -127,3 +130,5 @@ if __name__ == '__main__':
     dir = neighbor - source
     target = neighbor + dir
     print(f'{source} -> {neighbor} -> {target}')
+    hex_set = {Hex(0, 0), Hex(0, 1), Hex(0, 2)}
+    print(Hex(0, 1) in hex_set)
