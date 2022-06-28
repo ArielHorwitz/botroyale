@@ -1,13 +1,11 @@
-import random
 import numpy as np
 from api.logic_api import BaseLogicAPI, EventDeath
 from bots import make_bots
 from logic import maps
 from api.bot_api import world_info
-from util.hexagon import Hex
 from copy import deepcopy
 from util.settings import Settings
-from api.actions import Move, Push
+from api.actions import Move, Push, IllegalAction
 
 
 MAX_TURNS = Settings.get('turn_cap', 10_000)
@@ -24,17 +22,16 @@ class Battle(BaseLogicAPI):
         self.num_of_bots = len(map.spawns)
         self.bots = make_bots(self.num_of_bots)
         # Map
-        self.positions = np.asarray(map.spawns)
-        self.axis_size = np.asarray(map.axis_size)
-        self.walls = np.asarray(map.walls)
-        self.pits = np.asarray(map.pits)
+        self.positions = map.spawns
+        self.walls = map.walls
+        self.pits = map.pits
         # Metadata
         self.alive_mask = np.ones(self.num_of_bots, dtype=bool)
         self.turn_count = 0
         self.round_count = 0
         self.ap = np.zeros(self.num_of_bots)
         self.round_ap_spent = np.zeros(self.num_of_bots)
-        self.map_size = int(self.axis_size), int(self.axis_size)
+        self.map_size = map.axis_size, map.axis_size
         # when round_priority is empty, round is over.
         self.round_remaining_turns = []
         self.history = []
@@ -46,9 +43,9 @@ class Battle(BaseLogicAPI):
             self._next_round()
             return
         bot_id = self.round_remaining_turns.pop(0)
-        diff, ap_spent = self._get_bot_move(bot_id)
+        action = self._get_bot_action(bot_id)
         last_alive = set(np.flatnonzero(self.alive_mask))
-        self._apply_diff(bot_id, diff, ap_spent)
+        self._apply_action(bot_id, action)
         self.death_events(last_alive)
 
     def death_events(self, last_alive):
@@ -71,62 +68,80 @@ class Battle(BaseLogicAPI):
             self.round_remaining_turns.append(p[min_index])
             p = np.delete(p, min_index)
 
-    def _get_bot_move(self, bot_id):
-        diff = np.zeros((self.num_of_bots, 2), dtype='int8')
-        bot_position = Hex(*self.positions[bot_id])
+    def _get_bot_action(self, bot_id):
         world_state = self.set_world_info()
         action = self.bots[bot_id].get_action(world_state)
+        if self._check_legal_action(bot_id, action):
+            return action
+        return IllegalAction()
+
+    def _check_legal_action(self, bot_id, action):
         if not self.check_ap(bot_id, action.ap):
-            return diff, 0
-        ap_spent = action.ap
+            return False
         if isinstance(action, Move):
-            if self._check_legal_move(bot_id, action.target):
-                action_diff = np.asarray(action.target.xy) - bot_position.xy
-                diff[bot_id] += action_diff
-            else:
-                ap_spent = 0
-
+            return self._check_legal_move(bot_id, action.target)
         elif isinstance(action, Push):
-            if self._check_legal_push(bot_id, bot_position, action.target):
-                action_diff = np.asarray(action.target.xy) - bot_position.xy
-                diff[bot_id] += action_diff
-            else:
-                ap_spent = 0
-
-        return diff, ap_spent
+            return self._check_legal_push(bot_id, action.target)
+        raise TypeError(f'Unknown action: {action}')
 
     def check_ap(self, bot_id, ap_cost):
         return self.ap[bot_id] >= ap_cost
 
     def _check_legal_move(self, bot_id, target_tile):
-        # check if neighbors
-        bot_position = Hex(*self.positions[bot_id])
-        if bot_position.get_distance(target_tile) > 1:
+        # check if target is a neighbor
+        self_position = self.positions[bot_id]
+        if self_position.get_distance(target_tile) > 1:
             return False
 
-        target_pos = np.asarray(target_tile.xy)
-        # check if moving to a wall tile
-        if ((self.walls == target_pos).sum(axis=1) >= 2).sum() > 0:
+        if target_tile in self.walls:
             return False
 
         # check if moving on top of another bot
-        if ((self.positions == target_pos).sum(axis=1) >= 2).sum() > 0:
+        if target_tile in self.positions:
             return False
         return True
 
-    def _apply_diff(self, bot_id, diff, ap_spent):
-        self.positions += diff
-        self._apply_mortality()
-        self.ap[bot_id] -= ap_spent
-        self.round_ap_spent[bot_id] += ap_spent
+    def _check_legal_push(self, bot_id, target_tile):
+        # check if target is a neighbor
+        self_position = self.positions[bot_id]
+        if self_position.get_distance(target_tile) > 1:
+            return False
+
+        # check if actually pushing a bot
+        if not (target_tile in self.positions):
+            return False
+
+        # check if pushing to a wall
+        self_pos = self.positions[bot_id]
+        push_end = next(self_pos.straight_line(target_tile))
+        if push_end in self.walls:
+            return False
+
+        # check if pushing on top of another bot
+        if push_end in self.positions:
+            return False
+
+        return True
+
+    def _apply_action(self, bot_id, action):
         self.turn_count += 1
-        self.history.append(diff)
+        if isinstance(action, IllegalAction):
+            return
+        if isinstance(action, Move):
+            self.positions[bot_id] = action.target
+        elif isinstance(action, Push):
+            opp_id = self.positions.index(action.target)
+            self_pos = self.positions[bot_id]
+            self.positions[opp_id] = next(self_pos.straight_line(action.target))
+        self._apply_mortality()
+        self.ap[bot_id] -= action.ap
+        self.round_ap_spent[bot_id] += action.ap
 
     def _apply_mortality(self):
-        modified_positions = self.positions[:, None, :]
-        mortality = ((self.pits == modified_positions).sum(axis=-1) >= 2).sum(axis=-1)
-        mortality = mortality != 0
-        self.alive_mask[mortality] = False
+        live_bots = np.flatnonzero(self.alive_mask)
+        for bot_id in live_bots:
+            if self.positions[bot_id] in self.pits:
+                self.alive_mask[bot_id] = False
 
     def get_map_state(self):
         return self.get_match_state()
@@ -165,6 +180,9 @@ class Battle(BaseLogicAPI):
             ap=deepcopy(self.ap),
             round_remaining_turns=deepcopy(self.round_remaining_turns)
             )
+
+    def debug(self):
+        pass
 
     @staticmethod
     def _calc_ap(pos, target):

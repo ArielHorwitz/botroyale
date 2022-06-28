@@ -12,7 +12,7 @@ class RandomBot(BaseBot):
 
     def get_action(self, world_state):
         pos = world_state.positions[self.id]
-        return Move(random.choice(Hex(*pos).neighbors))
+        return Move(random.choice(pos.neighbors))
 
 
 BOT = RandomBot

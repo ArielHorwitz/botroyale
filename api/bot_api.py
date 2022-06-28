@@ -1,4 +1,3 @@
-import numpy as np
 from util.hexagon import Hex
 from collections import namedtuple
 from api.actions import Move, Push

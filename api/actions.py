@@ -13,3 +13,6 @@ class Push(Move):
     ap = 30
 
 
+class IllegalAction:
+    ap = 0
+

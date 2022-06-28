@@ -115,20 +115,20 @@ class Map(widgets.AnchorLayout):
         for event in self.api.flush_events():
             print(f'Handling event on turn #{self.api.turn_count}: {event}')
             if isinstance(event, EventDeath):
-                c, r = self.api.positions[event.unit]
+                c, r = self.api.positions[event.unit].xy
                 color = self.get_unit_color(event.unit)
                 self.flash_cell(c, r, color)
 
     def update_walls(self):
         for i, pos in enumerate(self.api.walls):
-            x, y = pos
+            x, y = pos.xy
             if (x, y) not in self.grid_cells:
                 continue
             self.grid_cells[(x,y)].make_bg(WALL_COLOR)
 
     def update_pits(self):
         for i, pos in enumerate(self.api.pits):
-            x, y = pos
+            x, y = pos.xy
             if (x, y) not in self.grid_cells:
                 continue
             self.grid_cells[(x,y)].make_bg(PIT_COLOR)
@@ -137,7 +137,7 @@ class Map(widgets.AnchorLayout):
         for i, pos in enumerate(self.api.positions):
             if not self.api.alive_mask[i]:
                 continue
-            x, y = pos
+            x, y = pos.xy
             if (x, y) not in self.grid_cells:
                 continue
             self.add_cell_label(x, y, f'{i}')
