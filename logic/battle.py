@@ -9,8 +9,8 @@ from api.actions import Move, Push, IllegalAction
 from util.hexagon import Hex
 
 
+MAX_ROUNDS = Settings.get('round_cap', 300)
 DEBUG = Settings.get('battle_debug', True)
-MAX_TURNS = Settings.get('turn_cap', 10_000)
 RNG = np.random.default_rng()
 
 
@@ -152,6 +152,8 @@ class Battle(BaseLogicAPI):
         for bot_id in live_bots:
             if self.positions[bot_id] in self.pits:
                 self.alive_mask[bot_id] = False
+                if bot_id in self.round_remaining_turns:
+                    self.round_remaining_turns.remove(bot_id)
                 # Move to graveyard
                 # TODO move to graveyard when GUI can handle it
                 # self.positions[bot_id] = Hex(10**6+bot_id, 10**6)
@@ -203,7 +205,7 @@ class Battle(BaseLogicAPI):
 
     @property
     def game_over(self):
-        cond1 = self.turn_count >= MAX_TURNS
+        cond1 = self.round_count > MAX_ROUNDS
         cond2 = self.alive_mask.sum() <= 1
         return cond1 or cond2
 
