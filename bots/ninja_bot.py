@@ -15,7 +15,7 @@ def debug(*lines):
         print('\n'.join(str(_) for _ in lines))
 
 
-@dataclass(order=True, slots=True)
+@dataclass(order=True)
 class TileValue:
     tile : object = field(compare=False)
     value : float = field(compare=True)

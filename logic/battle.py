@@ -6,6 +6,7 @@ from api.bot_api import world_info
 from copy import deepcopy
 from util.settings import Settings
 from api.actions import Move, Push, IllegalAction
+from util.hexagon import Hex
 
 
 MAX_TURNS = Settings.get('turn_cap', 10_000)
@@ -147,6 +148,8 @@ class Battle(BaseLogicAPI):
         for bot_id in live_bots:
             if self.positions[bot_id] in self.pits:
                 self.alive_mask[bot_id] = False
+                # Move to graveyard
+                self.positions[bot_id] = Hex(10**6+bot_id, 10**6)
 
     def get_map_state(self):
         return self.get_match_state()
