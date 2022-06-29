@@ -6,8 +6,8 @@ from gui.gui import App
 
 
 def run():
-    logic_api = Battle()
-    app = App(logic_api=logic_api)
+    logic = Battle()
+    app = App(logic_api=logic)
     Settings.write_to_file()
     app.run()
 

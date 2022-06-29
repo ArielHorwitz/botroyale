@@ -1,6 +1,6 @@
 import random
 
-from api.bot_api import BaseBot
+from api.bots import BaseBot
 from pkgutil import iter_modules
 from pathlib import Path
 from importlib import import_module

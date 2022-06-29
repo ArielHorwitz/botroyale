@@ -1,7 +1,7 @@
 from collections import namedtuple, defaultdict
 
 
-class _Hex:
+class Hexagon:
     OFFSET = -1
 
     def __init__(self, q, r, s):
@@ -26,18 +26,18 @@ class _Hex:
     @property
     def neighbors(self):
         if self.__neighbors is None:
-            self.__neighbors = tuple((self + dir).xy for dir in DIRECTIONS)
-        return tuple(Hex(x, y) for x, y in self.__neighbors)
+            self.__neighbors = tuple(self + dir for dir in DIRECTIONS)
+        return self.__neighbors
 
     # Internal calculations
     def __eq__(self, tile):
         return all((self.q==tile.q, self.r==tile.r, self.s==tile.s))
 
     def __add__(self, tile):
-        return self.__class__(self.q+tile.q, self.r+tile.r, self.s+tile.s)
+        return Hex(*self._convert_cube2offset(self.q+tile.q, self.r+tile.r, self.s+tile.s))
 
     def __sub__(self, tile):
-        return self.__class__(self.q-tile.q, self.r-tile.r, self.s-tile.s)
+        return Hex(*self._convert_cube2offset(self.q-tile.q, self.r-tile.r, self.s-tile.s))
 
     # Converters
     @classmethod
@@ -82,30 +82,52 @@ class _Hex:
     def cube(self):
         return self.__cube
 
-    def __repr__(self):
+    def __str__(self):
         return f'<Hex {self.x}, {self.y}>'
+
+    def __repr__(self):
+        return f'{super().__repr__()} {self.x}, {self.y}'
 
     def __hash__(self):
         return hash(self.__cube)
 
 
-DIRECTIONS = [
-    _Hex(+1, 0, -1),
-    _Hex(+1, -1, 0),
-    _Hex(0, -1, +1),
-    _Hex(-1, 0, +1),
-    _Hex(-1, +1, 0),
-    _Hex(0, +1, -1),
-    ]
+DIRECTIONS = (
+    Hexagon(+1, 0, -1),
+    Hexagon(+1, -1, 0),
+    Hexagon(0, -1, +1),
+    Hexagon(-1, 0, +1),
+    Hexagon(-1, +1, 0),
+    Hexagon(0, +1, -1),
+    )
 ALL_HEXES = {}
+
+
+def is_hex(h):
+    """
+    Checks that an object is one of the Hexagon singletons (ALL_HEXES).
+    This should work as long as the object was retrieved normally.
+
+    To ensure objects pass this check, they must be retrieved using the Hex()
+    function, or using the methods and operations available normally in the
+    Hexagon class.
+
+    Hexagons created manually (initializing the class directly) or using
+    deepcopy will fail this check.
+    """
+    if not isinstance(h, Hexagon):
+        return False
+    if h is not ALL_HEXES[h.xy]:
+        raise ValueError(f'Found a Hexagon object that is not the singleton. Consult hexagon.is_hex().')
+    return True
 
 
 def Hex(x, y):
     xy = x, y
     if xy in ALL_HEXES:
         return ALL_HEXES[xy]
-    q, r, s = _Hex._convert_offset2cube(x, y)
-    new_hex = _Hex(q, r, s)
+    q, r, s = Hexagon._convert_offset2cube(x, y)
+    new_hex = Hexagon(q, r, s)
     ALL_HEXES[xy] = new_hex
     return new_hex
 

@@ -57,3 +57,7 @@ class BaseLogicAPI:
 
     def debug(self):
         print(f'Override the method BaseLogicAPI.debug() to use this feature.')
+
+    @property
+    def unit_colors(self):
+        return [b.COLOR_INDEX for b in self.bots]

@@ -1,7 +1,7 @@
 from util.settings import Settings
 from gui import kex
 import gui.kex.widgets as widgets
-from api.logic_api import BaseLogicAPI
+from api.logic import BaseLogicAPI
 from gui.map import Map
 
 

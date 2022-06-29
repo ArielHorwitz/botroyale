@@ -1,11 +1,11 @@
-from util.hexagon import _Hex
+from util.hexagon import is_hex
 
 
 class Move:
     ap = 10
 
     def __init__(self, target_tile):
-        assert isinstance(target_tile, _Hex)
+        assert is_hex(target_tile)
         self.target = target_tile
 
 
@@ -15,4 +15,3 @@ class Push(Move):
 
 class IllegalAction:
     ap = 0
-
