@@ -1,8 +1,8 @@
 import numpy as np
-from api.logic_api import BaseLogicAPI, EventDeath
+from api.logic import BaseLogicAPI, EventDeath
 from bots import make_bots
 from logic import maps
-from api.bot_api import world_info
+from api.bots import world_info
 from copy import deepcopy
 from util.settings import Settings
 from api.actions import Move, Push, IllegalAction

@@ -2,7 +2,7 @@ from pathlib import Path
 import numpy as np
 from gui import kex
 import gui.kex.widgets as widgets
-from api.logic_api import EventDeath
+from api.logic import EventDeath
 from util.settings import Settings
 from util.hexagon import Hex
 
