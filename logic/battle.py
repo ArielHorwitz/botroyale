@@ -149,7 +149,8 @@ class Battle(BaseLogicAPI):
             if self.positions[bot_id] in self.pits:
                 self.alive_mask[bot_id] = False
                 # Move to graveyard
-                self.positions[bot_id] = Hex(10**6+bot_id, 10**6)
+                # TODO move to graveyard when GUI can handle it
+                # self.positions[bot_id] = Hex(10**6+bot_id, 10**6)
 
     def get_map_state(self):
         return self.get_match_state()
