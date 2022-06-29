@@ -13,15 +13,15 @@ WALL_COLOR = Settings.get('map_wall_color', (1,1,1))
 PIT_COLOR = Settings.get('map_pit_color', (0,0,0))
 UNIT_COLORS = Settings.get('map_unit_colors', [
     (0.6, 0, 0.1),  # Red
+    (0.9, 0.3, 0.4),  # Pink
     (0.8, 0.7, 0.1),  # Yellow
+    (0.7, 0.4, 0),  # Orange
     (0.1, 0.4, 0),  # Green
+    (0.4, 0.7, 0.1),  # Lime
     (0.1, 0.7, 0.7),  # Teal
+    (0.1, 0.4, 0.9),  # Blue
     (0, 0.1, 0.5),  # Navy
     (0.7, 0.1, 0.9),  # Purple
-    (0.9, 0.3, 0.4),  # Pink
-    (0.7, 0.4, 0),  # Orange
-    (0.4, 0.7, 0.1),  # Lime
-    (0.1, 0.4, 0.9),  # Blue
     (0.4, 0, 0.7),  # Violet
     (0.7, 0, 0.5),  # Magenta
 ])
@@ -54,6 +54,7 @@ class Map(widgets.AnchorLayout):
         self.status_bar.set_size(y=30)
         self.map_grid = frame.add(widgets.BoxLayout(orientation='vertical'))
         self.debug_mode = False
+        self.unit_colors = [UNIT_COLORS[ci%len(UNIT_COLORS)] for ci in self.api.unit_colors]
         self.make_map()
         app.im.register('toggle_guimap_debug', key='^ m', callback=self.toggle_debug_mode)
 
@@ -116,7 +117,7 @@ class Map(widgets.AnchorLayout):
             print(f'Handling event on turn #{self.api.turn_count}: {event}')
             if isinstance(event, EventDeath):
                 c, r = self.api.positions[event.unit].xy
-                color = self.get_unit_color(event.unit)
+                color = self.unit_colors[event.unit]
                 self.flash_cell(c, r, color)
 
     def update_walls(self):
@@ -141,7 +142,7 @@ class Map(widgets.AnchorLayout):
             if (x, y) not in self.grid_cells:
                 continue
             self.add_cell_label(x, y, f'{i}')
-            self.grid_cells[(x,y)].make_bg(self.get_unit_color(i))
+            self.grid_cells[(x,y)].make_bg(self.unit_colors[i])
 
     def add_cell_label(self, x, y, label):
         ctext = self.grid_cells[(x,y)].text
@@ -155,6 +156,3 @@ class Map(widgets.AnchorLayout):
         if remaining:
             p = lambda *a: self.flash_cell(c, r, color, remaining-1, not alternate)
             kex.Clock.schedule_once(p, 0.1)
-
-    def get_unit_color(self, i):
-        return UNIT_COLORS[i%len(UNIT_COLORS)]

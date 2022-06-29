@@ -18,6 +18,7 @@ world_info = namedtuple('WorldInfo', [
 
 class BaseBot:
     NAME = "BaseBot"
+    COLOR_INDEX = 0
 
     def __init__(self, id: int):
         self.id = id

@@ -23,6 +23,7 @@ class TileValue:
 
 class NinjaBot(BaseBot):
     NAME = 'ninja'
+    COLOR_INDEX = 5
 
     def __init__(self, id):
         super().__init__(id)
