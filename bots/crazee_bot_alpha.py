@@ -6,6 +6,7 @@ from bots import BaseBot
 from util.hexagon import Hexagon
 from api.bots import world_info
 from util.settings import Settings
+from time import perf_counter
 
 DEBUG = Settings.get('crazeebot_debug', False)
 
@@ -27,34 +28,36 @@ class CrazeeBotAlpha(BaseBot):
         self.pos = None
 
     def get_action(self, wi: world_info):
+        t1_start = perf_counter()
         self.pos: Hexagon = wi.positions[self.id]
         self.enemy_positions: set = set(wi.positions) - {self.pos}
         debug(f"-" * 50,
               f"Crazee!!!!!!!!!!! id: {self.id}",
               f"-" * 50,
               )
-        debug(f"-" * 50,
-              f"{len(wi.pits)} pits {wi.pits}",
-              f"{len(wi.walls)} walls {wi.walls}",
-              f"-" * 50,
-              )
+        # debug(f"-" * 50,
+        #      f"{len(wi.pits)} pits",
+        #      f"{len(wi.walls)} walls",
+        #      f"-" * 50,
+        #      )
         action = self.pick_action(wi)
         if not action:
             debug(f"NO LEGAL MOVES FOR ME TO DO, Bot {self.id}")
+        debug(f"{self.NAME}-{self.id} took {(perf_counter()-t1_start) * 1000:.2f}ms")
         debug(f"-" * 50)
         return action
 
     def pick_action(self, wi: world_info):
         def make_action(action_set, scores, is_move):
             selected_action_dest = list(action_set)[np.argmax(scores)]
-            debug(f"Selected Action: {'Move' if is_move else 'Push'} {selected_action_dest} with Score {max(scores)}")
+            debug(f"Selected Action: {'Move' if is_move else 'Push'} {selected_action_dest} with Score {max(scores):.2f}")
             return Move(selected_action_dest) if is_move else Push(selected_action_dest)
 
         legal_moves, move_scores = self.get_legal_moves(wi, self.enemy_positions)
         legal_pushes, push_scores = self.get_legal_pushes(wi)
         debug(f"{len(move_scores) + len(push_scores)} Possible Actions:",
-              f"    Push> {[f'Score {score}: Dest {action}' for action, score in zip(legal_pushes, push_scores)]}",
-              f"    Move> {[f'Score {score}: Dest {action}' for action, score in zip(legal_moves, move_scores)]}")
+              f"    Push> {[f'Score {score:.2f} : Dest {action}' for action, score in zip(legal_pushes, push_scores)]}",
+              f"    Move> {[f'Score {score:.2f} : Dest {action}' for action, score in zip(legal_moves, move_scores)]}")
         if len(push_scores) == 0 and len(move_scores) == 0:
             return None
         if len(push_scores) == 0:
