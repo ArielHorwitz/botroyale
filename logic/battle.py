@@ -3,7 +3,7 @@ from api.logic import BaseLogicAPI, EventDeath
 from bots import make_bots
 from logic import maps
 from api.bots import world_info
-from copy import deepcopy
+import copy
 from util.settings import Settings
 from api.actions import Move, Push, IllegalAction
 from util.hexagon import Hex
@@ -180,14 +180,14 @@ class Battle(BaseLogicAPI):
 
     def set_world_info(self):
         return world_info(
-            positions=deepcopy(self.positions),
-            walls=deepcopy(self.walls),
-            pits=deepcopy(self.pits),
-            alive_mask=deepcopy(self.alive_mask),
+            positions=copy.copy(self.positions),
+            walls=copy.copy(self.walls),
+            pits=copy.copy(self.pits),
+            alive_mask=copy.deepcopy(self.alive_mask),
             turn_count=self.turn_count,
             round_count=self.round_count,
-            ap=deepcopy(self.ap),
-            round_remaining_turns=deepcopy(self.round_remaining_turns)
+            ap=copy.deepcopy(self.ap),
+            round_remaining_turns=copy.deepcopy(self.round_remaining_turns)
             )
 
     def debug(self):
