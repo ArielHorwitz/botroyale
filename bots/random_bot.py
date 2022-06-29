@@ -1,6 +1,7 @@
 import random
 from bots import BaseBot
 from util.hexagon import Hex
+from api.actions import Move, Push
 
 
 class RandomBot(BaseBot):
@@ -11,7 +12,7 @@ class RandomBot(BaseBot):
 
     def get_action(self, world_state):
         pos = world_state.positions[self.id]
-        return random.choice(Hex(*pos).neighbors)
+        return Move(random.choice(pos.neighbors))
 
 
 BOT = RandomBot

@@ -1,6 +1,6 @@
-import numpy as np
 from util.hexagon import Hex
 from collections import namedtuple
+from api.actions import Move, Push
 
 
 world_info = namedtuple('WorldInfo', [
@@ -23,4 +23,4 @@ class BaseBot:
         self.id = id
 
     def get_action(self, world_state):
-        return Hex(0, 0)
+        return Move(Hex(0, 0))

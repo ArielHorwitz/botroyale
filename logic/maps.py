@@ -3,6 +3,7 @@ import itertools
 import random
 import numpy as np
 from util.settings import Settings
+from util.hexagon import Hex
 
 
 RNG = np.random.default_rng()
@@ -93,6 +94,45 @@ class Maps:
         wall_grid[np.nonzero(pit_grid)] = False
         walls = np.dstack(np.nonzero(wall_grid))[0]
         # Return the map tuple
+        return Map(axis_size, pits, walls, spawns)
+
+
+    @staticmethod
+    def another_basic_map():
+        assert MAP_RADIUS >= 2
+        assert EDGE_SIZE >= 1
+        assert SPAWN_RADIUS <= MAP_RADIUS
+        axis_size = (EDGE_SIZE + MAP_RADIUS) * 2 + 1
+        spawn_offset = EDGE_SIZE + MAP_RADIUS - SPAWN_RADIUS
+        # Spawns
+        near = spawn_offset
+        mid = axis_size // 2
+        far = axis_size - near - 1
+        spawns = list(itertools.product([near, mid, far], repeat=2))
+        spawns.remove((mid, mid))
+        spawns = np.asarray(spawns[:min(len(spawns), SPAWN_COUNT)])
+        # Pits
+        pit_grid = np.zeros((axis_size, axis_size), dtype=np.bool_)
+        pit_edge = [*range(0, EDGE_SIZE), *range(axis_size-1, axis_size-EDGE_SIZE-1, -1)]
+        pit_grid[:, pit_edge] = True
+        pit_grid[pit_edge, :] = True
+        random_pits = RNG.integers(low=0, high=axis_size, size=(2, PIT_COUNT))
+        pit_grid[random_pits[0], random_pits[1]] = True
+        # Prevent pits generating at spawn points
+        pit_grid[spawns[:, 0], spawns[:, 1]] = False
+        pits = np.dstack(np.nonzero(pit_grid))[0]
+        # Walls
+        wall_grid = np.zeros((axis_size, axis_size), dtype=np.bool_)
+        random_walls = RNG.integers(low=0, high=axis_size, size=(2, WALL_COUNT))
+        wall_grid[random_walls[0], random_walls[1]] = True
+        # Prevent walls generating at spawn points or pits
+        wall_grid[spawns[:, 0], spawns[:, 1]] = False
+        wall_grid[np.nonzero(pit_grid)] = False
+        walls = np.dstack(np.nonzero(wall_grid))[0]
+        # Return the map tuple
+        pits = set(Hex(x, y) for x, y in pits)
+        walls = set(Hex(x, y) for x, y in walls)
+        spawns = [Hex(x, y) for x, y in spawns]
         return Map(axis_size, pits, walls, spawns)
 
 
