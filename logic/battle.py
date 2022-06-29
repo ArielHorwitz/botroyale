@@ -5,7 +5,7 @@ from logic import maps
 from api.bots import world_info
 import copy
 from util.settings import Settings
-from api.actions import Move, Push, IllegalAction
+from api.actions import Move, Push, IllegalAction, Idle
 from util.hexagon import Hex
 
 
@@ -39,15 +39,21 @@ class Battle(BaseLogicAPI):
         self.history = []
 
     def next_turn(self):
+        self.next_step()
+
+    def next_step(self):
         if self.game_over:
             return
         if len(self.round_remaining_turns) == 0:
             self._next_round()
             return
-        bot_id = self.round_remaining_turns.pop(0)
+        bot_id = self.round_remaining_turns[0]
         debug(f'Round/Turn: {self.round_count} / {self.turn_count}')
         debug(f'Getting action from bot #{bot_id}')
         action = self._get_bot_action(bot_id)
+        if not action.has_effect:
+            self.round_remaining_turns.pop(0)
+            return
         last_alive = set(np.flatnonzero(self.alive_mask))
         debug(f'Applying bot #{bot_id} action: {action}')
         self._apply_action(bot_id, action)
@@ -133,8 +139,7 @@ class Battle(BaseLogicAPI):
 
     def _apply_action(self, bot_id, action):
         self.turn_count += 1
-        if isinstance(action, IllegalAction):
-            return
+        assert action.has_effect
         if isinstance(action, Push):
             debug(f'{bot_id} APPLY PUSH: {action}')
             opp_id = self.positions.index(action.target)
