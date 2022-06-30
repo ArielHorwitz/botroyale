@@ -458,7 +458,7 @@ class Label(kvLabel, KexWidget):
     def __init__(self, *a, halign='center', valign='center', **k):
         super().__init__(*a,
             halign=halign, valign=valign,
-            font_name=str(Path.cwd() / 'gui' / 'FiraCode-SemiBold.ttf'),
+            font_name=str(Path.cwd() / 'assets' / 'FiraCode-SemiBold.ttf'),
             **k)
         self.bind(size=self._on_resize)
 

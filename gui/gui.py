@@ -2,6 +2,7 @@ from util.settings import Settings
 from gui import kex
 import gui.kex.widgets as widgets
 from api.logic import BaseLogicAPI
+from gui.panel import Panel
 from gui.map import Map
 
 
@@ -28,53 +29,36 @@ class App(widgets.App):
         self.im = widgets.InputManager(app_control_defaults=True, logger=self.logger)
         self.make_widgets()
         self.im.register('toggle_autoplay', key='spacebar', callback=lambda *a: self.toggle_autoplay())
-        self.im.register('next_step', key='s', callback=lambda *a: self.next_step())
+        self.im.register('next_step', key='n', callback=lambda *a: self.next_step())
         self.hook_mainloop(FPS)
         print('GUI initialized.')
 
     def make_widgets(self):
-        self.root.orientation = 'vertical'
-        controls = self.add(widgets.BoxLayout())
-        controls.set_size(y=45)
-        controls.add(widgets.Button(
-            text='Next step ([i]s[/i])', markup=True,
-            on_release=self.next_step,
-        ))
-        self.autoplay_widget = controls.add(widgets.ToggleButton(
-            text='Autoplay ([i]spacebar[/i])', markup=True))
-        self.autoplay_widget.bind(state=lambda w, *a: self._set_autoplay(w.active))
-        controls.add(widgets.Button(text='Play all', on_release=self.play_all))
-        controls.add(widgets.Button(text='Logic debug', on_release=self.logic_debug))
-        controls.add(widgets.Button(
-            text='Restart ([i]ctrl + w[/i])', markup=True,
-            on_release=lambda *a: kex.restart_script(),
-        ))
-        controls.add(widgets.Button(
-            text='Quit ([i]ctrl + q[/i])', markup=True,
-            on_release=lambda *a: quit(),
-        ))
-
-        window = self.add(widgets.BoxLayout())
-        self.map = window.add(Map(api=self.logic, app=self))
-        main_text_frame = window.add(widgets.AnchorLayout(
-            anchor_x='left', anchor_y='top', padding=(15, 15)))
-        main_text_frame.set_size(hx=0.5)
-        main_text_frame.make_bg((0.05, 0.2, 0.35))
-        self.main_text = main_text_frame.add(
-            widgets.Label(valign='top', halign='left'))
+        self.map = self.add(Map(app=self, api=self.logic))
+        self.panel = self.add(Panel(control_buttons=(
+            ('Autoplay ([i]spacebar[/i])', self.toggle_autoplay),
+            ('Next step ([i]n[/i])', self.next_step),
+            ('Play all', self.play_all),
+            ('Logic debug', self.logic_debug),
+            ('Restart ([i]ctrl + w[/i])', kex.restart_script),
+            ('Quit ([i]ctrl + q[/i])', quit),
+        )))
+        self.panel.set_size(hx=0.5)
+        self.update_widgets()
 
     def toggle_autoplay(self, set_to=None):
         if set_to is None:
-            set_to = not self.autoplay_widget.active
-        self.autoplay_widget.active = set_to
-
-    def _set_autoplay(self, set_to):
+            set_to = not self.autoplay
         self.autoplay = set_to
-        print(f'Auto playing...' if self.autoplay else f'Pausing auto play...')
+        print(f'Auto playing...' if self.autoplay else f'Paused autoplay...')
 
     def next_step(self, *args):
         if not self.logic.game_over:
             self.logic.next_step()
+
+    def update_widgets(self):
+        self.panel.set_text(self.logic.get_match_state())
+        self.map.update()
 
     def play_all(self, *args):
         print('Playing battle to completion...')
@@ -86,8 +70,7 @@ class App(widgets.App):
     def mainloop_hook(self, dt):
         if self.autoplay:
             self.next_step()
-        self.main_text.text = self.logic.get_match_state()
-        self.map.update()
+        self.update_widgets()
 
     def logic_debug(self, *a):
         self.logic.debug()

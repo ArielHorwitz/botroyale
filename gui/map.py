@@ -1,16 +1,16 @@
 from pathlib import Path
 import numpy as np
 from gui import kex
+from gui.tilemap import TileMap, TileInfo
 import gui.kex.widgets as widgets
 from api.logic import EventDeath
 from util.settings import Settings
 from util.hexagon import Hex
 
 
-BG_COLOR = Settings.get('map_bg_color', (0,0,0))
 DEFAULT_CELL_BG = Settings.get('map_default_cell_color', (0.25, 0.1, 0))
 WALL_COLOR = Settings.get('map_wall_color', (1,1,1))
-PIT_COLOR = Settings.get('map_pit_color', (0,0,0))
+PIT_COLOR = Settings.get('map_pit_color', (0.1,0.1,0.1))
 UNIT_COLORS = Settings.get('map_unit_colors', [
     (0.6, 0, 0.1),  # Red
     (0.9, 0.3, 0.4),  # Pink
@@ -41,62 +41,75 @@ DIST_COLORS = Settings.get('map_distance_colors', [
 
 
 class Map(widgets.AnchorLayout):
-    def __init__(self, api, app, **kwargs):
-        self.api = api
+    def __init__(self, app, api, **kwargs):
         super().__init__(**kwargs)
-        self.map_size = rows, cols = api.map_size
-        assert isinstance(rows, int)
-        assert isinstance(cols, int)
-        self.selected_tile = Hex(0, 0)
-        self.grid_cells = {}
-        frame = self.add(widgets.BoxLayout(orientation='vertical'))
-        self.status_bar = frame.add(widgets.Label())
-        self.status_bar.set_size(y=30)
-        self.map_grid = frame.add(widgets.BoxLayout(orientation='vertical'))
-        self.debug_mode = False
+        self.api = api
         self.unit_colors = [UNIT_COLORS[ci%len(UNIT_COLORS)] for ci in self.api.unit_colors]
-        self.make_map()
-        app.im.register('toggle_guimap_debug', key='^ m', callback=self.toggle_debug_mode)
+        self.real_center = Hex(0, 0)
+        self.tile_layer = self.add(TileMap(
+            get_center=self.get_real_center,
+            get_tile_info=self.get_tile_info,
+            ))
+        app.im.register('pan_up', key='w', callback=lambda *a: self.pan(y=2))
+        app.im.register('pan_down', key='s', callback=lambda *a: self.pan(y=-2))
+        app.im.register('pan_right', key='d', callback=lambda *a: self.pan(x=2))
+        app.im.register('pan_left', key='a', callback=lambda *a: self.pan(x=-2))
+        app.im.register('pan_up2', key='+ w', callback=lambda *a: self.pan(y=6))
+        app.im.register('pan_down2', key='+ s', callback=lambda *a: self.pan(y=-6))
+        app.im.register('pan_right2', key='+ d', callback=lambda *a: self.pan(x=6))
+        app.im.register('pan_left2', key='+ a', callback=lambda *a: self.pan(x=-6))
+        app.im.register('reset_map', key='home', callback=self.reset_view)
+        app.im.register('map_zoom_in', key='pageup', callback=self.zoom_in)
+        app.im.register('map_zoom_out', key='pagedown', callback=self.zoom_out)
 
-    def toggle_debug_mode(self, *a):
-        self.debug_mode = not self.debug_mode
+    def get_real_center(self):
+        return self.real_center
 
-    def select_cell(self, w, m, c, r):
-        if not w.collide_point(*m.pos) or m.button != 'left':
-            return
-        self.selected_tile = Hex(c, r)
+    def get_tile_info(self, hex):
+        has_unit = hex in self.api.positions
+        # BG color
+        if hex in self.api.pits:
+            bg_color = PIT_COLOR
+        elif hex in self.api.walls:
+            bg_color = WALL_COLOR
+        else:
+            bg_color = DEFAULT_CELL_BG
+        # BG text
+        if has_unit:
+            bg_text = ''
+        else:
+            bg_text = ', '.join(str(_) for _ in hex.xy)
+        bg_text = ''
+        # FG color
+        if has_unit:
+            unit_id = self.api.positions.index(hex)
+            fg_color = self.unit_colors[unit_id]
+            fg_text = f'{unit_id}'
+        else:
+            fg_color = 0, 0, 0, 0
+            fg_text = ''
+        return TileInfo(
+            bg_color=bg_color,
+            bg_text=bg_text,
+            fg_color=fg_color,
+            fg_text=fg_text,
+            )
 
-    def make_map(self):
-        rows, cols = self.map_size
-        self.map_grid.clear_widgets()
-        self.map_grid.make_bg(BG_COLOR)
-        self.grid_cells = {}
-        for r in range(rows):
-            row = self.map_grid.add(widgets.BoxLayout())
-            if r % 2:
-                offset = row.add(widgets.AnchorLayout())
-                offset.set_size(hx=0.5)
-            for c in range(cols):
-                cell_anchor = widgets.AnchorLayout()
-                cell_anchor.bind(on_touch_down=lambda w, m, c=c, r=r: self.select_cell(w, m, c, r))
-                cell_anchor.padding = 10, 0
-                cell = cell_anchor.add(widgets.Label())
-                cell.make_bg((1, 1, 1))
-                cell._bg.source = str(Path.cwd() / 'assets' / 'hex.png')
-                row.add(cell_anchor)
-                cell.make_bg(DEFAULT_CELL_BG)
-                self.grid_cells[(c,r)] = cell
-            if not r % 2:
-                offset = row.add(widgets.AnchorLayout())
-                offset.set_size(hx=0.5)
+    def pan(self, x=0, y=0):
+        self.real_center -= Hex(x, y)
+
+    def reset_view(self, *a):
+        self.real_center = Hex(0, 0)
+        self.tile_layer.adjust_zoom()
+
+    def zoom_in(self, *a):
+        self.tile_layer.adjust_zoom(1.25)
+
+    def zoom_out(self, *a):
+        self.tile_layer.adjust_zoom(0.8)
 
     def update(self):
-        self.clear_cells()
-        if not self.debug_mode:
-            self.update_walls()
-            self.update_pits()
-            self.update_positions()
-        self.handle_events()
+        self.tile_layer.update()
 
     def clear_cells(self):
         self.status_bar.text = f'{self.selected_tile}'
@@ -111,44 +124,6 @@ class Map(widgets.AnchorLayout):
                 text = f'{tile.x}, {tile.y}\nD:{dist}'
             cell.text = text
             cell.make_bg(color)
-
-    def handle_events(self):
-        for event in self.api.flush_events():
-            print(f'Handling event on turn #{self.api.turn_count}: {event}')
-            if isinstance(event, EventDeath):
-                c, r = self.api.positions[event.unit].xy
-                color = self.unit_colors[event.unit]
-                self.flash_cell(c, r, color)
-
-    def update_walls(self):
-        for i, pos in enumerate(self.api.walls):
-            x, y = pos.xy
-            if (x, y) not in self.grid_cells:
-                continue
-            self.grid_cells[(x,y)].make_bg(WALL_COLOR)
-
-    def update_pits(self):
-        for i, pos in enumerate(self.api.pits):
-            x, y = pos.xy
-            if (x, y) not in self.grid_cells:
-                continue
-            self.grid_cells[(x,y)].make_bg(PIT_COLOR)
-
-    def update_positions(self):
-        for i, pos in enumerate(self.api.positions):
-            if not self.api.alive_mask[i]:
-                continue
-            x, y = pos.xy
-            if (x, y) not in self.grid_cells:
-                continue
-            self.add_cell_label(x, y, f'{i}')
-            self.grid_cells[(x,y)].make_bg(self.unit_colors[i])
-
-    def add_cell_label(self, x, y, label):
-        ctext = self.grid_cells[(x,y)].text
-        if ctext != '':
-            label = f'{ctext}\n{label}'
-        self.grid_cells[(x,y)].text = label
 
     def flash_cell(self, c, r, color, remaining=10, alternate=True):
         new_bg = color if alternate else (0,0,0)
