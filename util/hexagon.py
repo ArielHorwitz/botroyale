@@ -1,4 +1,9 @@
+import math
 from collections import namedtuple, defaultdict
+
+
+SQRT3 = math.sqrt(3)
+WIDTH_HEIGHT_RATIO = SQRT3 / 2
 
 
 class Hexagon:
@@ -68,6 +73,12 @@ class Hexagon:
         col = q + (r + cls.OFFSET * (r & 1)) // 2
         row = r
         return col, row
+
+    def pixels(self, radius):
+        offset_r = (self.y % 2 == 1) / 2
+        x = radius * SQRT3 * (self.x + offset_r)
+        y = radius * 3/2 * self.y
+        return x, y
 
     # Representations
     @property
@@ -174,3 +185,7 @@ if __name__ == '__main__':
     print('=== Sets and containment')
     print(f'Set: {hex_set}')
     print(f'{tile1} in {hex_set} : {tile1 in hex_set}')
+    print('=== Pixel offset')
+    print(f'{tile2} pixels w/ 50 radius: {tile1.pixels(radius=50)}')
+    print(f'{tile1} pixels w/ 22 radius: {tile1.pixels(radius=22)}')
+    print(f'{tile4} pixels w/ 80 radius: {tile1.pixels(radius=80)}')
