@@ -23,6 +23,16 @@ class Hexagon:
             neighbor += delta
             yield neighbor
 
+    def ring(self, radius):
+        ring = []
+        dir = DIRECTIONS[4]
+        hex = list(self.straight_line(self+dir, max_distance=radius-1))[-1]
+        for i in range(6):
+            for _ in range(radius):
+                ring.append(hex)
+                hex = hex + DIRECTIONS[i]
+        return ring
+
     @property
     def neighbors(self):
         if self.__neighbors is None:
@@ -92,6 +102,7 @@ class Hexagon:
         return hash(self.__cube)
 
 
+# Do not change the order of Directions!
 DIRECTIONS = (
     Hexagon(+1, 0, -1),
     Hexagon(+1, -1, 0),

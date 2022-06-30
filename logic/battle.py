@@ -24,9 +24,11 @@ class Battle(BaseLogicAPI):
         self.num_of_bots = len(map.spawns)
         self.bots = make_bots(self.num_of_bots)
         # Map
+        self.center = Hex(map.axis_size//2, map.axis_size//2)
+        self.ring_radius = map.axis_size//2 + 1
         self.positions = map.spawns
         self.walls = map.walls
-        self.pits = map.pits
+        self.pits = map.pits | set(self.center.ring(self.ring_radius))
         # Metadata
         self.alive_mask = np.ones(self.num_of_bots, dtype=bool)
         self.turn_count = 0
@@ -54,15 +56,8 @@ class Battle(BaseLogicAPI):
         if not action.has_effect:
             self.round_remaining_turns.pop(0)
             return
-        last_alive = set(np.flatnonzero(self.alive_mask))
         debug(f'Applying bot #{bot_id} action: {action}')
         self._apply_action(bot_id, action)
-        self.death_events(last_alive)
-
-    def death_events(self, last_alive):
-        now_alive = set(np.flatnonzero(self.alive_mask))
-        for dead_unit in last_alive - now_alive:
-            self.add_event(EventDeath(dead_unit))
 
     def _next_round(self):
         self._next_round_order()
@@ -70,6 +65,9 @@ class Battle(BaseLogicAPI):
         self.ap[self.alive_mask] += 50
         self.ap[self.ap > 100] = 100
         self.round_count += 1
+        self.ring_radius -= 1
+        self.pits |= set(self.center.ring(self.ring_radius))
+        self._apply_mortality()
 
     def _next_round_order(self):
         bots_id = np.arange(self.num_of_bots)
@@ -156,6 +154,7 @@ class Battle(BaseLogicAPI):
         live_bots = np.flatnonzero(self.alive_mask)
         for bot_id in live_bots:
             if self.positions[bot_id] in self.pits:
+                self.add_event(EventDeath(bot_id))
                 self.alive_mask[bot_id] = False
                 if bot_id in self.round_remaining_turns:
                     self.round_remaining_turns.remove(bot_id)
