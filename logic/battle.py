@@ -40,9 +40,6 @@ class Battle(BaseLogicAPI):
         self.round_remaining_turns = []
         self.history = []
 
-    def next_turn(self):
-        self.next_step()
-
     def next_step(self):
         if self.game_over:
             return

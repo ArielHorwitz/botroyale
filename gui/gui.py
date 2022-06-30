@@ -28,7 +28,7 @@ class App(widgets.App):
         self.im = widgets.InputManager(app_control_defaults=True, logger=self.logger)
         self.make_widgets()
         self.im.register('toggle_autoplay', key='spacebar', callback=lambda *a: self.toggle_autoplay())
-        self.im.register('next_turn', key='t', callback=lambda *a: self.next_turn())
+        self.im.register('next_step', key='s', callback=lambda *a: self.next_step())
         self.hook_mainloop(FPS)
         print('GUI initialized.')
 
@@ -37,8 +37,8 @@ class App(widgets.App):
         controls = self.add(widgets.BoxLayout())
         controls.set_size(y=45)
         controls.add(widgets.Button(
-            text='Next turn ([i]t[/i])', markup=True,
-            on_release=self.next_turn,
+            text='Next step ([i]s[/i])', markup=True,
+            on_release=self.next_step,
         ))
         self.autoplay_widget = controls.add(widgets.ToggleButton(
             text='Autoplay ([i]spacebar[/i])', markup=True))
@@ -72,20 +72,20 @@ class App(widgets.App):
         self.autoplay = set_to
         print(f'Auto playing...' if self.autoplay else f'Pausing auto play...')
 
-    def next_turn(self, *args):
+    def next_step(self, *args):
         if not self.logic.game_over:
-            self.logic.next_turn()
+            self.logic.next_step()
 
     def play_all(self, *args):
         print('Playing battle to completion...')
         count = 0
         while not self.logic.game_over and count < STEP_CAP:
             count += 1
-            self.logic.next_turn()
+            self.logic.next_step()
 
     def mainloop_hook(self, dt):
         if self.autoplay:
-            self.next_turn()
+            self.next_step()
         self.main_text.text = self.logic.get_match_state()
         self.map.update()
 
