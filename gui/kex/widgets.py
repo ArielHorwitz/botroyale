@@ -336,6 +336,7 @@ class InputManager(Widget):
         self.__last_key_down_ping = ping()
         self.__last_key_code = key_code
         self.__last_keys_down = self._convert_keys(modifiers, key_name)
+        self.logger(f'Keys pressed: {self.__last_keys_down}')
         if self.__recording_press:
             stop_recording = self.__recording_press(self.__last_keys_down)
             if stop_recording is True:
