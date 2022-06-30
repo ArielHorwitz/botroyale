@@ -24,6 +24,12 @@ class Hexagon:
             yield neighbor
 
     def ring(self, radius):
+        if radius < 0:
+            raise ValueError(f'Radius must be non-negative, got: {radius}')
+        if radius == 0:
+            return self
+        if radius == 1:
+            return self.neighbors
         ring = []
         dir = DIRECTIONS[4]
         hex = list(self.straight_line(self+dir, max_distance=radius-1))[-1]

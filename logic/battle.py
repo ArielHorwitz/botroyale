@@ -55,6 +55,7 @@ class Battle(BaseLogicAPI):
         action = self._get_bot_action(bot_id)
         if not action.has_effect:
             self.round_remaining_turns.pop(0)
+            self.turn_count += 1
             return
         debug(f'Applying bot #{bot_id} action: {action}')
         self._apply_action(bot_id, action)
@@ -136,7 +137,6 @@ class Battle(BaseLogicAPI):
         return True
 
     def _apply_action(self, bot_id, action):
-        self.turn_count += 1
         assert action.has_effect
         if isinstance(action, Push):
             debug(f'{bot_id} APPLY PUSH: {action}')
