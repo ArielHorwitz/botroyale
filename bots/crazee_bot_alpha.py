@@ -48,6 +48,16 @@ class CrazeeBotAlpha(BaseBot):
         return action
 
     def pick_action(self, wi: world_info):
+        def select_action():
+            """True = Move, False = Push"""
+            if len(push_scores) == 0 and len(move_scores) > 0:
+                return True
+            if len(push_scores) > 0 and len(move_scores) == 0:
+                return False
+            if max(push_scores) >= max(move_scores):
+                return not self.ap >= Push.ap
+            return True
+
         def make_action(action_set, scores, is_move):
             selected_action_dest = list(action_set)[np.argmax(scores)]
             debug(f"Selected Action: {'Move' if is_move else 'Push'} {selected_action_dest} with Score {max(scores):.2f}")
@@ -60,19 +70,10 @@ class CrazeeBotAlpha(BaseBot):
               f"    Move> {[f'Score {score:.2f} : Dest {action}' for action, score in zip(legal_moves, move_scores)]}")
         if len(push_scores) == 0 and len(move_scores) == 0:
             return None
-        if len(push_scores) == 0 and len(move_scores) > 0:
-            action = make_action(legal_moves, move_scores, True)
-        elif len(push_scores) > 0 and len(move_scores) == 0:
-            action = make_action(legal_pushes, push_scores, False)
-        elif max(push_scores) >= max(move_scores):
-            action = make_action(legal_pushes, push_scores, False)
-        else:
-            action = make_action(legal_moves, move_scores, True)
-        return action
+        return make_action(legal_moves, move_scores, True) if select_action() \
+            else make_action(legal_pushes, push_scores, False)
 
     def get_legal_moves(self, wi: world_info, enemy_positions: set[Hexagon]):
-
-
         obstacles = wi.pits | wi.walls | enemy_positions
         legal_moves = set(self.pos.neighbors) - obstacles
         scores = []
