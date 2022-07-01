@@ -4,13 +4,15 @@ from api.actions import Move, Push
 
 
 world_info = namedtuple('WorldInfo', [
-    'positions',  # list of tile
+    'positions',  # list of tiles
     'walls',  # set of tiles
-    'pits', # set of tiles
+    'pits',  # set of tiles
+    'ring_radius',  # int
     'alive_mask',  # ndarray mask
     'turn_count',  # int
     'round_count',  # int
     'ap',  # ndarray
+    'round_ap_spent',  # ndarray
     # when round_priority is empty, round is over.
     'round_remaining_turns',  # list
     ])

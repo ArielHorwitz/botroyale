@@ -193,11 +193,13 @@ class Battle(BaseLogicAPI):
             positions=copy.copy(self.positions),
             walls=copy.copy(self.walls),
             pits=copy.copy(self.pits),
+            ring_radius=self.ring_radius,
             alive_mask=copy.deepcopy(self.alive_mask),
             turn_count=self.turn_count,
             round_count=self.round_count,
             ap=copy.deepcopy(self.ap),
-            round_remaining_turns=copy.deepcopy(self.round_remaining_turns)
+            round_ap_spent=copy.deepcopy(self.round_ap_spent),
+            round_remaining_turns=copy.deepcopy(self.round_remaining_turns),
             )
 
     def debug(self):

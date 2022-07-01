@@ -1,9 +1,9 @@
 import random
 import numpy as np
 
-from api.actions import Move, Push
+from api.actions import Move, Push, Idle
 from bots import BaseBot
-from util.hexagon import Hexagon
+from util.hexagon import Hexagon, Hex
 from api.bots import world_info
 from util.settings import Settings
 from time import perf_counter
@@ -26,23 +26,23 @@ class CrazeeBotAlpha(BaseBot):
         print(f'Bot #{id} is {self.NAME}')
         self.enemy_positions: set = set()
         self.pos = None
+        self.ap = None
+        self.center_tile = Hex(7, 7)
 
     def get_action(self, wi: world_info):
         t1_start = perf_counter()
         self.pos: Hexagon = wi.positions[self.id]
+        self.ap = wi.ap[self.id]
         self.enemy_positions: set = set(wi.positions) - {self.pos}
         debug(f"-" * 50,
               f"Crazee!!!!!!!!!!! id: {self.id}",
               f"-" * 50,
               )
-        # debug(f"-" * 50,
-        #      f"{len(wi.pits)} pits",
-        #      f"{len(wi.walls)} walls",
-        #      f"-" * 50,
-        #      )
         action = self.pick_action(wi)
         if not action:
             debug(f"NO LEGAL MOVES FOR ME TO DO, Bot {self.id}")
+            # action = Idle()
+            action = Move(Hex(100, 100))
         debug(f"{self.NAME}-{self.id} took {(perf_counter()-t1_start) * 1000:.2f}ms")
         debug(f"-" * 50)
         return action
@@ -60,8 +60,10 @@ class CrazeeBotAlpha(BaseBot):
               f"    Move> {[f'Score {score:.2f} : Dest {action}' for action, score in zip(legal_moves, move_scores)]}")
         if len(push_scores) == 0 and len(move_scores) == 0:
             return None
-        if len(push_scores) == 0:
+        if len(push_scores) == 0 and len(move_scores) > 0:
             action = make_action(legal_moves, move_scores, True)
+        elif len(push_scores) > 0 and len(move_scores) == 0:
+            action = make_action(legal_pushes, push_scores, False)
         elif max(push_scores) >= max(move_scores):
             action = make_action(legal_pushes, push_scores, False)
         else:
@@ -69,12 +71,12 @@ class CrazeeBotAlpha(BaseBot):
         return action
 
     def get_legal_moves(self, wi: world_info, enemy_positions: set[Hexagon]):
+
+
         obstacles = wi.pits | wi.walls | enemy_positions
         legal_moves = set(self.pos.neighbors) - obstacles
         scores = []
         for move in legal_moves:
-            # distances = [move.get_distance(enemy) for enemy in enemy_positions]
-            # scores.append(sum(distances) + min(distances))
             scores.append(-self.gen_neighbor_heat_value(wi, move))
         return legal_moves, scores
 
@@ -92,13 +94,18 @@ class CrazeeBotAlpha(BaseBot):
         return legal_options, scores
 
     def gen_neighbor_heat_value(self, wi: world_info, neighbor: Hexagon):
+        # debug(f'ring radius {wi.ring_radius}, edge {[str(e) for e in edge_of_map]}')
+        edge_of_map: set[Hexagon] = set(self.center_tile.ring(wi.ring_radius - 1))
         tile_view_distance = 5
         terrain_heat = 0
         enemy_heat = 0
+        edge_heat = 100 if neighbor in edge_of_map else 0
+
         # terrain_heat = (dist from pits - dist from walls)
         d_pits = [neighbor.get_distance(pit) for pit in wi.pits if neighbor.get_distance(pit) < tile_view_distance]
         d_walls = [neighbor.get_distance(wall) for wall in wi.walls if neighbor.get_distance(wall) < tile_view_distance]
         d_enemys = [neighbor.get_distance(enemy) for enemy in self.enemy_positions if neighbor.get_distance(enemy) < tile_view_distance]
+
         if len(d_pits) > 0:
             terrain_heat += (sum(d_pits) / len(d_pits))
         if len(d_walls) > 0:
@@ -106,6 +113,7 @@ class CrazeeBotAlpha(BaseBot):
         if len(d_enemys) > 0:
             enemy_heat += (sum(d_enemys) / len(d_enemys))
         heat_value = terrain_heat - enemy_heat
+        heat_value += edge_heat
         return heat_value
 
 
