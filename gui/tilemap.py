@@ -12,7 +12,7 @@ from util.hexagon import Hex, WIDTH_HEIGHT_RATIO
 
 MAX_MAP_TILES = Settings.get('map_max_draw_tiles', 2500)
 TILE_RADIUS = Settings.get('map_tile_radius', 50)
-MAX_TILE_RADIUS = Settings.get('map_max_tile_radius', 1000)
+MAX_TILE_RADIUS = Settings.get('map_max_tile_radius', 200)
 TILE_PADDING = Settings.get('map_tile_padding', 15)
 UNIT_SIZE = Settings.get('map_unit_size', 0.65)
 FONT_SIZE = Settings.get('map_font_size', 12)
@@ -72,7 +72,13 @@ class TileMap(widgets.RelativeLayout):
         for hex in currently_visible:
             tile_pos = hex.pixels(tile_radius) + center_offset
             self.tiles[hex].reset(tile_pos, tile_size)
-        print(f'Recreated tile map with {len(currently_visible)} tiles.')
+        print(f'Recreated tile map with {cols+1} × {rows} = {len(currently_visible)} tiles.')
+
+    @property
+    def axis_sizes(self):
+        cols, rows = self.__get_axis_sizes(self.tile_radius)
+        # We add one more column which is added by _create_grid to account for offest
+        return cols+1, rows
 
     def __get_axis_sizes(self, tile_radius):
         w, h = self.__get_tile_size(tile_radius)
