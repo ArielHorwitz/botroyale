@@ -18,24 +18,24 @@ class Battle(BaseLogicAPI):
     def __init__(self):
         super().__init__()
         map = maps.get_map()
-        assert len(map.pits) > 0
-        assert len(map.walls) > 0
         # Bots
         self.num_of_bots = len(map.spawns)
         self.bots = make_bots(self.num_of_bots)
         # Map
-        self.center = Hex(map.axis_size//2, map.axis_size//2)
-        self.ring_radius = map.axis_size//2 + 1
+        self.center = Hex(0, 0)
+        # Ring contracts before the first round, so we set the ring even
+        # further out than one tile past the map radius.
+        self.ring_radius = map.radius + 2
         self.positions = map.spawns
         self.walls = map.walls
-        self.pits = map.pits | set(self.center.ring(self.ring_radius))
+        # Add the first ring now (the one added before the first round)
+        self.pits = map.pits | set(self.center.ring(map.radius+1))
         # Metadata
         self.alive_mask = np.ones(self.num_of_bots, dtype=bool)
         self.turn_count = 0
         self.round_count = 0
         self.ap = np.zeros(self.num_of_bots)
         self.round_ap_spent = np.zeros(self.num_of_bots)
-        self.map_size = map.axis_size, map.axis_size
         # when round_priority is empty, round is over.
         self.round_remaining_turns = []
         self.history = []
