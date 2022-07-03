@@ -6,7 +6,7 @@ from logic.battle import Battle
 from gui.gui import App
 
 
-LOGIC_API = BaseLogicAPI if Settings.get('use_base_logic_api', False) else Battle
+LOGIC_API = BaseLogicAPI if Settings.get('|api.use_base_logic_api', False) else Battle
 
 
 def run():

@@ -7,11 +7,11 @@ from gui.map import Map
 
 
 # User-configurable settings
-FPS = Settings.get('fps', 5)
-WINDOW_SIZE = Settings.get('window_size', [1280, 720])
-START_MAXIMIZED = Settings.get('window_maximize', False)
-STEP_CAP = Settings.get('gui_step_cap', 1_000_000)
-LOG_HOTKEYS = Settings.get('gui_log_hotkeys', False)
+FPS = Settings.get('gui._fps', 60)
+WINDOW_SIZE = Settings.get('gui._window_size', [1280, 720])
+START_MAXIMIZED = Settings.get('gui._window_maximize', False)
+STEP_CAP = Settings.get('gui.|step_cap', 1_000_000)
+LOG_HOTKEYS = Settings.get('gui.log_hotkeys', False)
 
 
 class App(widgets.App):

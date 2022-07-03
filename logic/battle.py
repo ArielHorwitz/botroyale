@@ -9,8 +9,8 @@ from api.actions import Move, Push, IllegalAction, Idle
 from util.hexagon import Hex
 
 
-MAX_ROUNDS = Settings.get('round_cap', 300)
-DEBUG = Settings.get('battle_debug', True)
+MAX_ROUNDS = Settings.get('logic.round_cap', 300)
+DEBUG = Settings.get('logic.battle_debug', True)
 RNG = np.random.default_rng()
 
 

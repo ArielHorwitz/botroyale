@@ -3,7 +3,7 @@ import numpy as np
 from util.settings import Settings
 
 
-GUI_DEBUG = Settings.get('gui_debug', False)
+GUI_DEBUG = Settings.get('gui.debug', False)
 FONT = str(Path.cwd() / 'assets' / 'FiraCode-SemiBold.ttf')
 
 

@@ -22,10 +22,10 @@ class BaseLogicAPI:
     positions = [Hex(_, 0) for _ in range(UNIT_COUNT)]
     walls = {Hex(0, 1)}
     pits = {Hex(1, 1)}
-    DEFAULT_CELL_BG = Settings.get('default_tile_color', (0.25, 0.1, 0))
-    WALL_COLOR = Settings.get('wall_color', (1, 1, 1))
-    PIT_COLOR = Settings.get('pit_color', (0.05, 0.05, 0.05))
-    UNIT_COLORS = Settings.get('unit_colors', [
+    DEFAULT_CELL_BG = Settings.get('tilemap.|colors._default_tile', (0.25, 0.1, 0))
+    WALL_COLOR = Settings.get('tilemap.|colors._walls', (1, 1, 1))
+    PIT_COLOR = Settings.get('tilemap.|colors._pits', (0.05, 0.05, 0.05))
+    UNIT_COLORS = Settings.get('tilemap.|colors.|units', [
         (0.6, 0, 0.1),  # Red
         (0.9, 0.3, 0.4),  # Pink
         (0.8, 0.7, 0.1),  # Yellow
@@ -39,7 +39,7 @@ class BaseLogicAPI:
         (0.4, 0, 0.7),  # Violet
         (0.7, 0, 0.5),  # Magenta
     ])
-    RAINBOW_COLORS = Settings.get('rainbow_colors', [
+    RAINBOW_COLORS = Settings.get('tilemap.|colors.||rainbow', [
         (0, 0, 0),
         (1, 0, 0),
         (1, 0.5, 0),

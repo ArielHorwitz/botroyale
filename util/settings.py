@@ -33,4 +33,5 @@ class Settings:
         for name in list(all_settings.keys()):
             if name not in cls.default_settings:
                 del all_settings[name]
-        file_dump(SETTINGS_FILE, json.dumps(all_settings, indent=4))
+        sorted_settings = {k: all_settings[k] for k in sorted(all_settings.keys())}
+        file_dump(SETTINGS_FILE, json.dumps(sorted_settings, indent=4))

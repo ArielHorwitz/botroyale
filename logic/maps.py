@@ -8,7 +8,7 @@ from util.hexagon import Hex
 
 RNG = np.random.default_rng()
 MapGen = namedtuple('Map', ['radius', 'spawns', 'pits', 'walls'])
-SELECTED_MAP_NAME = Settings.get('selected_map', 'basic')
+SELECTED_MAP_NAME = Settings.get('map.selected_map', 'basic')
 
 
 class Map:

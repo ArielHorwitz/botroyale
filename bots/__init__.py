@@ -25,7 +25,7 @@ def bot_importer():
     return bots
 
 
-BOT_REQ = Settings.get("bot_names", [])
+BOT_REQ = Settings.get("bots.bot_names", ['basebot'])
 BOTS = bot_importer()
 
 
