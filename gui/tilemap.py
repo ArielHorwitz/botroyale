@@ -3,7 +3,7 @@ import itertools
 from pathlib import Path
 from collections import namedtuple
 import numpy as np
-from gui import kex, center_sprite, FONT
+from gui import kex, center_sprite, FONT, debug
 import gui.kex.widgets as widgets
 from api.logic import EventDeath
 from util.settings import Settings
@@ -42,7 +42,7 @@ class TileMap(widgets.RelativeLayout):
     def _create_grid(self):
         requested_tile_radius = self.tile_radius
         minimum_radius = self.__get_minimum_radius(self.size)
-        tile_radius = max(requested_tile_radius, minimum_radius)
+        tile_radius = tile_radius_nopadding = max(requested_tile_radius, minimum_radius)
 
         # We can check if the tiles need to change at all
         new_grid = tile_radius, *self.size
@@ -72,7 +72,7 @@ class TileMap(widgets.RelativeLayout):
         for hex in currently_visible:
             tile_pos = hex.pixels(tile_radius) + center_offset
             self.tiles[hex].reset(tile_pos, tile_size)
-        print(f'Recreated tile map with {cols+1} × {rows} = {len(currently_visible)} tiles.')
+        debug(f'Recreated tile map with {cols+1} × {rows} = {len(currently_visible)} tiles of {tile_radius_nopadding:.1f} radius + {TILE_PADDING}% padding.')
 
     @property
     def axis_sizes(self):
