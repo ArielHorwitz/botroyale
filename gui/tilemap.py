@@ -1,7 +1,6 @@
 import math
 import itertools
 from pathlib import Path
-from collections import namedtuple
 import numpy as np
 from gui import kex, center_sprite, FONT, debug
 import gui.kex.widgets as widgets
@@ -18,9 +17,6 @@ UNIT_SIZE = Settings.get('map_unit_size', 0.65)
 FONT_SIZE = Settings.get('map_font_size', 12)
 HEX_PNG = str(Path.cwd() / 'assets' / 'hex.png')
 UNIT_PNG = str(Path.cwd() / 'assets' / 'unit.png')
-
-
-TileInfo = namedtuple('TileInfo', ['bg_color', 'bg_text', 'fg_color', 'fg_text'])
 
 
 class TileMap(widgets.RelativeLayout):

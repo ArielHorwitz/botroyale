@@ -21,6 +21,7 @@ class Battle(BaseLogicAPI):
         # Bots
         self.num_of_bots = len(map.spawns)
         self.bots = make_bots(self.num_of_bots)
+        self.unit_colors = [self.get_color(bot.COLOR_INDEX) for bot in self.bots]
         # Map
         self.center = Hex(0, 0)
         # Ring contracts before the first round, so we set the ring even
@@ -198,7 +199,7 @@ class Battle(BaseLogicAPI):
             )
 
     def debug(self):
-        pass
+        self.debug_mode = not self.debug_mode
 
     @staticmethod
     def _calc_ap(pos, target):

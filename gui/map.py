@@ -2,54 +2,20 @@ from pathlib import Path
 import math
 import numpy as np
 from gui import kex
-from gui.tilemap import TileMap, TileInfo
+from gui.tilemap import TileMap
 import gui.kex.widgets as widgets
 from api.logic import EventDeath
-from util.settings import Settings
 from util.hexagon import Hex
-
-
-DEFAULT_CELL_BG = Settings.get('map_default_cell_color', (0.25, 0.1, 0))
-WALL_COLOR = Settings.get('map_wall_color', (1,1,1))
-PIT_COLOR = Settings.get('map_pit_color', (0.1,0.1,0.1))
-UNIT_COLORS = Settings.get('map_unit_colors', [
-    (0.6, 0, 0.1),  # Red
-    (0.9, 0.3, 0.4),  # Pink
-    (0.8, 0.7, 0.1),  # Yellow
-    (0.7, 0.4, 0),  # Orange
-    (0.1, 0.4, 0),  # Green
-    (0.4, 0.7, 0.1),  # Lime
-    (0.1, 0.7, 0.7),  # Teal
-    (0.1, 0.4, 0.9),  # Blue
-    (0, 0.1, 0.5),  # Navy
-    (0.7, 0.1, 0.9),  # Purple
-    (0.4, 0, 0.7),  # Violet
-    (0.7, 0, 0.5),  # Magenta
-])
-DIST_COLORS = Settings.get('map_distance_colors', [
-    (0, 0, 0),
-    (1, 0, 0),
-    (1, 0.5, 0),
-    (0.5, 0.5, 0),
-    (0.25, 0.75, 0),
-    (0, 0.5, 0.5),
-    (0, 0.5, 1),
-    (0, 0, 1),
-    (1, 0, 1),
-    (1, 0, 0.5),
-    (0, 0, 0),
-])
 
 
 class Map(widgets.AnchorLayout):
     def __init__(self, app, api, **kwargs):
         super().__init__(**kwargs)
         self.api = api
-        self.unit_colors = [UNIT_COLORS[ci%len(UNIT_COLORS)] for ci in self.api.unit_colors]
         self.real_center = Hex(0, 0)
         self.tile_layer = self.add(TileMap(
             get_center=self.get_real_center,
-            get_tile_info=self.get_tile_info,
+            get_tile_info=api.get_gui_tile_info,
             ))
         self.bind(on_touch_down=self.scroll_wheel)
         app.im.register('pan_up', key='w', callback=lambda *a: self.pan(y=1))
@@ -75,35 +41,6 @@ class Map(widgets.AnchorLayout):
 
     def get_real_center(self):
         return self.real_center
-
-    def get_tile_info(self, hex):
-        has_unit = hex in self.api.positions
-        # BG color
-        if hex in self.api.pits:
-            bg_color = PIT_COLOR
-        elif hex in self.api.walls:
-            bg_color = WALL_COLOR
-        else:
-            bg_color = DEFAULT_CELL_BG
-        # BG text
-        if has_unit:
-            bg_text = ''
-        else:
-            bg_text = ', '.join(str(_) for _ in hex.xy)
-        # FG color
-        if has_unit:
-            unit_id = self.api.positions.index(hex)
-            fg_color = self.unit_colors[unit_id]
-            fg_text = f'{unit_id}'
-        else:
-            fg_color = None
-            fg_text = ''
-        return TileInfo(
-            bg_color=bg_color,
-            bg_text=bg_text,
-            fg_color=fg_color,
-            fg_text=fg_text,
-            )
 
     def pan(self, x=0, y=0, zoom_scale=False):
         if zoom_scale:
