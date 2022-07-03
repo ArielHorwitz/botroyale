@@ -54,10 +54,10 @@ class Map(widgets.AnchorLayout):
         app.im.register('pan_down', key='s', callback=lambda *a: self.pan(y=-2))
         app.im.register('pan_right', key='d', callback=lambda *a: self.pan(x=2))
         app.im.register('pan_left', key='a', callback=lambda *a: self.pan(x=-2))
-        app.im.register('pan_up2', key='+ w', callback=lambda *a: self.pan(y=6))
-        app.im.register('pan_down2', key='+ s', callback=lambda *a: self.pan(y=-6))
-        app.im.register('pan_right2', key='+ d', callback=lambda *a: self.pan(x=6))
-        app.im.register('pan_left2', key='+ a', callback=lambda *a: self.pan(x=-6))
+        app.im.register('pan_up2', key='+ w', callback=lambda *a: self.pan(y=10))
+        app.im.register('pan_down2', key='+ s', callback=lambda *a: self.pan(y=-10))
+        app.im.register('pan_right2', key='+ d', callback=lambda *a: self.pan(x=10))
+        app.im.register('pan_left2', key='+ a', callback=lambda *a: self.pan(x=-10))
         app.im.register('reset_map', key='home', callback=self.reset_view)
         app.im.register('map_zoom_in', key='pageup', callback=self.zoom_in)
         app.im.register('map_zoom_out', key='pagedown', callback=self.zoom_out)
@@ -79,14 +79,13 @@ class Map(widgets.AnchorLayout):
             bg_text = ''
         else:
             bg_text = ', '.join(str(_) for _ in hex.xy)
-        bg_text = ''
         # FG color
         if has_unit:
             unit_id = self.api.positions.index(hex)
             fg_color = self.unit_colors[unit_id]
             fg_text = f'{unit_id}'
         else:
-            fg_color = 0, 0, 0, 0
+            fg_color = None
             fg_text = ''
         return TileInfo(
             bg_color=bg_color,
@@ -103,10 +102,10 @@ class Map(widgets.AnchorLayout):
         self.tile_layer.adjust_zoom()
 
     def zoom_in(self, *a):
-        self.tile_layer.adjust_zoom(1.25)
+        self.tile_layer.adjust_zoom(3/2)
 
     def zoom_out(self, *a):
-        self.tile_layer.adjust_zoom(0.8)
+        self.tile_layer.adjust_zoom(2/3)
 
     def update(self):
         self.tile_layer.update()

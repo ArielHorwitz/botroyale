@@ -1098,9 +1098,7 @@ class ColorPick(GridLayout):
         self.callback(self.__color)
 
 
-def text_texture(text, font_size=16):
-    label = CoreLabel(text=text, font_size=font_size)
+def text_texture(text, **kwargs):
+    label = CoreLabel(text=text, **kwargs)
     label.refresh()
-    texture = label.texture
-    texture_size = texture.size
-    return texture
+    return label.texture
