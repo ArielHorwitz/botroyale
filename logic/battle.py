@@ -32,6 +32,7 @@ class Battle(BaseLogicAPI):
         self.pits = map.pits | set(self.center.ring(map.radius+1))
         # Metadata
         self.alive_mask = np.ones(self.num_of_bots, dtype=bool)
+        self.step_count = 0
         self.turn_count = 0
         self.round_count = 0
         self.ap = np.zeros(self.num_of_bots)
@@ -43,6 +44,7 @@ class Battle(BaseLogicAPI):
     def next_step(self):
         if self.game_over:
             return
+        self.step_count += 1
         if len(self.round_remaining_turns) == 0:
             self._next_round()
             return
@@ -163,20 +165,42 @@ class Battle(BaseLogicAPI):
     def get_map_state(self):
         return self.get_match_state()
 
+    @property
+    def casualties(self):
+        return np.arange(self.num_of_bots)[~self.alive_mask]
+
+    @property
+    def round_done_turns(self):
+        return [bid for bid in range(self.num_of_bots) if (bid not in self.casualties and bid not in self.round_remaining_turns)]
+
     def get_match_state(self):
-        units = []
-        for i in range(self.num_of_bots):
-            ap = self.ap[i]
-            pos = self.positions[i]
-            units.append(f'Unit #{i} {ap}AP {pos}')
-        units = '\n'.join(units)
-        casualties = np.arange(self.num_of_bots)[~self.alive_mask]
+        def get_bot_string(bot_id):
+            bot = self.bots[bot_id]
+            ap = round(self.ap[bot_id])
+            pos = self.positions[bot_id]
+            name_label = f'#{bot_id:<2} {bot.NAME[:15]:<15}'
+            bot_str = f'{name_label} {ap:>3} AP {pos}'
+            if bot_id in self.casualties:
+                bot_str = f'[s]{bot_str}[/s]'
+            return bot_str
+        unit_strs = []
+        unit_strs.extend(get_bot_string(bot_id) for bot_id in self.round_remaining_turns)
+        unit_strs.append('-'*10)
+        unit_strs.extend(get_bot_string(bot_id) for bot_id in self.round_done_turns)
+        unit_strs.append('='*10)
+        unit_strs.extend(get_bot_string(bot_id) for bot_id in self.casualties)
+        unit_strs = '\n'.join(unit_strs)
+        if self.round_remaining_turns:
+            bot_id = self.round_remaining_turns[0]
+            bot = self.bots[bot_id]
+            turn_str = f'#{bot_id:<2} {bot.NAME}\'s turn'
+        else:
+            turn_str = f'starting new round'
         state_str = '\n'.join([
-            f'Round #{self.round_count}',
-            f'Turn #{self.turn_count}',
-            f'Turn order: {self.round_remaining_turns}',
-            f'Casualties: {casualties}',
-            f'\n{units}',
+            f'Round: #{self.round_count:<3} Turn: #{self.turn_count:<4} Step: #{self.step_count:<5}',
+            f'Currently:  [u]{turn_str}[/u]',
+            '',
+            f'{unit_strs}',
         ])
         if self.game_over:
             winner_str = ''
