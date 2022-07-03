@@ -10,7 +10,6 @@ from util.hexagon import Hex
 
 
 MAX_ROUNDS = Settings.get('logic.round_cap', 300)
-DEBUG = Settings.get('logic.battle_debug', True)
 RNG = np.random.default_rng()
 
 
@@ -48,14 +47,15 @@ class Battle(BaseLogicAPI):
             self._next_round()
             return
         bot_id = self.round_remaining_turns[0]
-        debug(f'Round/Turn: {self.round_count} / {self.turn_count}')
-        debug(f'Getting action from bot #{bot_id}')
+        self.logger('='*50)
+        self.logger(f'R: {self.round_count} T: {self.turn_count} S: {self.step_count} | #{bot_id:<2} {self.bots[bot_id].NAME}')
+        self.logger('='*50)
         action = self._get_bot_action(bot_id)
         if not action.has_effect:
             self.round_remaining_turns.pop(0)
             self.turn_count += 1
             return
-        debug(f'Applying bot #{bot_id} action: {action}')
+        self.logger(f'Applying bot #{bot_id} action: {action}')
         self._apply_action(bot_id, action)
 
     def _next_round(self):
@@ -85,7 +85,7 @@ class Battle(BaseLogicAPI):
 
     def _check_legal_action(self, bot_id, action):
         if not self.check_ap(bot_id, action.ap):
-            debug(f'Unit #{bot_id} missing AP: {action}')
+            self.logger(f'Unit #{bot_id} missing AP: {action}')
             return False
         if isinstance(action, Push):
             return self._check_legal_push(bot_id, action.target)
@@ -100,15 +100,15 @@ class Battle(BaseLogicAPI):
         # check if target is a neighbor
         self_position = self.positions[bot_id]
         if not self_position.get_distance(target_tile) == 1:
-            debug(f'Illegal move by Unit #{bot_id}: not neighbor {self_position} -> {target_tile}')
+            self.logger(f'Illegal move by Unit #{bot_id}: not neighbor {self_position} -> {target_tile}')
             return False
         # check if moving into a wall
         if target_tile in self.walls:
-            debug(f'Illegal move by Unit #{bot_id}: is wall {self_position} -> {target_tile}')
+            self.logger(f'Illegal move by Unit #{bot_id}: is wall {self_position} -> {target_tile}')
             return False
         # check if moving on top of another bot
         if target_tile in self.positions:
-            debug(f'Illegal move by Unit #{bot_id}: is unit {self_position} -> {target_tile}')
+            self.logger(f'Illegal move by Unit #{bot_id}: is unit {self_position} -> {target_tile}')
             return False
         return True
 
@@ -116,33 +116,33 @@ class Battle(BaseLogicAPI):
         # check if target is a neighbor
         self_position = self.positions[bot_id]
         if not self_position.get_distance(target_tile) == 1:
-            debug(f'Illegal push by Unit #{bot_id}: not neighbor {self_position} -> {target_tile}')
+            self.logger(f'Illegal push by Unit #{bot_id}: not neighbor {self_position} -> {target_tile}')
             return False
         # check if actually pushing a bot
         if not (target_tile in self.positions):
-            debug(f'Illegal push by Unit #{bot_id}: no unit {self_position} -> {target_tile}')
+            self.logger(f'Illegal push by Unit #{bot_id}: no unit {self_position} -> {target_tile}')
             return False
         # check if pushing to a wall
         self_pos = self.positions[bot_id]
         push_end = next(self_pos.straight_line(target_tile))
         if push_end in self.walls:
-            debug(f'Illegal move by Unit #{bot_id}: against wall {self_position} -> {target_tile}')
+            self.logger(f'Illegal move by Unit #{bot_id}: against wall {self_position} -> {target_tile}')
             return False
         # check if pushing on top of another bot
         if push_end in self.positions:
-            debug(f'Illegal move by Unit #{bot_id}: against unit {self_position} -> {target_tile}')
+            self.logger(f'Illegal move by Unit #{bot_id}: against unit {self_position} -> {target_tile}')
             return False
         return True
 
     def _apply_action(self, bot_id, action):
         assert action.has_effect
         if isinstance(action, Push):
-            debug(f'{bot_id} APPLY PUSH: {action}')
+            self.logger(f'{bot_id} APPLY PUSH: {action}')
             opp_id = self.positions.index(action.target)
             self_pos = self.positions[bot_id]
             self.positions[opp_id] = next(self_pos.straight_line(action.target))
         elif isinstance(action, Move):
-            debug(f'{bot_id} APPLY MOVE: {action}')
+            self.logger(f'{bot_id} APPLY MOVE: {action}')
             self.positions[bot_id] = action.target
         self._apply_mortality()
         self.ap[bot_id] -= action.ap
@@ -210,8 +210,3 @@ class Battle(BaseLogicAPI):
         cond1 = self.round_count > MAX_ROUNDS
         cond2 = self.alive_mask.sum() <= 1
         return cond1 or cond2
-
-
-def debug(m):
-    if DEBUG:
-        print(m)

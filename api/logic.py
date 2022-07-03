@@ -1,10 +1,14 @@
 from collections import deque, namedtuple
 import numpy as np
+from util import ping, pong
 from util.settings import Settings
 from util.hexagon import Hex
 
 
 TileGUI = namedtuple('TileGUI', ['bg_color', 'bg_text', 'fg_color', 'fg_text'])
+STEP_RATE = Settings.get('logic._step_rate', 20)
+STEP_INTERVAL_MS = 1000 / STEP_RATE
+LOGIC_DEBUG = Settings.get('logic.battle_debug', True)
 
 RNG = np.random.default_rng()
 MAX_STEPS = 1000
@@ -17,7 +21,7 @@ EVENT_TYPES = (EventDeath, )
 
 class BaseLogicAPI:
     debug_mode = False
-    turn_count = 0
+    step_count = 0
     alive_mask = np.ones(UNIT_COUNT, dtype=bool)
     positions = [Hex(_, 0) for _ in range(UNIT_COUNT)]
     walls = {Hex(0, 1)}
@@ -53,6 +57,8 @@ class BaseLogicAPI:
     ])
 
     def __init__(self):
+        self.autoplay = False
+        self.__last_step = ping()
         self.__event_queue = deque()
         self.unit_colors = [self.get_color(_) for _ in range(UNIT_COUNT)]
 
@@ -67,19 +73,30 @@ class BaseLogicAPI:
         self.__event_queue = deque()
         return r
 
+    def update(self):
+        if self.game_over:
+            self.autoplay = False
+        if not self.autoplay:
+            return
+        time_delta = pong(self.__last_step)
+        if time_delta >= STEP_INTERVAL_MS:
+            self.next_step()
+            leftover = time_delta - STEP_INTERVAL_MS
+            self.__last_step = ping() - leftover
+
     def next_step(self):
         """This method is called when a single step (smallest unit of time) is to be played."""
-        self.turn_count += 1
+        self.step_count += 1
 
     @property
     def game_over(self):
-        """This property returns a boolean if there are any more turns to play."""
-        return self.turn_count >= MAX_STEPS
+        return self.step_count >= MAX_STEPS
 
     def get_match_state(self):
         """This method returns an arbritrary string to be displayed in the GUI."""
+        turn = f'Step: {self.step_count} {self.autoplay}'
         game_over = 'GAME OVER' if self.game_over else ''
-        return f'Turn: {self.turn_count}\n{game_over}'
+        return '\n'.join((turn, game_over))
 
     def debug(self):
         print(f'Toggling logic debug mode.')
@@ -117,3 +134,38 @@ class BaseLogicAPI:
 
     def get_color(self, index):
         return self.UNIT_COLORS[index % len(self.UNIT_COLORS)]
+
+    def get_control_buttons(self):
+        return (
+            ('Logic debug', self.debug),
+            ('Play all', self.play_all),
+            ('Next step ([i]n[/i])', self.next_step),
+            ('Autoplay ([i]spacebar[/i])', self.toggle_autoplay),
+        )
+
+    def get_hotekys(self):
+        return (
+            ('autoplay', 'spacebar', self.toggle_autoplay),
+            ('next_step', 'n', self.next_step),
+        )
+
+    def play_all(self, *args):
+        print('Playing battle to completion...')
+        count = 0
+        while not self.game_over:
+            count += 1
+            self.next_step()
+
+    def toggle_autoplay(self, set_to=None):
+        if self.game_over:
+            return
+        if set_to is None:
+            set_to = not self.autoplay
+        self.autoplay = set_to
+        self.__last_step = ping()
+        self.logger(f'Auto playing...' if self.autoplay else f'Paused autoplay...')
+
+    @staticmethod
+    def logger(m):
+        if LOGIC_DEBUG:
+            print(m)
