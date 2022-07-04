@@ -14,18 +14,25 @@ def bot_importer():
     """
     bots = {}
     package_dir = Path(__file__).resolve().parent
+    print('Available bots:')
     for (_, module_name, _) in iter_modules([str(package_dir)]):
         module = import_module(f"{__name__}.{module_name}")
-        print(f'module: {module}, module_name: {module_name}')
         if hasattr(module, "BOT"):
-            bot = getattr(module, "BOT")
-            if issubclass(bot, BaseBot):
-                assert bot.NAME not in bots
-                bots[bot.NAME] = bot
+            module_bots = [getattr(module, "BOT")]
+        elif hasattr(module, "BOTS"):
+            module_bots = getattr(module, "BOTS")
+        else:
+            continue
+        for bot in module_bots:
+            assert issubclass(bot, BaseBot)
+            if bot.NAME in bots:
+                raise KeyError(f'Bot name: "{bot.NAME}" (from module: {module_name}) already in use.')
+            bots[bot.NAME] = bot
+            print(f'- {bot.NAME} (from module: {module_name})')
     return bots
 
 
-BOT_REQ = Settings.get("bot_names", [])
+BOT_REQ = Settings.get("bots.bot_names", ['basebot'])
 BOTS = bot_importer()
 
 
@@ -38,7 +45,12 @@ def make_bots(num_of_bots: int) -> list[BaseBot]:
     if len(BOTS) == 0:
         game_classes = [BaseBot] * num_of_bots
     else:
+        print('Requested bots:')
+        print('\n'.join(f'#{i:<2} {r}' for i, r in enumerate(BOT_REQ[:num_of_bots])))
         game_classes = [BOTS[req] for req in BOT_REQ if req in BOTS]
-        game_classes.extend(random.choices(list(BOTS.values()), k=num_of_bots - len(game_classes)))
+        non_testing_bots = [bot for bot in BOTS.values() if not bot.TESTING_ONLY]
+        game_classes.extend(random.choices(non_testing_bots, k=num_of_bots - len(game_classes)))
+    print('Selected bots:')
+    print('\n'.join(f'#{i:<2} {cls.NAME}' for i, cls in enumerate(game_classes[:num_of_bots])))
     bots_instances = [game_classes[i](i) for i in range(num_of_bots)]
     return bots_instances
