@@ -8,7 +8,7 @@ from api.bots import world_info
 from util.settings import Settings
 from time import perf_counter
 
-DEBUG = Settings.get('crazeebot_debug', False)
+DEBUG = Settings.get('bots.crazee.debug', False)
 
 
 def debug(*lines):
@@ -23,11 +23,10 @@ class CrazeeBotAlpha(BaseBot):
 
     def __init__(self, id):
         super().__init__(id)
-        print(f'Bot #{id} is {self.NAME}')
         self.enemy_positions: set = set()
         self.pos = None
         self.ap = None
-        self.center_tile = Hex(7, 7)
+        self.center_tile = Hex(0, 0)
 
     def get_action(self, wi: world_info):
         t1_start = perf_counter()
@@ -95,8 +94,8 @@ class CrazeeBotAlpha(BaseBot):
         return legal_options, scores
 
     def gen_neighbor_heat_value(self, wi: world_info, neighbor: Hexagon):
-        # debug(f'ring radius {wi.ring_radius}, edge {[str(e) for e in edge_of_map]}')
         edge_of_map: set[Hexagon] = set(self.center_tile.ring(wi.ring_radius - 1))
+        #debug(f'ring radius {wi.ring_radius}, edge {[str(e) for e in edge_of_map]}')
         tile_view_distance = 5
         terrain_heat = 0
         enemy_heat = 0
