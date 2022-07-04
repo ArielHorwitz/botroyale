@@ -51,6 +51,7 @@ class Map(widgets.AnchorLayout):
             get_center=self.get_real_center,
             get_tile_info=self.get_tile_info,
             ))
+        self.bind(on_touch_down=self.scroll_wheel)
         app.im.register('pan_up', key='w', callback=lambda *a: self.pan(y=1))
         app.im.register('pan_down', key='s', callback=lambda *a: self.pan(y=-1))
         app.im.register('pan_right', key='d', callback=lambda *a: self.pan(x=1))
@@ -62,6 +63,15 @@ class Map(widgets.AnchorLayout):
         app.im.register('reset_map', key='home', callback=self.reset_view)
         app.im.register('map_zoom_in', key='pageup', callback=self.zoom_in)
         app.im.register('map_zoom_out', key='pagedown', callback=self.zoom_out)
+
+    def scroll_wheel(self, w, m):
+        if m.button == 'scrollup':
+            self.zoom_out()
+            return True
+        elif m.button == 'scrolldown':
+            self.zoom_in()
+            return True
+        return False
 
     def get_real_center(self):
         return self.real_center
