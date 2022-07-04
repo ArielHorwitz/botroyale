@@ -1,5 +1,5 @@
 from util.settings import Settings
-from gui import kex
+from gui import kex, GUI_DEBUG
 import gui.kex.widgets as widgets
 from api.logic import BaseLogicAPI
 from gui.panel import Panel
@@ -34,6 +34,7 @@ class App(widgets.App):
         self.panel = self.add(Panel(control_buttons=(
             ('Quit ([i]ctrl + q[/i])', quit),
             ('Restart ([i]ctrl + w[/i])', kex.restart_script),
+            ('GUI debug', self.debug),
             *self.logic.get_control_buttons(),
         )))
         self.panel.set_size(hx=0.5)
@@ -48,3 +49,8 @@ class App(widgets.App):
     def mainloop_hook(self, dt):
         self.logic.update()
         self.update_widgets()
+
+    def debug(self, *a):
+        if GUI_DEBUG:
+            print('GUI DEBUG')
+        self.map.debug()
