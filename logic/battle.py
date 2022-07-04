@@ -50,7 +50,7 @@ class Battle(BaseLogicAPI):
             return
         bot_id = self.round_remaining_turns[0]
         self.logger('='*50)
-        self.logger(f'R: {self.round_count} T: {self.turn_count} S: {self.step_count} | #{bot_id:<2} {self.bots[bot_id].NAME}')
+        self.logger(f'R: {self.round_count} T: {self.turn_count} S: {self.step_count} | #{bot_id:<2} {self.bots[bot_id].name}')
         self.logger('='*50)
         action = self._get_bot_action(bot_id)
         if not action.has_effect:
@@ -178,7 +178,7 @@ class Battle(BaseLogicAPI):
             bot = self.bots[bot_id]
             ap = round(self.ap[bot_id])
             pos = self.positions[bot_id]
-            name_label = f'#{bot_id:<2} {bot.NAME[:15]:<15}'
+            name_label = f'#{bot_id:<2} {bot.name[:15]:<15}'
             bot_str = f'{name_label} {ap:>3} AP {pos}'
             if bot_id in self.casualties:
                 bot_str = f'[s]{bot_str}[/s]'
@@ -193,7 +193,7 @@ class Battle(BaseLogicAPI):
         if self.round_remaining_turns:
             bot_id = self.round_remaining_turns[0]
             bot = self.bots[bot_id]
-            turn_str = f'#{bot_id:<2} {bot.NAME}\'s turn'
+            turn_str = f'#{bot_id:<2} {bot.name}\'s turn'
         else:
             turn_str = f'starting new round'
         state_str = '\n'.join([
