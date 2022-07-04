@@ -4,7 +4,6 @@ from pathlib import Path
 import numpy as np
 from gui import kex, center_sprite, FONT, debug
 import gui.kex.widgets as widgets
-from api.logic import EventDeath
 from util.settings import Settings
 from util.hexagon import Hex, WIDTH_HEIGHT_RATIO
 
@@ -20,17 +19,56 @@ UNIT_PNG = str(Path.cwd() / 'assets' / 'unit.png')
 
 
 class TileMap(widgets.RelativeLayout):
-    def __init__(self, get_center, get_tile_info, **kwargs):
+    def __init__(self, app, api, **kwargs):
         super().__init__(**kwargs)
-        self.__creating_grid = False
         self.__current_grid = 0, 0, 0  # tile_radius, canvas_width, canvas_height
         self.tile_radius = round(TILE_RADIUS)
-        self.get_center = get_center
-        self.get_tile_info = get_tile_info
+        self.real_center = Hex(0, 0)
+        self.get_tile_info = api.get_gui_tile_info
         self.tiles = {}
         self.visible_tiles = set()
         self._create_grid()
         self.bind(size=self._resize)
+        self.bind(on_touch_down=self.scroll_wheel)
+        app.im.register('pan_up', key='w', callback=lambda *a: self.pan(y=1))
+        app.im.register('pan_down', key='s', callback=lambda *a: self.pan(y=-1))
+        app.im.register('pan_right', key='d', callback=lambda *a: self.pan(x=1))
+        app.im.register('pan_left', key='a', callback=lambda *a: self.pan(x=-1))
+        app.im.register('pan_up2', key='+ w', callback=lambda *a: self.pan(y=1, zoom_scale=True))
+        app.im.register('pan_down2', key='+ s', callback=lambda *a: self.pan(y=-1, zoom_scale=True))
+        app.im.register('pan_right2', key='+ d', callback=lambda *a: self.pan(x=1, zoom_scale=True))
+        app.im.register('pan_left2', key='+ a', callback=lambda *a: self.pan(x=-1, zoom_scale=True))
+        app.im.register('reset_map', key='home', callback=self.reset_view)
+        app.im.register('map_zoom_in', key='pageup', callback=self.zoom_in)
+        app.im.register('map_zoom_out', key='pagedown', callback=self.zoom_out)
+
+    def scroll_wheel(self, w, m):
+        if m.button == 'scrollup':
+            self.zoom_out()
+            return True
+        elif m.button == 'scrolldown':
+            self.zoom_in()
+            return True
+        return False
+
+    def pan(self, x=0, y=0, zoom_scale=False):
+        if zoom_scale:
+            cols, rows = self.axis_sizes
+            x = int(x * cols / 6)
+            y = int(y * rows / 6)
+        x *= 2
+        y *= 2
+        self.real_center -= Hex(x, y)
+
+    def reset_view(self, *a):
+        self.real_center = Hex(0, 0)
+        self._adjust_zoom()
+
+    def zoom_in(self, *a):
+        self._adjust_zoom(3/2)
+
+    def zoom_out(self, *a):
+        self._adjust_zoom(2/3)
 
     def _resize(self, w, size):
         widgets.kvClock.schedule_once(lambda *a: self._create_grid(), 0)
@@ -99,7 +137,7 @@ class TileMap(widgets.RelativeLayout):
     def __get_tile_size(radius):
         return radius * 2 * WIDTH_HEIGHT_RATIO, radius * 2
 
-    def adjust_zoom(self, d=None):
+    def _adjust_zoom(self, d=None):
         if d is None:
             new_radius = TILE_RADIUS
         else:
@@ -115,10 +153,11 @@ class TileMap(widgets.RelativeLayout):
         self._create_grid()
 
     def update(self):
-        center = self.get_center()
+        center = self.real_center
+        get_tile_info = self.get_tile_info
         for hex in self.tiles:
             real_hex = hex - center
-            self.tiles[hex].update(self.get_tile_info(real_hex))
+            self.tiles[hex].update(get_tile_info(real_hex))
 
 
 class Tile(widgets.kvInstructionGroup):

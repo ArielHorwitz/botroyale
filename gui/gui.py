@@ -3,7 +3,7 @@ from gui import kex
 import gui.kex.widgets as widgets
 from api.logic import BaseLogicAPI
 from gui.panel import Panel
-from gui.map import Map
+from gui.tilemap import TileMap
 
 
 # User-configurable settings
@@ -30,7 +30,7 @@ class App(widgets.App):
         print('GUI initialized.')
 
     def make_widgets(self):
-        self.map = self.add(Map(app=self, api=self.logic))
+        self.map = self.add(TileMap(app=self, api=self.logic))
         self.panel = self.add(Panel(control_buttons=(
             ('Quit ([i]ctrl + q[/i])', quit),
             ('Restart ([i]ctrl + w[/i])', kex.restart_script),
