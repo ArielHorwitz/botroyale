@@ -20,10 +20,12 @@ world_info = namedtuple('WorldInfo', [
 
 class BaseBot:
     NAME = "BaseBot"
+    TESTING_ONLY = False
     COLOR_INDEX = 0
 
     def __init__(self, id: int):
         self.id = id
+        self.name = self.NAME
 
     def get_action(self, world_state):
         return Move(Hex(0, 0))

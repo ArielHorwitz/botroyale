@@ -7,82 +7,99 @@ from util.hexagon import Hex
 
 
 RNG = np.random.default_rng()
-Map = namedtuple('Map', ['axis_size', 'pits', 'walls', 'spawns'])
-SELECTED_MAP_NAME = Settings.get('selected_map', 'basic')
-MAP_RADIUS = Settings.get('map_radius', 5)
-EDGE_SIZE = Settings.get('edge_size', 2)
-SPAWN_COUNT = Settings.get('spawn_count', 8)
-SPAWN_RADIUS = Settings.get('spawn_radius', 2)
-PIT_COUNT = Settings.get('pit_count', 20)
-WALL_COUNT = Settings.get('wall_count', 40)
+MapGen = namedtuple('Map', ['radius', 'spawns', 'pits', 'walls'])
+SELECTED_MAP_NAME = Settings.get('map.selected_map', 'basic')
 
 
-class Maps:
-    @staticmethod
-    def small_test_map():
-        axis_size = 2
-        spawns = [Hex(0, 0), Hex(1, 0)]
-        walls = {Hex(1, 1)}
-        pits = {Hex(0, 1)}
-        return Map(axis_size, pits, walls, spawns)
+class Map:
+    radius = 5
+    def __init__(self):
+        self.center = Hex(0, 0)
+        self.all_tiles = set()
+        for _ in range(2, self.radius-1):
+            self.all_tiles |= set(self.center.ring(_))
+        self.empty_tiles = list(self.all_tiles)
+        random.shuffle(self.empty_tiles)
+        self.pits = set()
+        self.walls = set()
+        self.spawns = []
+        self.make_map()
 
-    @staticmethod
-    def random_map():
-        axis_size = MAP_RADIUS * 2
-        # Map features
-        coords = list(itertools.product(range(axis_size), repeat=2))
-        random.shuffle(coords)
-        pits = set(Hex(*coords.pop(0)) for _ in range(PIT_COUNT))
-        walls = set(Hex(*coords.pop(0)) for _ in range(WALL_COUNT))
-        spawns = [Hex(*coords.pop(0)) for _ in range(SPAWN_COUNT)]
-        # Return the map tuple
-        return Map(axis_size, pits, walls, spawns)
+    def add_spawn(self, tile):
+        self.spawns.append(tile)
+        if tile in self.empty_tiles:
+            self.empty_tiles.remove(tile)
 
-    @staticmethod
-    def test_color_map():
-        spawns = [Hex(i, 0) for i in range(SPAWN_COUNT)]
-        return Map(SPAWN_COUNT, {Hex(0, 1)}, {Hex(1, 1)}, spawns)
+    def add_pit(self, tile):
+        self.pits.add(tile)
+        if tile in self.empty_tiles:
+            self.empty_tiles.remove(tile)
 
-    @staticmethod
-    def basic_map():
-        assert MAP_RADIUS >= 2
-        assert EDGE_SIZE >= 1
-        assert SPAWN_RADIUS <= MAP_RADIUS
-        axis_size = (EDGE_SIZE + MAP_RADIUS) * 2 + 1
-        spawn_offset = EDGE_SIZE + MAP_RADIUS - SPAWN_RADIUS
+    def add_wall(self, tile):
+        self.walls.add(tile)
+        if tile in self.empty_tiles:
+            self.empty_tiles.remove(tile)
+
+    def make_map(self):
+        pass
+
+    def get(self):
+        assert not set(self.spawns) & self.pits
+        assert not set(self.spawns) & self.walls
+        assert not self.pits & self.walls
+        return MapGen(self.radius, self.spawns, self.pits, self.walls)
+
+
+class EmptyMap(Map):
+    spawn_count = 12
+
+    def make_map(self):
         # Spawns
-        near = spawn_offset
-        mid = axis_size // 2
-        far = axis_size - near - 1
-        spawns = list(itertools.product([near, mid, far], repeat=2))
-        spawns.remove((mid, mid))
-        spawns = np.asarray(spawns[:min(len(spawns), SPAWN_COUNT)])
-        # Pits
-        pit_grid = np.zeros((axis_size, axis_size), dtype=np.bool_)
-        pit_edge = [*range(0, EDGE_SIZE), *range(axis_size-1, axis_size-EDGE_SIZE-1, -1)]
-        pit_grid[:, pit_edge] = True
-        pit_grid[pit_edge, :] = True
-        random_pits = RNG.integers(low=0, high=axis_size, size=(2, PIT_COUNT))
-        pit_grid[random_pits[0], random_pits[1]] = True
-        # Prevent pits generating at spawn points
-        pit_grid[spawns[:, 0], spawns[:, 1]] = False
-        pits = np.dstack(np.nonzero(pit_grid))[0]
-        # Walls
-        wall_grid = np.zeros((axis_size, axis_size), dtype=np.bool_)
-        random_walls = RNG.integers(low=0, high=axis_size, size=(2, WALL_COUNT))
-        wall_grid[random_walls[0], random_walls[1]] = True
-        # Prevent walls generating at spawn points or pits
-        wall_grid[spawns[:, 0], spawns[:, 1]] = False
-        wall_grid[np.nonzero(pit_grid)] = False
-        walls = np.dstack(np.nonzero(wall_grid))[0]
-        # Convert to Hex
-        pits = set(Hex(x, y) for x, y in pits)
-        walls = set(Hex(x, y) for x, y in walls)
-        spawns = [Hex(x, y) for x, y in spawns]
-        # Return the map tuple
-        return Map(axis_size, pits, walls, spawns)
+        spawn_options = self.center.ring(self.radius-1)
+        assert len(spawn_options) >= self.spawn_count
+        random.shuffle(spawn_options)
+        for s in spawn_options[:self.spawn_count]:
+            self.add_spawn(s)
 
+
+class BasicMap(Map):
+    radius = 10
+    pit_freq = 0.075
+    wall_freq = 0.15
+    spawn_count = 12
+
+    def make_map(self):
+        # Spawns
+        spawn_options = self.center.ring(self.radius-1)
+        assert len(spawn_options) >= self.spawn_count
+        random.shuffle(spawn_options)
+        for s in spawn_options[:self.spawn_count]:
+            self.add_spawn(s)
+        # Pits
+        pit_count = round(len(self.empty_tiles) * self.pit_freq)
+        wall_count = round(len(self.empty_tiles) * self.wall_freq)
+        for i in range(pit_count):
+            if not self.empty_tiles:
+                break
+            self.add_pit(self.empty_tiles.pop())
+        # Walls
+        for i in range(wall_count):
+            if not self.empty_tiles:
+                break
+            self.add_wall(self.empty_tiles.pop())
+
+
+class GiantMap(BasicMap):
+    radius = 25
+
+
+MAPS = {
+    'basic': BasicMap,
+    'empty': EmptyMap,
+    'giant': GiantMap,
+}
+print('\n'.join([f'Available maps:', *(f'- {m}' for m in MAPS.keys())]))
 
 def get_map():
-    f = getattr(Maps, f'{SELECTED_MAP_NAME}_map')
-    return f()
+    map = MAPS[SELECTED_MAP_NAME]()
+    return map.get()

@@ -1,0 +1,242 @@
+import math
+import itertools
+from pathlib import Path
+import numpy as np
+from gui import kex, center_sprite, FONT, debug
+import gui.kex.widgets as widgets
+from util.settings import Settings
+from util.hexagon import Hex, WIDTH_HEIGHT_RATIO
+
+
+MAX_MAP_TILES = Settings.get('tilemap.max_draw_tiles', 2500)
+TILE_RADIUS = Settings.get('tilemap._tile_radius', 20)
+TILE_PADDING = Settings.get('tilemap._tile_padding', 15)
+MAX_TILE_RADIUS = Settings.get('tilemap.max_tile_radius', 200)
+UNIT_SIZE = Settings.get('tilemap.unit_size', 0.65)
+FONT_SIZE = Settings.get('tilemap.font_size', 12)
+HEX_PNG = str(Path.cwd() / 'assets' / 'hex.png')
+UNIT_PNG = str(Path.cwd() / 'assets' / 'unit.png')
+
+
+class TileMap(widgets.RelativeLayout):
+    def __init__(self, app, api, **kwargs):
+        super().__init__(**kwargs)
+        self.__current_grid = 0, 0, 0  # tile_radius, canvas_width, canvas_height
+        self.tile_radius = round(TILE_RADIUS)
+        self.real_center = Hex(0, 0)
+        self.get_tile_info = api.get_gui_tile_info
+        self.tiles = {}
+        self.visible_tiles = set()
+        self._create_grid()
+        self.bind(size=self._resize)
+        self.bind(on_touch_down=self.scroll_wheel)
+        app.im.register('pan_up', key='w', callback=lambda *a: self.pan(y=1))
+        app.im.register('pan_down', key='s', callback=lambda *a: self.pan(y=-1))
+        app.im.register('pan_right', key='d', callback=lambda *a: self.pan(x=1))
+        app.im.register('pan_left', key='a', callback=lambda *a: self.pan(x=-1))
+        app.im.register('pan_up2', key='+ w', callback=lambda *a: self.pan(y=1, zoom_scale=True))
+        app.im.register('pan_down2', key='+ s', callback=lambda *a: self.pan(y=-1, zoom_scale=True))
+        app.im.register('pan_right2', key='+ d', callback=lambda *a: self.pan(x=1, zoom_scale=True))
+        app.im.register('pan_left2', key='+ a', callback=lambda *a: self.pan(x=-1, zoom_scale=True))
+        app.im.register('reset_map', key='home', callback=self.reset_view)
+        app.im.register('map_zoom_in', key='pageup', callback=self.zoom_in)
+        app.im.register('map_zoom_out', key='pagedown', callback=self.zoom_out)
+
+    def scroll_wheel(self, w, m):
+        if m.button == 'scrollup':
+            self.zoom_out()
+            return True
+        elif m.button == 'scrolldown':
+            self.zoom_in()
+            return True
+        return False
+
+    def pan(self, x=0, y=0, zoom_scale=False):
+        if zoom_scale:
+            cols, rows = self.axis_sizes
+            x = int(x * cols / 6)
+            y = int(y * rows / 6)
+        x *= 2
+        y *= 2
+        self.real_center -= Hex(x, y)
+
+    def reset_view(self, *a):
+        self.real_center = Hex(0, 0)
+        self._adjust_zoom()
+
+    def zoom_in(self, *a):
+        self._adjust_zoom(3/2)
+
+    def zoom_out(self, *a):
+        self._adjust_zoom(2/3)
+
+    def _resize(self, w, size):
+        widgets.kvClock.schedule_once(lambda *a: self._create_grid(), 0)
+
+    def _create_grid(self):
+        requested_tile_radius = self.tile_radius
+        minimum_radius = self.__get_minimum_radius(self.size)
+        tile_radius = tile_radius_nopadding = max(requested_tile_radius, minimum_radius)
+
+        # We can check if the tiles need to change at all
+        new_grid = tile_radius, *self.size
+        if new_grid == self.__current_grid:
+            return
+        self.__current_grid = new_grid
+
+        tile_size = self.__get_tile_size(tile_radius)
+        tile_radius *= 1+(TILE_PADDING/100)
+        cols, rows = self.__get_axis_sizes(tile_radius)
+        half_cols, half_rows = int(cols / 2), int(rows / 2)
+        center_offset = np.asarray(self.size) / 2
+
+        # Add / remove tile intruction groups
+        visible_tiles_coords = itertools.product(range(-half_cols-1, half_cols+1), range(-half_rows, half_rows+1))
+        currently_visible = {Hex(x,y) for x,y in visible_tiles_coords}
+        newly_visible = currently_visible - self.visible_tiles
+        newly_invisible = self.visible_tiles - currently_visible
+        assert len(currently_visible) == (cols+1) * rows
+        self.visible_tiles = currently_visible
+        for hex in newly_invisible:
+            self.canvas.remove(self.tiles[hex])
+        for hex in newly_visible:
+            if hex not in self.tiles:
+                self.tiles[hex] = Tile(bg=HEX_PNG, fg=UNIT_PNG)
+            self.canvas.add(self.tiles[hex])
+        for hex in currently_visible:
+            tile_pos = hex.pixels(tile_radius) + center_offset
+            self.tiles[hex].reset(tile_pos, tile_size)
+        debug(f'Recreated tile map with {cols+1} × {rows} = {len(currently_visible)} tiles of {tile_radius_nopadding:.1f} radius + {TILE_PADDING}% padding.')
+
+    @property
+    def axis_sizes(self):
+        cols, rows = self.__get_axis_sizes(self.tile_radius)
+        # We add one more column which is added by _create_grid to account for offest
+        return cols+1, rows
+
+    def __get_axis_sizes(self, tile_radius):
+        w, h = self.__get_tile_size(tile_radius)
+        cols = math.ceil(self.width / w)
+        rows = math.ceil(self.height / (h * 3/4))
+        # Ensure there is an odd number of cols and rows for center tile
+        cols += cols % 2 == 0
+        rows += rows % 2 == 0
+        return cols, rows
+
+    def __get_minimum_radius(self, pix_size, limit=MAX_MAP_TILES):
+        canvas_ratio = pix_size[0] / pix_size[1]
+        cols_count = math.sqrt(canvas_ratio * MAX_MAP_TILES)
+        radius = pix_size[0] / cols_count / 2
+        return radius
+
+    @staticmethod
+    def __get_total_tile_count(cols_radius, rows_radius):
+        return (int(cols_radius) * 2 + 1) * (int(rows_radius) * 2 + 1)
+
+    @staticmethod
+    def __get_tile_size(radius):
+        return radius * 2 * WIDTH_HEIGHT_RATIO, radius * 2
+
+    def _adjust_zoom(self, d=None):
+        if d is None:
+            new_radius = TILE_RADIUS
+        else:
+            new_radius = self.tile_radius * d
+        minimum_radius = self.__get_minimum_radius(self.size)
+        if minimum_radius > new_radius:
+            print(f'Cannot zoom out any more.')
+            new_radius = minimum_radius
+        if new_radius > MAX_TILE_RADIUS:
+            print(f'Cannot zoom in any more.')
+            new_radius = MAX_TILE_RADIUS
+        self.tile_radius = new_radius
+        self._create_grid()
+
+    def update(self):
+        center = self.real_center
+        get_tile_info = self.get_tile_info
+        for hex in self.tiles:
+            real_hex = hex - center
+            self.tiles[hex].update(get_tile_info(real_hex))
+
+
+class Tile(widgets.kvInstructionGroup):
+    def __init__(self, bg, fg, size=(5, 5), **kwargs):
+        super().__init__(**kwargs)
+        self.__pos = 0, 0
+
+        self._bg_color = widgets.kvColor(0,0,0,1)
+        self._bg = widgets.kvRectangle(source=bg, size=size)
+        self._bg_text_color = widgets.kvColor(0,0,0,0)
+        self._bg_text = widgets.kvRectangle(size=size)
+
+        fg_size = size[0] * UNIT_SIZE, size[1] * UNIT_SIZE
+        self._fg_color = widgets.kvColor(0,0,0,1)
+        self._fg = widgets.kvRectangle(source=fg, size=fg_size)
+        self._fg_text_color = widgets.kvColor(0,0,0,0)
+        self._fg_text = widgets.kvRectangle(size=fg_size)
+
+        self.add(self._bg_color)
+        self.add(self._bg)
+        self.add(self._bg_text_color)
+        self.add(self._bg_text)
+        self.add(self._fg_color)
+        self.add(self._fg)
+        self.add(self._fg_text_color)
+        self.add(self._fg_text)
+
+    def update(self, tile_info):
+        # Always set the bg color
+        self._bg_color.rgba = (*tile_info.bg_color, 1)
+
+        # Hide bg the text rect if no text is set
+        if tile_info.bg_text is None:
+            self._bg_text_color.rgba = 0,0,0,0
+            bg_text = None
+        else:
+            self._bg_text_color.rgba = 1,1,1,1
+            bg_text = tile_info.bg_text
+
+        # Hide the fg rect if no color is set
+        if tile_info.fg_color is None:
+            self._fg_color.rgba = 0,0,0,0
+        else:
+            self._fg_color.rgba = (*tile_info.fg_color, 1)
+
+        # Hide the fg text rect if no text is set
+        if not tile_info.fg_text:
+            self._fg_text_color.rgba = 0,0,0,0
+            fg_text = None
+        else:
+            self._fg_text_color.rgba = 1,1,1,1
+            fg_text = tile_info.fg_text
+
+        # Apply text
+        self.set_text(bg_text, fg_text)
+
+    def reset(self, pos, size):
+        self.__pos = pos
+        self._bg.size = size
+        self._bg.pos = center_sprite(pos, size)
+        fg_size = size[0] * UNIT_SIZE, size[1] * UNIT_SIZE
+        self._fg.size = fg_size
+        self._fg.pos = center_sprite(pos, fg_size)
+        # Hide the text as its size and position will be updated when set text
+        self._bg_text.size = self._fg_text.size = 0, 0
+
+    def set_text(self, bg, fg):
+        if fg:
+            self._fg_text.texture = t = widgets.text_texture(fg,
+                font=FONT, font_size=FONT_SIZE)
+            self._fg_text.size = t.size
+            self._fg_text.pos = center_sprite(self.__pos, t.size)
+            self._bg_text.size = 0, 0
+        elif bg:
+            self._bg_text.texture = t = widgets.text_texture(bg,
+                font=FONT, font_size=FONT_SIZE)
+            self._bg_text.size = t.size
+            self._bg_text.pos = center_sprite(self.__pos, t.size)
+            self._fg_text.size = 0, 0
+        else:
+            self._bg_text.size = 0, 0
+            self._fg_text.size = 0, 0

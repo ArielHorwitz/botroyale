@@ -7,7 +7,7 @@ from dataclasses import dataclass, field
 import numpy as np
 
 
-DEBUG = Settings.get('ninjabot_debug', False)
+DEBUG = Settings.get('bots.ninjabot.debug', False)
 
 
 def debug(*lines):

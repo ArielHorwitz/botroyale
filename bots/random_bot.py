@@ -5,7 +5,7 @@ from api.actions import Move, Push
 
 
 class RandomBot(BaseBot):
-    NAME = "Random1"
+    NAME = "RandomBot"
 
     def __init__(self, id):
         super().__init__(id)

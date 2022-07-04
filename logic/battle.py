@@ -9,8 +9,7 @@ from api.actions import Move, Push, IllegalAction, Idle
 from util.hexagon import Hex
 
 
-MAX_ROUNDS = Settings.get('round_cap', 300)
-DEBUG = Settings.get('battle_debug', True)
+MAX_ROUNDS = Settings.get('logic.round_cap', 300)
 RNG = np.random.default_rng()
 
 
@@ -18,46 +17,47 @@ class Battle(BaseLogicAPI):
     def __init__(self):
         super().__init__()
         map = maps.get_map()
-        assert len(map.pits) > 0
-        assert len(map.walls) > 0
         # Bots
         self.num_of_bots = len(map.spawns)
         self.bots = make_bots(self.num_of_bots)
+        self.unit_colors = [self.get_color(bot.COLOR_INDEX) for bot in self.bots]
         # Map
-        self.center = Hex(map.axis_size//2, map.axis_size//2)
-        self.ring_radius = map.axis_size//2 + 1
+        self.center = Hex(0, 0)
+        # Ring contracts before the first round, so we set the ring even
+        # further out than one tile past the map radius.
+        self.ring_radius = map.radius + 2
         self.positions = map.spawns
         self.walls = map.walls
-        self.pits = map.pits | set(self.center.ring(self.ring_radius))
+        # Add the first ring now (the one added before the first round)
+        self.pits = map.pits | set(self.center.ring(map.radius+1))
         # Metadata
         self.alive_mask = np.ones(self.num_of_bots, dtype=bool)
+        self.step_count = 0
         self.turn_count = 0
         self.round_count = 0
         self.ap = np.zeros(self.num_of_bots)
         self.round_ap_spent = np.zeros(self.num_of_bots)
-        self.map_size = map.axis_size, map.axis_size
         # when round_priority is empty, round is over.
         self.round_remaining_turns = []
         self.history = []
 
-    def next_turn(self):
-        self.next_step()
-
     def next_step(self):
         if self.game_over:
             return
+        self.step_count += 1
         if len(self.round_remaining_turns) == 0:
             self._next_round()
             return
         bot_id = self.round_remaining_turns[0]
-        debug(f'Round/Turn: {self.round_count} / {self.turn_count}')
-        debug(f'Getting action from bot #{bot_id}')
+        self.logger('='*50)
+        self.logger(f'R: {self.round_count} T: {self.turn_count} S: {self.step_count} | #{bot_id:<2} {self.bots[bot_id].name}')
+        self.logger('='*50)
         action = self._get_bot_action(bot_id)
         if not action.has_effect:
             self.round_remaining_turns.pop(0)
             self.turn_count += 1
             return
-        debug(f'Applying bot #{bot_id} action: {action}')
+        self.logger(f'Applying bot #{bot_id} action: {action}')
         self._apply_action(bot_id, action)
 
     def _next_round(self):
@@ -87,7 +87,7 @@ class Battle(BaseLogicAPI):
 
     def _check_legal_action(self, bot_id, action):
         if not self.check_ap(bot_id, action.ap):
-            debug(f'Unit #{bot_id} missing AP: {action}')
+            self.logger(f'Unit #{bot_id} missing AP: {action}')
             return False
         if isinstance(action, Push):
             return self._check_legal_push(bot_id, action.target)
@@ -102,15 +102,15 @@ class Battle(BaseLogicAPI):
         # check if target is a neighbor
         self_position = self.positions[bot_id]
         if not self_position.get_distance(target_tile) == 1:
-            debug(f'Illegal move by Unit #{bot_id}: not neighbor {self_position} -> {target_tile}')
+            self.logger(f'Illegal move by Unit #{bot_id}: not neighbor {self_position} -> {target_tile}')
             return False
         # check if moving into a wall
         if target_tile in self.walls:
-            debug(f'Illegal move by Unit #{bot_id}: is wall {self_position} -> {target_tile}')
+            self.logger(f'Illegal move by Unit #{bot_id}: is wall {self_position} -> {target_tile}')
             return False
         # check if moving on top of another bot
         if target_tile in self.positions:
-            debug(f'Illegal move by Unit #{bot_id}: is unit {self_position} -> {target_tile}')
+            self.logger(f'Illegal move by Unit #{bot_id}: is unit {self_position} -> {target_tile}')
             return False
         return True
 
@@ -118,33 +118,33 @@ class Battle(BaseLogicAPI):
         # check if target is a neighbor
         self_position = self.positions[bot_id]
         if not self_position.get_distance(target_tile) == 1:
-            debug(f'Illegal push by Unit #{bot_id}: not neighbor {self_position} -> {target_tile}')
+            self.logger(f'Illegal push by Unit #{bot_id}: not neighbor {self_position} -> {target_tile}')
             return False
         # check if actually pushing a bot
         if not (target_tile in self.positions):
-            debug(f'Illegal push by Unit #{bot_id}: no unit {self_position} -> {target_tile}')
+            self.logger(f'Illegal push by Unit #{bot_id}: no unit {self_position} -> {target_tile}')
             return False
         # check if pushing to a wall
         self_pos = self.positions[bot_id]
         push_end = next(self_pos.straight_line(target_tile))
         if push_end in self.walls:
-            debug(f'Illegal move by Unit #{bot_id}: against wall {self_position} -> {target_tile}')
+            self.logger(f'Illegal move by Unit #{bot_id}: against wall {self_position} -> {target_tile}')
             return False
         # check if pushing on top of another bot
         if push_end in self.positions:
-            debug(f'Illegal move by Unit #{bot_id}: against unit {self_position} -> {target_tile}')
+            self.logger(f'Illegal move by Unit #{bot_id}: against unit {self_position} -> {target_tile}')
             return False
         return True
 
     def _apply_action(self, bot_id, action):
         assert action.has_effect
         if isinstance(action, Push):
-            debug(f'{bot_id} APPLY PUSH: {action}')
+            self.logger(f'{bot_id} APPLY PUSH: {action}')
             opp_id = self.positions.index(action.target)
             self_pos = self.positions[bot_id]
             self.positions[opp_id] = next(self_pos.straight_line(action.target))
         elif isinstance(action, Move):
-            debug(f'{bot_id} APPLY MOVE: {action}')
+            self.logger(f'{bot_id} APPLY MOVE: {action}')
             self.positions[bot_id] = action.target
         self._apply_mortality()
         self.ap[bot_id] -= action.ap
@@ -165,20 +165,42 @@ class Battle(BaseLogicAPI):
     def get_map_state(self):
         return self.get_match_state()
 
+    @property
+    def casualties(self):
+        return np.arange(self.num_of_bots)[~self.alive_mask]
+
+    @property
+    def round_done_turns(self):
+        return [bid for bid in range(self.num_of_bots) if (bid not in self.casualties and bid not in self.round_remaining_turns)]
+
     def get_match_state(self):
-        units = []
-        for i in range(self.num_of_bots):
-            ap = self.ap[i]
-            pos = self.positions[i]
-            units.append(f'Unit #{i} {ap}AP {pos}')
-        units = '\n'.join(units)
-        casualties = np.arange(self.num_of_bots)[~self.alive_mask]
+        def get_bot_string(bot_id):
+            bot = self.bots[bot_id]
+            ap = round(self.ap[bot_id])
+            pos = self.positions[bot_id]
+            name_label = f'#{bot_id:<2} {bot.name[:15]:<15}'
+            bot_str = f'{name_label} {ap:>3} AP {pos}'
+            if bot_id in self.casualties:
+                bot_str = f'[s]{bot_str}[/s]'
+            return bot_str
+        unit_strs = []
+        unit_strs.extend(get_bot_string(bot_id) for bot_id in self.round_remaining_turns)
+        unit_strs.append('-'*10)
+        unit_strs.extend(get_bot_string(bot_id) for bot_id in self.round_done_turns)
+        unit_strs.append('='*10)
+        unit_strs.extend(get_bot_string(bot_id) for bot_id in self.casualties)
+        unit_strs = '\n'.join(unit_strs)
+        if self.round_remaining_turns:
+            bot_id = self.round_remaining_turns[0]
+            bot = self.bots[bot_id]
+            turn_str = f'#{bot_id:<2} {bot.name}\'s turn'
+        else:
+            turn_str = f'starting new round'
         state_str = '\n'.join([
-            f'Round #{self.round_count}',
-            f'Turn #{self.turn_count}',
-            f'Turn order: {self.round_remaining_turns}',
-            f'Casualties: {casualties}',
-            f'\n{units}',
+            f'Round: #{self.round_count:<3} Turn: #{self.turn_count:<4} Step: #{self.step_count:<5}',
+            f'Currently:  [u]{turn_str}[/u]',
+            '',
+            f'{unit_strs}',
         ])
         if self.game_over:
             winner_str = ''
@@ -203,7 +225,7 @@ class Battle(BaseLogicAPI):
             )
 
     def debug(self):
-        pass
+        self.debug_mode = not self.debug_mode
 
     @staticmethod
     def _calc_ap(pos, target):
@@ -214,8 +236,3 @@ class Battle(BaseLogicAPI):
         cond1 = self.round_count > MAX_ROUNDS
         cond2 = self.alive_mask.sum() <= 1
         return cond1 or cond2
-
-
-def debug(m):
-    if DEBUG:
-        print(m)

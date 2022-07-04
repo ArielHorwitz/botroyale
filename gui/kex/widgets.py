@@ -336,6 +336,7 @@ class InputManager(Widget):
         self.__last_key_down_ping = ping()
         self.__last_key_code = key_code
         self.__last_keys_down = self._convert_keys(modifiers, key_name)
+        self.logger(f'Keys pressed: {self.__last_keys_down}')
         if self.__recording_press:
             stop_recording = self.__recording_press(self.__last_keys_down)
             if stop_recording is True:
@@ -457,7 +458,7 @@ class Label(kvLabel, KexWidget):
     def __init__(self, *a, halign='center', valign='center', **k):
         super().__init__(*a,
             halign=halign, valign=valign,
-            font_name=str(Path.cwd() / 'gui' / 'FiraCode-SemiBold.ttf'),
+            font_name=str(Path.cwd() / 'assets' / 'FiraCode-SemiBold.ttf'),
             **k)
         self.bind(size=self._on_resize)
 
@@ -1097,9 +1098,7 @@ class ColorPick(GridLayout):
         self.callback(self.__color)
 
 
-def text_texture(text, font_size=16):
-    label = CoreLabel(text=text, font_size=font_size)
+def text_texture(text, **kwargs):
+    label = CoreLabel(text=text, **kwargs)
     label.refresh()
-    texture = label.texture
-    texture_size = texture.size
-    return texture
+    return label.texture
