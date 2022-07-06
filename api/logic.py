@@ -104,8 +104,8 @@ class BaseLogicAPI:
         return '\n'.join((turn, game_over))
 
     def debug(self):
-        print(f'Toggling logic debug mode.')
         self.debug_mode = not self.debug_mode
+        self.logger(f'Toggled logic debug mode: {self.debug_mode}')
 
     def get_gui_tile_info(self, hex):
         """This method is called for every hex currently visible on the map,
@@ -137,22 +137,16 @@ class BaseLogicAPI:
     def get_color(self, index):
         return self.UNIT_COLORS[index % len(self.UNIT_COLORS)]
 
-    def get_control_buttons(self):
+    def get_controls(self):
         return (
-            ('Logic debug', self.debug),
-            ('Play all', self.play_all),
-            ('Next step ([i]n[/i])', self.next_step),
-            ('Autoplay ([i]spacebar[/i])', self.toggle_autoplay),
-        )
-
-    def get_hotekys(self):
-        return (
-            ('autoplay', 'spacebar', self.toggle_autoplay),
-            ('next_step', 'n', self.next_step),
+            ('Logic debug', self.debug, None),
+            ('Play entire battle', self.play_all, '^+ enter'),
+            ('Next step', self.next_step, 'n'),
+            ('Autoplay', self.toggle_autoplay, 'spacebar'),
         )
 
     def play_all(self, *args):
-        print('Playing battle to completion...')
+        self.logger('Playing battle to completion...')
         count = 0
         while not self.game_over:
             count += 1
