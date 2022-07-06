@@ -5,7 +5,7 @@ from logic import maps
 from api.bots import world_info
 import copy
 from util.settings import Settings
-from api.actions import Move, Push, IllegalAction, Idle
+from api.actions import Action, Move, Push, IllegalAction, Idle
 from util.hexagon import Hex
 
 
@@ -81,9 +81,14 @@ class Battle(BaseLogicAPI):
     def _get_bot_action(self, bot_id):
         world_state = self.set_world_info()
         action = self.bots[bot_id].get_action(world_state)
-        if self._check_legal_action(bot_id, action):
-            return action
-        return IllegalAction()
+        if not isinstance(action, Action):
+            self.logger(f'Revceived NON-ACTION type from #{bot_id} {self.bots[bot_id].name}: {action} {self.bots[bot_id]}')
+            return IllegalAction()
+        if action.has_effect:
+            if not self._check_legal_action(bot_id, action):
+                self.logger(f'Revceived ILLEGAL action from #{bot_id} {self.bots[bot_id].name}: {action} {self.bots[bot_id]}')
+                return IllegalAction()
+        return action
 
     def _check_legal_action(self, bot_id, action):
         if not self.check_ap(bot_id, action.ap):
