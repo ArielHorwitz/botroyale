@@ -157,6 +157,8 @@ class BaseLogicAPI:
         while not self.game_over:
             count += 1
             self.next_step()
+        # Clear the vfx else they will all be drawn at once at the end
+        self.flush_vfx()
 
     def toggle_autoplay(self, set_to=None):
         if self.game_over:
