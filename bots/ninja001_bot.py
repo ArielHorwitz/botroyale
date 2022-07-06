@@ -1,49 +1,48 @@
+from collections import namedtuple
+import numpy as np
 from bots import BaseBot
-from api.actions import Move, Push
+from api.actions import Idle, Move, Push
 from util.settings import Settings
 from util.hexagon import Hex
-from collections import namedtuple
-from dataclasses import dataclass, field
-import numpy as np
+from util.pathfinding import a_star
 
 
-DEBUG = Settings.get('bots.ninjabot.debug', False)
+DEBUG = Settings.get('bots.ninja.debug', 0)
 
 
-def debug(*lines):
+def mlogger(*lines):
     if DEBUG:
         print('\n'.join(str(_) for _ in lines))
 
 
-@dataclass(order=True)
-class TileValue:
-    tile : object = field(compare=False)
-    value : float = field(compare=True)
-
-
-class NinjaBot(BaseBot):
-    NAME = 'ninja'
+class NinjaBotV001(BaseBot):
+    NAME = 'ninja.001'
     COLOR_INDEX = 5
 
-    def __init__(self, id):
-        super().__init__(id)
-        print(f'Bot #{id} is NinjaBot')
-        self.__completed_setup = False
+    TileValue = namedtuple('TileValue', ['tile', 'value'])
 
-    def setup(self, wi):
-        enemy_mask = np.ones(len(wi.positions), dtype=np.bool)
-        enemy_mask[self.id] = False
-        self.enemy_ids = np.flatnonzero(enemy_mask)
-        self.walls = wi.walls
-        self.pits = wi.pits
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.__last_step_round = -1
+        self.turn_step = 0
 
     def update(self, wi):
+        if self.__last_step_round < wi.round_count:
+            self.turn_step = 0
+        else:
+            self.turn_step += 1
+        self.__last_step_round = wi.round_count
         self.pos = wi.positions[self.id]
+        self.ap = wi.ap[self.id]
+        self.walls = wi.walls
+        self.pits = wi.pits
+        enemy_mask = np.ones(len(wi.positions), dtype=np.bool)
+        enemy_mask[self.id] = False
+        enemy_mask[~wi.alive_mask] = False
+        self.enemy_ids = np.flatnonzero(enemy_mask)
         self.enemy_pos = set(wi.positions[uid] for uid in self.enemy_ids)
 
     def get_action(self, wi):
-        if not self.__completed_setup:
-            self.setup(wi)
         self.update(wi)
         # Move
         move_target = self.pos
@@ -63,6 +62,7 @@ class NinjaBot(BaseBot):
         # Choose move
         action = Move(move_target)
         if move_target is self.pos:
+            action = Idle()
             action_str = 'Staying put'
         else:
             action_str = f'Moving to: {move_target} {move_options[0].value}'
@@ -72,24 +72,23 @@ class NinjaBot(BaseBot):
             action = Push(push.tile)
             action_str = f'Pushing: {push.tile} {"LETHAL" if push.value > 0 else "not lethal"}'
 
-        debug(
-            '='*30,
-            f'=== NINJABOT #{self.id} get_action',
-            f'Round/turn: {str(wi.round_count):>4} / {str(wi.turn_count):>5}',
+        mlogger(
+            f'{action_str}',
+            '',
+            f'Turn step: {self.turn_step}',
             f'My position: {self.pos} {my_pos_value}',
-            action_str,
             f'Action: {action}',
             '=== MOVE OPTIONS',
             '\n'.join(f'{tv.value} {tv.tile}' for tv in move_options),
             '=== PUSH OPTIONS',
             '\n'.join(push_option_reprs),
-            '='*30,
+            '_'*30,
         )
         return action
 
     def move_options(self, wi):
-        tvs = (TileValue(n, self.move_tile_value(wi, n)) for n in self.pos.neighbors)
-        sorted_tvs = sorted(tvs, reverse=True)
+        tvs = (self.TileValue(n, self.move_tile_value(wi, n)) for n in self.pos.neighbors)
+        sorted_tvs = sorted(tvs, key=lambda tv: -tv.value)
         return sorted_tvs
 
     def move_tile_value(self, wi, tile):
@@ -125,8 +124,8 @@ class NinjaBot(BaseBot):
         return v
 
     def push_options(self, wi):
-        tvs = (TileValue(n, self.push_value(wi, n)) for n in self.pos.neighbors)
-        sorted_tvs = sorted(tvs, reverse=True)
+        tvs = (self.TileValue(n, self.push_value(wi, n)) for n in self.pos.neighbors)
+        sorted_tvs = sorted(tvs, key=lambda tv: -tv.value)
         return sorted_tvs
 
     def push_value(self, wi, push_tile):
@@ -143,4 +142,4 @@ class NinjaBot(BaseBot):
         return int(is_lethal)
 
 
-BOT = NinjaBot
+BOT = NinjaBotV001
