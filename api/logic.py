@@ -9,7 +9,7 @@ TileGUI = namedtuple('TileGUI', ['bg_color', 'bg_text', 'fg_color', 'fg_text'])
 VFX = namedtuple('VFX', ['name', 'hex', 'neighbor', 'time'])
 
 STEP_RATE = Settings.get('logic._step_rate_cap', 20)
-STEP_INTERVAL_MS = 1000 / STEP_RATE
+STEP_RATES = Settings.get('logic.|step_rates', [1, 3, 10, 20, 60])
 LOGIC_DEBUG = Settings.get('logic.battle_debug', True)
 
 RNG = np.random.default_rng()
@@ -20,6 +20,7 @@ AXIS_SIZE = 15
 
 
 class BaseLogicAPI:
+    step_interval_ms = 1000 / STEP_RATE
     debug_mode = False
     step_count = 0
     alive_mask = np.ones(UNIT_COUNT, dtype=bool)
@@ -83,9 +84,9 @@ class BaseLogicAPI:
         if not self.autoplay:
             return
         time_delta = pong(self.__last_step)
-        if time_delta >= STEP_INTERVAL_MS:
+        if time_delta >= self.step_interval_ms:
             self.next_step()
-            leftover = time_delta - STEP_INTERVAL_MS
+            leftover = time_delta - self.step_interval_ms
             self.__last_step = ping() - leftover
 
     def next_step(self):
@@ -140,11 +141,20 @@ class BaseLogicAPI:
         return self.UNIT_COLORS[index % len(self.UNIT_COLORS)]
 
     def get_controls(self):
+        step_rates = []
+        for i, r in enumerate(STEP_RATES):
+            s = (
+                f'Set step rate {r}',
+                lambda r=r: self.set_step_rate(r),
+                str(i+1),
+                )
+            step_rates.append(s)
         return (
             ('Logic debug', self.debug, None),
             ('Play entire battle', self.play_all, '^+ enter'),
             ('Next step', self.next_step, 'n'),
             ('Autoplay', self.toggle_autoplay, 'spacebar'),
+            *step_rates,
         )
 
     def play_all(self, *args):
@@ -164,6 +174,11 @@ class BaseLogicAPI:
         self.autoplay = set_to
         self.__last_step = ping()
         self.logger(f'Auto playing...' if self.autoplay else f'Paused autoplay...')
+
+    def set_step_rate(self, step_rate):
+        assert 0 <= step_rate
+        self.step_interval_ms = 1000 / step_rate
+        self.__last_step = ping()
 
     @staticmethod
     def logger(m):

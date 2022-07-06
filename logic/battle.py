@@ -216,9 +216,12 @@ class Battle(BaseLogicAPI):
             winner_str = ''
             if self.alive_mask.sum() == 1:
                 winner = np.arange(self.num_of_bots)[self.alive_mask]
-                winner_str = f'This game winner is: unit #{winner[0]}\n\n'
-            state_str = 'GAME OVER\n' + winner_str + state_str
-        return state_str
+                winner_str = f'This game winner is: unit #{winner[0]}'
+            status_str = f'GAME OVER\n{winner_str}'
+        else:
+            autoplay = 'Playing' if self.autoplay else 'Paused'
+            status_str = f'{autoplay} <= {1000 / self.step_interval_ms:.2f} steps/second'
+        return f'{status_str}\n\n{state_str}'
 
     def set_world_info(self):
         return world_info(
