@@ -23,7 +23,8 @@ class App(widgets.App):
         if START_MAXIMIZED:
             widgets.kvWindow.maximize()
         assert issubclass(logic_cls, BaseLogicAPI)
-        self.logic = logic_cls()
+        self.__logic_cls = logic_cls
+        self.logic = self.__logic_cls()
         self.im = widgets.InputManager(app_control_defaults=True, logger=self.logger)
         self.make_widgets()
         self.hook_mainloop(FPS)
@@ -35,12 +36,21 @@ class App(widgets.App):
             ('Quit ([i]ctrl + q[/i])', quit),
             ('Restart ([i]ctrl + w[/i])', kex.restart_script),
             ('GUI debug', self.debug),
+            ('New battle', lambda *a: self.reset_logic()),
             *self.logic.get_control_buttons(),
         )))
         self.panel.set_size(hx=0.5)
         for hk_name, key, callback in self.logic.get_hotekys():
             self.im.register(hk_name, key=key, callback=lambda *a, c=callback: c())
         self.update_widgets()
+
+    def reset_logic(self):
+        if GUI_DEBUG:
+            print('Resetting logic...')
+        self.root.clear_widgets()
+        self.im.clear_all(app_control_defaults=True)
+        self.logic = self.__logic_cls()
+        self.make_widgets()
 
     def update_widgets(self):
         self.panel.set_text(self.logic.get_match_state())
