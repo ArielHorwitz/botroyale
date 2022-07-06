@@ -110,20 +110,17 @@ class BaseLogicAPI:
     def get_gui_tile_info(self, hex):
         """This method is called for every hex currently visible on the map,
         and must return a TileGUI namedtuple."""
-        has_unit = hex in self.positions
-        # BG color
+        # BG
         if hex in self.pits:
             bg_color = self.PIT_COLOR
-        elif hex in self.walls:
-            bg_color = self.WALL_COLOR
         else:
             bg_color = self.DEFAULT_CELL_BG
-        # BG text
-        bg_text = ''
-        if self.debug_mode:
-            bg_text = ', '.join(str(_) for _ in hex.xy)
-        # FG color
-        if has_unit:
+        bg_text = ', '.join(str(_) for _ in hex.xy) if self.debug_mode else ''
+        # FG
+        if hex in self.walls:
+            fg_text = ''
+            fg_color = self.WALL_COLOR
+        elif hex in self.positions:
             unit_id = self.positions.index(hex)
             fg_color = self.unit_colors[unit_id]
             fg_text = f'{unit_id}'
