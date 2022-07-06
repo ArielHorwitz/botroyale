@@ -253,10 +253,10 @@ class InputManager(Widget):
         'capslock': '',
     }
     KEY2MODIFIER = {
-        '^': 'Control',
-        '!': 'Alt',
-        '+': 'Shift',
-        '#': 'Super',
+        '^': 'ctrl',
+        '!': 'alt',
+        '+': 'shift',
+        '#': 'super',
     }
 
     @property
@@ -336,7 +336,7 @@ class InputManager(Widget):
         self.__last_key_down_ping = ping()
         self.__last_key_code = key_code
         self.__last_keys_down = self._convert_keys(modifiers, key_name)
-        self.logger(f'Keys pressed: {self.__last_keys_down}')
+        self.logger(f'Keys pressed: {self.__last_keys_down} ( {self.humanize_keys(self.__last_keys_down)} )')
         if self.__recording_press:
             stop_recording = self.__recording_press(self.__last_keys_down)
             if stop_recording is True:
@@ -355,15 +355,20 @@ class InputManager(Widget):
     @classmethod
     def humanize_keys(cls, keys):
         if ' ' not in keys:
-            return keys.capitalize()
+            return keys
         mods, key = keys.split(' ')
+        ignore_mods = set()
         if key in cls.MODIFIERS:
-            return key.capitalize()
+            if len(mods) == 1:
+                return key
+            ignore_mods.add(cls.MODIFIERS[key])
         dstr = []
         for mod in mods:
+            if mod in ignore_mods:
+                continue
             dstr.append(cls.KEY2MODIFIER[mod])
-        if key != '' and mods:
-            dstr.append(key.capitalize())
+        if key != '':
+            dstr.append(key)
         return ' + '.join(dstr)
 
 # LAYOUTS

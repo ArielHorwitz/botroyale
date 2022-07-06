@@ -13,6 +13,6 @@ def center_sprite(pos, size):
     return [int(r[0]), int(r[1])]
 
 
-def debug(m):
+def logger(m):
     if GUI_DEBUG:
         print(m)

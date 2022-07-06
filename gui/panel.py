@@ -1,3 +1,4 @@
+import math
 from gui.kex import widgets
 
 
@@ -15,11 +16,12 @@ class Panel(widgets.BoxLayout):
         self.main_text.text = str(text)
 
 
-class ControlPanel(widgets.BoxLayout):
+class ControlPanel(widgets.GridLayout):
     def __init__(self, buttons, **kwargs):
-        super().__init__(orientation='vertical', **kwargs)
+        rows = math.ceil(len(buttons)/2)
+        super().__init__(orientation='tb-lr', rows=rows, **kwargs)
         for text, callback in buttons:
             btn = self.add(widgets.Button(
                 text=text, markup=True, on_release=lambda *a, c=callback: c()))
             btn.set_size(y=40)
-        self.set_size(y=40*len(buttons))
+        self.set_size(y=40*rows)
