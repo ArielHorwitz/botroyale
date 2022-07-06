@@ -1,5 +1,5 @@
 from util.settings import Settings
-from gui import kex, GUI_DEBUG
+from gui import kex, logger
 import gui.kex.widgets as widgets
 from api.logic import BaseLogicAPI
 from gui.panel import Panel
@@ -15,20 +15,22 @@ LOG_HOTKEYS = Settings.get('gui.log_hotkeys', False)
 
 class App(widgets.App):
     def __init__(self, logic_cls, **kwargs):
-        print('Starting app...')
+        logger('Starting app...')
         super().__init__(**kwargs)
         self.title = 'Bot Royale'
-        self.logger = print if LOG_HOTKEYS else lambda *a: None
         kex.resize_window(WINDOW_SIZE)
         if START_MAXIMIZED:
             widgets.kvWindow.maximize()
         assert issubclass(logic_cls, BaseLogicAPI)
         self.__logic_cls = logic_cls
         self.logic = self.__logic_cls()
-        self.im = widgets.InputManager(app_control_defaults=True, logger=self.logger)
+        self.im = widgets.InputManager(
+            app_control_defaults=True,
+            logger=print if LOG_HOTKEYS else lambda *a: None,
+            )
         self.make_widgets()
         self.hook_mainloop(FPS)
-        print('GUI initialized.')
+        logger('GUI initialized.')
 
     def make_widgets(self):
         self.map = self.add(TileMap(app=self, api=self.logic))
@@ -45,8 +47,7 @@ class App(widgets.App):
         self.update_widgets()
 
     def reset_logic(self):
-        if GUI_DEBUG:
-            print('Resetting logic...')
+        logger('Resetting logic...')
         self.root.clear_widgets()
         self.im.clear_all(app_control_defaults=True)
         self.logic = self.__logic_cls()
@@ -61,6 +62,5 @@ class App(widgets.App):
         self.update_widgets()
 
     def debug(self, *a):
-        if GUI_DEBUG:
-            print('GUI DEBUG')
+        logger('GUI DEBUG')
         self.map.debug()

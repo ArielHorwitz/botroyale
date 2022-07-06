@@ -1,4 +1,4 @@
-print('Welcome to Bot Royale.')
+print('\n\nWelcome to Bot Royale.')
 
 from util.settings import Settings
 from api.logic import BaseLogicAPI
