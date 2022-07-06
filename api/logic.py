@@ -2,11 +2,13 @@ from collections import deque, namedtuple
 import numpy as np
 from util import ping, pong
 from util.settings import Settings
-from util.hexagon import Hex
+from util.hexagon import Hex, is_hex
 
 
 TileGUI = namedtuple('TileGUI', ['bg_color', 'bg_text', 'fg_color', 'fg_text'])
-STEP_RATE = Settings.get('logic._step_rate', 20)
+VFX = namedtuple('VFX', ['name', 'hex', 'neighbor', 'time'])
+
+STEP_RATE = Settings.get('logic._step_rate_cap', 20)
 STEP_INTERVAL_MS = 1000 / STEP_RATE
 LOGIC_DEBUG = Settings.get('logic.battle_debug', True)
 
@@ -15,8 +17,6 @@ MAX_STEPS = 1000
 UNIT_COUNT = 20
 AXIS_SIZE = 15
 
-EventDeath = namedtuple('EventDeath', ['unit'])
-EVENT_TYPES = (EventDeath, )
 
 
 class BaseLogicAPI:
@@ -59,18 +59,23 @@ class BaseLogicAPI:
     def __init__(self):
         self.autoplay = False
         self.__last_step = ping()
-        self.__event_queue = deque()
+        self.__vfx_queue = deque()
         self.unit_colors = [self.get_color(_) for _ in range(UNIT_COUNT)]
 
-    def add_event(self, event):
-        """Add an event to the queue."""
-        assert type(event) in EVENT_TYPES
-        self.__event_queue.append(event)
+    def add_vfx(self, name, hex, neighbor=None, steps=2):
+        """Add a single vfx to the queue."""
+        assert isinstance(name, str)
+        assert is_hex(hex)
+        if neighbor is not None:
+            assert is_hex(neighbor)
+            assert neighbor in hex.neighbors
+        time = steps * STEP_INTERVAL_MS / 1000
+        self.__vfx_queue.append(VFX(name, hex, neighbor, time))
 
-    def flush_events(self):
-        """This method clears and returns the events from queue."""
-        r = self.__event_queue
-        self.__event_queue = deque()
+    def flush_vfx(self):
+        """This method clears and returns the vfx from queue."""
+        r = self.__vfx_queue
+        self.__vfx_queue = deque()
         return r
 
     def update(self):

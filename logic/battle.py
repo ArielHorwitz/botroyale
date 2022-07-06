@@ -1,5 +1,5 @@
 import numpy as np
-from api.logic import BaseLogicAPI, EventDeath
+from api.logic import BaseLogicAPI
 from bots import make_bots
 from logic import maps
 from api.bots import world_info
@@ -143,9 +143,13 @@ class Battle(BaseLogicAPI):
             opp_id = self.positions.index(action.target)
             self_pos = self.positions[bot_id]
             self.positions[opp_id] = next(self_pos.straight_line(action.target))
+            self.add_vfx('push', self_pos, action.target)
+            self.add_vfx('push', action.target, self.positions[opp_id])
         elif isinstance(action, Move):
             self.logger(f'{bot_id} APPLY MOVE: {action}')
+            old_pos = self.positions[bot_id]
             self.positions[bot_id] = action.target
+            self.add_vfx('move', old_pos, action.target)
         self._apply_mortality()
         self.ap[bot_id] -= action.ap
         self.round_ap_spent[bot_id] += action.ap
@@ -154,7 +158,7 @@ class Battle(BaseLogicAPI):
         live_bots = np.flatnonzero(self.alive_mask)
         for bot_id in live_bots:
             if self.positions[bot_id] in self.pits:
-                self.add_event(EventDeath(bot_id))
+                self.add_vfx('death', self.positions[bot_id])
                 self.alive_mask[bot_id] = False
                 if bot_id in self.round_remaining_turns:
                     self.round_remaining_turns.remove(bot_id)
@@ -225,7 +229,7 @@ class Battle(BaseLogicAPI):
             )
 
     def debug(self):
-        self.debug_mode = not self.debug_mode
+        super().debug()
 
     @staticmethod
     def _calc_ap(pos, target):

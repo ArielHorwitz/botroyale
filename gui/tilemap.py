@@ -1,4 +1,5 @@
 import math
+import random
 import itertools
 from pathlib import Path
 import numpy as np
@@ -10,23 +11,27 @@ from util.hexagon import Hex, WIDTH_HEIGHT_RATIO
 
 MAX_MAP_TILES = Settings.get('tilemap.max_draw_tiles', 2500)
 TILE_RADIUS = Settings.get('tilemap._tile_radius', 20)
-TILE_PADDING = Settings.get('tilemap._tile_padding', 15)
+TILE_PADDING = Settings.get('tilemap._tile_padding', 10)
 MAX_TILE_RADIUS = Settings.get('tilemap.max_tile_radius', 200)
-UNIT_SIZE = Settings.get('tilemap.unit_size', 0.65)
+UNIT_SIZE = Settings.get('tilemap.unit_size', 0.55)
 FONT_SIZE = Settings.get('tilemap.font_size', 12)
 HEX_PNG = str(Path.cwd() / 'assets' / 'hex.png')
 UNIT_PNG = str(Path.cwd() / 'assets' / 'unit.png')
+VFX_DIR = Path.cwd() / 'assets' / 'vfx'
 
 
 class TileMap(widgets.RelativeLayout):
     def __init__(self, app, api, **kwargs):
         super().__init__(**kwargs)
         self.__current_grid = 0, 0, 0  # tile_radius, canvas_width, canvas_height
-        self.tile_radius = round(TILE_RADIUS)
+        self.__tile_radius = TILE_RADIUS  # in pixels, to hexagon corner
+        self.__tile_padding = TILE_PADDING  # in percent of tile radius
         self.real_center = Hex(0, 0)
         self.get_tile_info = api.get_gui_tile_info
+        self.get_vfx = api.flush_vfx
         self.tiles = {}
         self.visible_tiles = set()
+        self.__vfx = set()
         self._create_grid()
         self.bind(size=self._resize)
         self.bind(on_touch_down=self.scroll_wheel)
@@ -43,6 +48,8 @@ class TileMap(widgets.RelativeLayout):
         app.im.register('map_zoom_out', key='pagedown', callback=self.zoom_out)
 
     def scroll_wheel(self, w, m):
+        if not self.collide_point(*m.pos):
+            return False
         if m.button == 'scrollup':
             self.zoom_out()
             return True
@@ -59,6 +66,7 @@ class TileMap(widgets.RelativeLayout):
         x *= 2
         y *= 2
         self.real_center -= Hex(x, y)
+        self.__reposition_vfx()
 
     def reset_view(self, *a):
         self.real_center = Hex(0, 0)
@@ -74,21 +82,19 @@ class TileMap(widgets.RelativeLayout):
         widgets.kvClock.schedule_once(lambda *a: self._create_grid(), 0)
 
     def _create_grid(self):
-        requested_tile_radius = self.tile_radius
-        minimum_radius = self.__get_minimum_radius(self.size)
-        tile_radius = tile_radius_nopadding = max(requested_tile_radius, minimum_radius)
+        tile_radius = self.tile_radius
+        tile_radius_padded = self.tile_radius_padded
 
         # We can check if the tiles need to change at all
-        new_grid = tile_radius, *self.size
+        new_grid = tile_radius_padded, *self.size
         if new_grid == self.__current_grid:
             return
         self.__current_grid = new_grid
 
         tile_size = self.__get_tile_size(tile_radius)
-        tile_radius *= 1+(TILE_PADDING/100)
-        cols, rows = self.__get_axis_sizes(tile_radius)
+        cols, rows = self.__get_axis_sizes(tile_radius_padded)
         half_cols, half_rows = int(cols / 2), int(rows / 2)
-        center_offset = np.asarray(self.size) / 2
+        screen_center = self.screen_center
 
         # Add / remove tile intruction groups
         visible_tiles_coords = itertools.product(range(-half_cols-1, half_cols+1), range(-half_rows, half_rows+1))
@@ -104,14 +110,25 @@ class TileMap(widgets.RelativeLayout):
                 self.tiles[hex] = Tile(bg=HEX_PNG, fg=UNIT_PNG)
             self.canvas.add(self.tiles[hex])
         for hex in currently_visible:
-            tile_pos = hex.pixels(tile_radius) + center_offset
+            tile_pos = hex.pixels(tile_radius_padded) + screen_center
             self.tiles[hex].reset(tile_pos, tile_size)
-        debug(f'Recreated tile map with {cols+1} × {rows} = {len(currently_visible)} tiles of {tile_radius_nopadding:.1f} radius + {TILE_PADDING}% padding.')
+        debug('\n'.join([
+            f'Recreated tile map with {cols+1} × {rows} = {len(currently_visible)} tiles. Radius: {tile_radius_padded:.1f} ({tile_radius:.1f} + {self.__tile_padding}% padding) size: {tile_size}',
+            ]))
+
+    @property
+    def tile_radius(self):
+        return self.__tile_radius
+
+    @property
+    def tile_radius_padded(self):
+        return self.__tile_radius * (100 + self.__tile_padding) / 100
 
     @property
     def axis_sizes(self):
-        cols, rows = self.__get_axis_sizes(self.tile_radius)
-        # We add one more column which is added by _create_grid to account for offest
+        cols, rows = self.__get_axis_sizes(self.tile_radius_padded)
+        # We add one more column which is added by _create_grid to account for
+        # horizontal offset of every other row
         return cols+1, rows
 
     def __get_axis_sizes(self, tile_radius):
@@ -137,20 +154,29 @@ class TileMap(widgets.RelativeLayout):
     def __get_tile_size(radius):
         return radius * 2 * WIDTH_HEIGHT_RATIO, radius * 2
 
+    @staticmethod
+    def __get_tile_and_neighbors_size(radius):
+        return radius * 6 * WIDTH_HEIGHT_RATIO, radius * 5
+
     def _adjust_zoom(self, d=None):
         if d is None:
             new_radius = TILE_RADIUS
         else:
-            new_radius = self.tile_radius * d
+            new_radius = self.__tile_radius * d
         minimum_radius = self.__get_minimum_radius(self.size)
-        if minimum_radius > new_radius:
-            print(f'Cannot zoom out any more.')
+        if new_radius < minimum_radius:
+            debug(f'Cannot zoom out any more.')
             new_radius = minimum_radius
         if new_radius > MAX_TILE_RADIUS:
-            print(f'Cannot zoom in any more.')
+            debug(f'Cannot zoom in any more.')
             new_radius = MAX_TILE_RADIUS
-        self.tile_radius = new_radius
+        self.__tile_radius = new_radius
         self._create_grid()
+        self.__reposition_vfx()
+
+    @property
+    def screen_center(self):
+        return np.asarray(self.size) / 2
 
     def update(self):
         center = self.real_center
@@ -158,6 +184,62 @@ class TileMap(widgets.RelativeLayout):
         for hex in self.tiles:
             real_hex = hex - center
             self.tiles[hex].update(get_tile_info(real_hex))
+        for vfx_kwargs in self.get_vfx():
+            self.add_vfx(*vfx_kwargs)
+
+    def real2tile(self, real_hex):
+        return self.real_center + real_hex
+
+    def real2pix(self, real_hex):
+        tile = self.real2tile(real_hex)
+        tile_pos = tile.pixels(self.tile_radius_padded) + self.screen_center
+        return tile_pos
+
+    def add_vfx(self, vfx_name, hex, neighbor=None, time=1):
+        if neighbor is None:
+            neighbor = hex.neighbors[0]
+        assert neighbor in hex.neighbors
+        rotation = -60 * hex.neighbors.index(neighbor)
+        vfx = VFX(hex, rotation=rotation, source=str(VFX_DIR / f'{vfx_name}.png'))
+        self.__reposition_vfx_single(vfx)
+        debug(f'Adding VFX: {vfx} @ {hex} -> {neighbor} with pos: {vfx.pos_center} rotation: {rotation} for {time:.3f} seconds')
+        self.__vfx.add(vfx)
+        self.canvas.after.add(vfx)
+        widgets.kvClock.schedule_once(
+            lambda *a, v=vfx: self.__remove_vfx(v), time)
+
+    def __remove_vfx(self, vfx):
+        debug(f'Removing VFX: {vfx}')
+        self.canvas.after.remove(vfx)
+        self.__vfx.remove(vfx)
+
+    def __reposition_vfx(self):
+        size = self.__get_tile_and_neighbors_size(self.tile_radius_padded)
+        for vfx in self.__vfx:
+            vfx.reset(self.real2pix(vfx.hex), size)
+
+    def __reposition_vfx_single(self, vfx):
+        vfx.reset(
+            pos=self.real2pix(vfx.hex),
+            size=self.__get_tile_and_neighbors_size(self.tile_radius_padded)
+            )
+
+    def debug(self):
+        pix = self.real2pix(Hex(0, 0))
+        debug(f'Map center in pixel coords: {pix}')
+        debug(f'Tile map size: {self.axis_sizes} = {len(self.visible_tiles)} tiles')
+        debug(f'Tile radius: {self.tile_radius_padded:.3f} ({self.tile_radius:.3f} + {self.__tile_padding:.3f}% padding)')
+        debug(f'Tile size: {self.__get_tile_size(self.tile_radius)}')
+        debug(f'Tile size padded: {self.__get_tile_size(self.tile_radius_padded)}')
+        debug(f'VFX size (padded): {self.__get_tile_and_neighbors_size(self.tile_radius_padded)}')
+        debug(f'VFX:')
+        debug(', '.join(f'{vfx}' for vfx in self.__vfx))
+        vfx_hex = Hex(random.randint(0, 5), random.randint(0, 5))
+        vfx_neighbor = random.choice(vfx_hex.neighbors)
+        self.add_vfx(
+            random.choice(('move', 'push')),
+            vfx_hex, vfx_neighbor,
+            5)
 
 
 class Tile(widgets.kvInstructionGroup):
@@ -240,3 +322,25 @@ class Tile(widgets.kvInstructionGroup):
         else:
             self._bg_text.size = 0, 0
             self._fg_text.size = 0, 0
+
+
+class VFX(widgets.kvInstructionGroup):
+    def __init__(self, hex, source, rotation=0, pos=None, size=None, **kwargs):
+        super().__init__(**kwargs)
+        self.pos_center = 0, 0
+        self.hex = hex
+        self.add(widgets.kvColor(1, 1, 1, 1))
+        self.add(widgets.kvPushMatrix())
+        self.rot = widgets.kvRotate(angle=rotation)
+        self.add(self.rot)
+        self.rect = widgets.kvRectangle(source=source)
+        self.add(self.rect)
+        self.add(widgets.kvPopMatrix())
+        if pos and size:
+            self.reset(pos, size)
+
+    def reset(self, pos, size):
+        self.pos_center = pos
+        self.rot.origin = pos
+        self.rect.size = size
+        self.rect.pos = center_sprite(pos, size)
