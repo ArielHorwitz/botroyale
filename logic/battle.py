@@ -201,6 +201,7 @@ class Battle(BaseLogicAPI):
         else:
             turn_str = f'starting new round'
         state_str = '\n'.join([
+            f'Ring of death radius:  {self.ring_radius}',
             f'Round: #{self.round_count:<3} Turn: #{self.turn_count:<4} Step: #{self.step_count:<5}',
             f'Currently:  [u]{turn_str}[/u]',
             '',
