@@ -151,7 +151,7 @@ class BaseLogicAPI:
             step_rates.append(s)
         return (
             ('Logic debug', self.debug, None),
-            ('Play entire battle', self.play_all, '^+ enter'),
+            ('Play all', self.play_all, '^+ enter'),
             ('Next step', self.next_step, 'n'),
             ('Autoplay', self.toggle_autoplay, 'spacebar'),
             *step_rates,
