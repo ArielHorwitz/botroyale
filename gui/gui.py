@@ -14,7 +14,7 @@ LOG_HOTKEYS = Settings.get('gui.log_hotkeys', False)
 
 
 class App(widgets.App):
-    def __init__(self, logic_api, **kwargs):
+    def __init__(self, logic_cls, **kwargs):
         print('Starting app...')
         super().__init__(**kwargs)
         self.title = 'Bot Royale'
@@ -22,8 +22,8 @@ class App(widgets.App):
         kex.resize_window(WINDOW_SIZE)
         if START_MAXIMIZED:
             widgets.kvWindow.maximize()
-        assert isinstance(logic_api, BaseLogicAPI)
-        self.logic = logic_api
+        assert issubclass(logic_cls, BaseLogicAPI)
+        self.logic = logic_cls()
         self.im = widgets.InputManager(app_control_defaults=True, logger=self.logger)
         self.make_widgets()
         self.hook_mainloop(FPS)
