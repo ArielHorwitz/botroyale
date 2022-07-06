@@ -69,8 +69,7 @@ class BaseLogicAPI:
         if neighbor is not None:
             assert is_hex(neighbor)
             assert neighbor in hex.neighbors
-        time = steps * STEP_INTERVAL_MS / 1000
-        self.__vfx_queue.append(VFX(name, hex, neighbor, time))
+        self.__vfx_queue.append(VFX(name, hex, neighbor, steps))
 
     def flush_vfx(self):
         """This method clears and returns the vfx from queue."""
@@ -106,6 +105,9 @@ class BaseLogicAPI:
     def debug(self):
         self.debug_mode = not self.debug_mode
         self.logger(f'Toggled logic debug mode: {self.debug_mode}')
+
+    def get_time(self):
+        return self.step_count
 
     def get_gui_tile_info(self, hex):
         """This method is called for every hex currently visible on the map,
