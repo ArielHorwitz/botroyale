@@ -141,7 +141,8 @@ class CrazeeBotAlpha(BaseBot):
                        my_pos.get_distance(wall) < tile_view_distance]
             d_enemys = [my_pos.get_distance(enemy) for enemy in alive_enemy_pos
                         if my_pos.get_distance(enemy) < tile_view_distance]
-
+            d_center = my_pos.get_distance(self.CENTER_TILE)
+            terrain_score -= d_center/4
             if len(d_pits) > 0:
                 terrain_score += (sum(d_pits) / len(d_pits)) * 2
             if len(d_walls) > 0:
