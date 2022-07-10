@@ -17,6 +17,7 @@ class Battle(BaseLogicAPI):
     def __init__(self):
         super().__init__()
         map = maps.get_map()
+        self.map_size_hint = map.radius + 0.2
         # Bots
         self.num_of_bots = len(map.spawns)
         self.bots = make_bots(self.num_of_bots)

@@ -10,11 +10,10 @@ from util.hexagon import Hex, WIDTH_HEIGHT_RATIO
 
 
 MAX_MAP_TILES = Settings.get('tilemap.max_draw_tiles', 2500)
-TILE_RADIUS = Settings.get('tilemap._tile_radius', 20)
 TILE_PADDING = Settings.get('tilemap._tile_padding', 10)
-MAX_TILE_RADIUS = Settings.get('tilemap.max_tile_radius', 200)
-UNIT_SIZE = Settings.get('tilemap.unit_size', 0.55)
-FONT_SIZE = Settings.get('tilemap.font_size', 12)
+MAX_TILE_RADIUS = Settings.get('tilemap.max_tile_radius', 300)
+UNIT_SIZE = Settings.get('tilemap.unit_size', 0.7)
+FONT_SIZE = Settings.get('tilemap.font_size', 20)
 HEX_PNG = str(Path.cwd() / 'assets' / 'hex.png')
 UNIT_PNG = str(Path.cwd() / 'assets' / 'unit.png')
 VFX_DIR = Path.cwd() / 'assets' / 'vfx'
@@ -24,7 +23,8 @@ class TileMap(widgets.RelativeLayout):
     def __init__(self, app, api, **kwargs):
         super().__init__(**kwargs)
         self.__current_grid = 0, 0, 0  # tile_radius, canvas_width, canvas_height
-        self.__tile_radius = TILE_RADIUS  # in pixels, to hexagon corner
+        self.__size_hint = api.map_size_hint
+        self.__tile_radius = MAX_TILE_RADIUS
         self.__tile_padding = TILE_PADDING  # in percent of tile radius
         self.real_center = Hex(0, 0)
         self.get_tile_info = api.get_gui_tile_info
@@ -47,6 +47,8 @@ class TileMap(widgets.RelativeLayout):
         app.im.register('reset_map', key='home', callback=self.reset_view)
         app.im.register('map_zoom_in', key='pageup', callback=self.zoom_in)
         app.im.register('map_zoom_out', key='pagedown', callback=self.zoom_out)
+        app.im.register('clear_vfx', key='^+ c', callback=self.clear_vfx)
+        widgets.kvClock.schedule_once(self.reset_view, 1)
 
     def scroll_wheel(self, w, m):
         if not self.collide_point(*m.pos):
@@ -113,7 +115,7 @@ class TileMap(widgets.RelativeLayout):
         for hex in currently_visible:
             tile_pos = hex.pixels(tile_radius_padded) + screen_center
             self.tiles[hex].reset(tile_pos, tile_size)
-        logger(f'Recreated tile map with {cols+1} × {rows} = {len(currently_visible)} tiles. Radius: {tile_radius_padded:.1f} ({tile_radius:.1f} + {self.__tile_padding}% padding) size: {tile_size}')
+        logger(f'Recreated tile map with {cols+1} × {rows} = {len(currently_visible)} tiles. Radius: {tile_radius_padded:.1f} ({tile_radius:.1f} + {self.__tile_padding}% padding) size: {tile_size}. Pixel size: {self.size}')
 
     @property
     def tile_radius(self):
@@ -145,6 +147,25 @@ class TileMap(widgets.RelativeLayout):
         radius = pix_size[0] / cols_count / 2
         return radius
 
+    def __tile_radius_from_sizehint(self):
+        # Convert the size_hint radius to diameter in tiles
+        tile_diameter = self.__size_hint * 2 + 1
+        pix_size = self.size
+        minimum_radius = self.__get_minimum_radius(pix_size)
+        width_radius = math.ceil(pix_size[0] / tile_diameter) / 2
+        height_radius = math.ceil(pix_size[1] / (tile_diameter * 3/4)) / 2
+        hint_radius = min((width_radius, height_radius))
+        final_radius = max((minimum_radius, hint_radius))
+        final_radius = min((MAX_TILE_RADIUS, final_radius))
+        logger(f'__get_tile_radius_from_sizehint')
+        logger(f'size: {pix_size} {self.width} {self.height}')
+        logger(f'hint: {self.__size_hint}')
+        logger(f'min: {minimum_radius}')
+        logger(f'wid: {width_radius}')
+        logger(f'hei: {height_radius}')
+        logger(f'final: {final_radius}')
+        return final_radius
+
     @staticmethod
     def __get_total_tile_count(cols_radius, rows_radius):
         return (int(cols_radius) * 2 + 1) * (int(rows_radius) * 2 + 1)
@@ -159,7 +180,7 @@ class TileMap(widgets.RelativeLayout):
 
     def _adjust_zoom(self, d=None):
         if d is None:
-            new_radius = TILE_RADIUS
+            new_radius = self.__tile_radius_from_sizehint()
         else:
             new_radius = self.__tile_radius * d
         minimum_radius = self.__get_minimum_radius(self.size)
@@ -214,6 +235,11 @@ class TileMap(widgets.RelativeLayout):
         logger(f'Adding VFX: {vfx} @ {hex} -> {neighbor} with pos: {vfx.pos_center} rotation: {rotation} for {time:.3f} seconds')
         self.__vfx.add(vfx)
         self.canvas.after.add(vfx)
+
+    def clear_vfx(self, *a):
+        all_vfx = list(self.__vfx)
+        for vfx in all_vfx:
+            self.__remove_vfx(vfx)
 
     def __remove_vfx(self, vfx):
         logger(f'Removing VFX: {vfx}')
