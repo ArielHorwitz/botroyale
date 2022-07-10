@@ -20,12 +20,12 @@ class Settings:
     @classmethod
     def get(cls, name, set_default=None):
         if set_default is not None:
-            if name in cls.default_settings:
-                raise KeyError(f'Setting "{name}" default already set to: {cls.default_settings[name]}')
             cls.default_settings[name] = set_default
         if name in cls.user_settings:
             return cls.user_settings[name]
-        return cls.default_settings[name]
+        elif name in cls.default_settings:
+            return cls.default_settings[name]
+        raise KeyError(f'No such setting "{name}" found')
 
     @classmethod
     def write_to_file(cls):

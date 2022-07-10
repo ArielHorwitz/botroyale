@@ -20,6 +20,7 @@ AXIS_SIZE = 15
 
 
 class BaseLogicAPI:
+    map_size_hint = 10
     step_interval_ms = 1000 / STEP_RATE
     debug_mode = False
     step_count = 0
