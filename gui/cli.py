@@ -1,3 +1,7 @@
+from collections import Counter
+import numpy as np
+
+
 HELP_STR = """
 === BOT ROYALE ===
 Running in terminal mode (CLI). To use the GUI, disable "gui.cli" setting, or delete your settings file.
@@ -8,6 +12,7 @@ Please note that settings are not auto-fixed when using the CLI.
   "s"    : Show battle details.
   "#"    : Run # number of steps.
   "c"    : Run the battle to completion.
+  "r #"  : Run # of battles and get winrates.
   "n"    : Start a new battle.
   "q"    : Quit.
 """
@@ -40,6 +45,34 @@ class CLI:
         while not self.battle.game_over:
             self.battle.next_step()
         self.print_battle()
+        alive = np.flatnonzero(self.battle.alive_mask)
+        if len(alive):
+            winner_id = alive[0]
+            winner = self.battle.bots[winner_id].name
+            losers = [b.name for b in self.battle.bots if b.id != winner_id]
+        else:
+            losers = [b.name for b in self.battle.bots]
+            winner = 'draw'
+        return winner, losers
+
+    def run_battles(self, count):
+        def print_summary():
+            print(f'\n\n          Total Winrates (played {i} / {count} games)\n')
+            if i <= 0:
+                return
+            for bot, wins in counter.most_common():
+                print(f'{bot:>20}: {f"{wins/i*100:.2f}":>7} % ({str(wins):<4} wins)')
+
+        counter = Counter()
+        for i in range(count):
+            self.new_battle()
+            print_summary()
+            winner, losers = self.play_complete()
+            counter[winner] += 1
+            for loser in losers:
+                counter[loser] += 0
+        i += 1
+        print_summary()
 
     def print_help(self):
         print(HELP_STR)
@@ -65,6 +98,9 @@ class CLI:
                 self.next_step()
             elif uinput == 'c':
                 self.play_complete()
+            elif uinput.startswith('r '):
+                count = int(uinput[2:])
+                self.run_battles(count)
             else:
                 try:
                     steps = int(uinput)
