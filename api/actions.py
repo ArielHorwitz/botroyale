@@ -13,14 +13,26 @@ class Move(Action):
         assert is_hex(target_tile)
         self.target = target_tile
 
+    def __repr__(self):
+        return f'<Move action: {self.target}>'
+
 
 class Push(Move):
     ap = 30
+
+    def __repr__(self):
+        return f'<Push action: {self.target}>'
 
 
 class Idle(Action):
     has_effect = False
 
+    def __repr__(self):
+        return f'<Idle action>'
+
 
 class IllegalAction(Action):
     has_effect = False
+
+    def __repr__(self):
+        return f'<Illegal action>'
