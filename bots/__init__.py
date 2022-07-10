@@ -49,7 +49,10 @@ def make_bots(num_of_bots: int) -> list[BaseBot]:
         print('\n'.join(f'#{i:<2} {r}' for i, r in enumerate(BOT_REQ[:num_of_bots])))
         game_classes = [BOTS[req] for req in BOT_REQ if req in BOTS]
         non_testing_bots = [bot for bot in BOTS.values() if not bot.TESTING_ONLY]
-        game_classes.extend(random.choices(non_testing_bots, k=num_of_bots - len(game_classes)))
+        random.shuffle(non_testing_bots)
+        while len(game_classes) < num_of_bots:
+            idx = (num_of_bots - len(game_classes)) % len(non_testing_bots)
+            game_classes.append(non_testing_bots[idx])
     print('Selected bots:')
     print('\n'.join(f'#{i:<2} {cls.NAME}' for i, cls in enumerate(game_classes[:num_of_bots])))
     bots_instances = [game_classes[i](i) for i in range(num_of_bots)]
