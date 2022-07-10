@@ -59,6 +59,15 @@ class Hexagon:
                 rotations += 1
         return hex
 
+    def range(self, distance):
+        """Returns all the hexes within distance from our position."""
+        results = []
+        for q in range(-distance, distance+1):
+            for r in range(max(-distance, -q-distance), min(+distance, -q+distance)+1):
+                s = -q-r
+                results.append(self + Hexagon(q, r, s))
+        return results
+
     @property
     def neighbors(self):
         if self.__neighbors is None:
