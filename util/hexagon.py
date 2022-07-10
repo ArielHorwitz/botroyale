@@ -44,6 +44,21 @@ class Hexagon:
                 hex = hex + DIRECTIONS[i]
         return ring
 
+    def rotate(self, rotations=1):
+        """Return the hex given by rotating our position about the origin (0, 0)
+        by 60° per rotation."""
+        hex = self
+        assert isinstance(rotations, int)
+        if rotations > 0:
+            while rotations > 0:
+                hex = Hex(*self._convert_cube2offset(-hex.r, -hex.s, -hex.q))
+                rotations -= 1
+        elif rotations < 0:
+            while rotations < 0:
+                hex = Hex(*self._convert_cube2offset(-hex.s, -hex.q, -hex.r))
+                rotations += 1
+        return hex
+
     @property
     def neighbors(self):
         if self.__neighbors is None:
