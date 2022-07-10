@@ -47,6 +47,7 @@ class TileMap(widgets.RelativeLayout):
         app.im.register('reset_map', key='home', callback=self.reset_view)
         app.im.register('map_zoom_in', key='pageup', callback=self.zoom_in)
         app.im.register('map_zoom_out', key='pagedown', callback=self.zoom_out)
+        app.im.register('clear_vfx', key='^+ c', callback=self.clear_vfx)
 
     def scroll_wheel(self, w, m):
         if not self.collide_point(*m.pos):
@@ -214,6 +215,11 @@ class TileMap(widgets.RelativeLayout):
         logger(f'Adding VFX: {vfx} @ {hex} -> {neighbor} with pos: {vfx.pos_center} rotation: {rotation} for {time:.3f} seconds')
         self.__vfx.add(vfx)
         self.canvas.after.add(vfx)
+
+    def clear_vfx(self, *a):
+        all_vfx = list(self.__vfx)
+        for vfx in all_vfx:
+            self.__remove_vfx(vfx)
 
     def __remove_vfx(self, vfx):
         logger(f'Removing VFX: {vfx}')
