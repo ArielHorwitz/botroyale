@@ -1,5 +1,4 @@
 import copy
-import random
 import numpy as np
 
 from api.actions import Move, Push, Idle, Action
@@ -83,6 +82,7 @@ class CrazeeBotAlpha(BaseBot):
 
     def calc_turn(self, wi: world_info):
         MAX_DEPTH = 5
+        explored_worlds = set()
 
         def copy_wi(_wi: world_info) -> world_info:
             return world_info(
@@ -128,7 +128,7 @@ class CrazeeBotAlpha(BaseBot):
             if my_pos in edge_of_map:
                 return float('-inf')
 
-            enemy_dead_score = -enemys_alive
+            enemy_dead_score = -enemys_alive * 1.5
             enemy_mask = np.ones(len(cwi.positions), dtype=np.bool)
             enemy_mask[self.id] = False
             enemy_ids = np.flatnonzero(enemy_mask)
@@ -143,15 +143,19 @@ class CrazeeBotAlpha(BaseBot):
                         if my_pos.get_distance(enemy) < tile_view_distance]
             d_center = my_pos.get_distance(self.CENTER_TILE)
             terrain_score -= d_center/4
+            my_ap = cwi.ap[self.id]
+            ap_score = min(my_ap, self.AP_REGEN)
+            ap_score += max(0, my_ap-self.AP_REGEN) / 4
+            ap_score /= 20
             if len(d_pits) > 0:
                 terrain_score += (sum(d_pits) / len(d_pits)) * 2
             if len(d_walls) > 0:
                 terrain_score -= (sum(d_walls) / len(d_walls))
             if len(d_enemys) > 0:
                 enemy_score += (sum(d_enemys) / len(d_enemys))
-            score = terrain_score + enemy_score + enemy_dead_score
-            # print(f"Score: {score:.2f}, terrain_score: {terrain_score:.2f}, enemy_score: {enemy_score:.2f}, "
-            #       f"enemy_dead_score: {enemy_dead_score:.2f}")
+            score = terrain_score + enemy_score + enemy_dead_score + ap_score
+            # print(f"Score: {score:.2f}, terrain: {terrain_score:.2f}, enemy: {enemy_score:.2f}, "
+            #       f"enemy_dead: {enemy_dead_score:.2f}, ap: {ap_score:.2f}")
             return score
 
         def find_max_chain(chain: list[CWorld], depth=MAX_DEPTH):
@@ -165,14 +169,17 @@ class CrazeeBotAlpha(BaseBot):
                 new_cstate = CWorld(new_state,
                                     get_wi_score(new_state, self.id),
                                     next_action)
+                # Pruning explored worlds
+                c_hash = hash(new_cstate)
+                if c_hash in explored_worlds:
+                    continue
+                explored_worlds.add(c_hash)
+
                 child_best_chain = find_max_chain([*chain, new_cstate], depth - 1)
+
                 if child_best_chain[-1].score > best_chain[-1].score:
                     best_chain = child_best_chain
-                elif child_best_chain[-1].score == best_chain[-1].score:
-                    if len(child_best_chain) < len(best_chain):
-                        best_chain = child_best_chain
-            # print(f"depth: {depth}")
-            # print('\n'.join(str(_) for _ in best_chain))
+
             return best_chain
 
         init_chain = [CWorld(wi, get_wi_score(wi, self.id), Idle())]
@@ -180,7 +187,6 @@ class CrazeeBotAlpha(BaseBot):
         if len(result_chain) > 1:
             temp = result_chain.pop(0)
             result_chain.append(temp)
-        # print('End result_chain')
         debug('\n'.join(str(_) for _ in result_chain))
         return result_chain
 
@@ -198,6 +204,12 @@ class CWorld:
 
     def __repr__(self):
         return str(self)
+
+    def __hash__(self):
+        return hash(str(self.state))
+
+    def __eq__(self, other):
+        return hash(self) == hash(other)
 
 
 BOT = CrazeeBotAlpha
