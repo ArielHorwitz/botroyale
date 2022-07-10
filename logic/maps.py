@@ -15,10 +15,7 @@ class Map:
     radius = 5
     def __init__(self):
         self.center = Hex(0, 0)
-        self.all_tiles = set()
-        for _ in range(2, self.radius-1):
-            self.all_tiles |= set(self.center.ring(_))
-        self.empty_tiles = list(self.all_tiles)
+        self.empty_tiles = list(set(self.center.range(self.radius-1)) - {self.center, *self.center.neighbors})
         random.shuffle(self.empty_tiles)
         self.pits = set()
         self.walls = set()
@@ -93,7 +90,45 @@ class GiantMap(BasicMap):
     radius = 25
 
 
+class ClassicMap(Map):
+    radius = 15
+    spawn_count = 12
+
+    def make_map(self):
+        # Spawns
+        spawns = Hex(6, -14), Hex(-6, -14), Hex(3, -14), Hex(-3, -14)
+        walls = set()
+        radial_walls = list(self.center.straight_line(Hex(0, -1), max_distance=self.radius-1))
+        radial_walls = set(w for i, w in enumerate(radial_walls[1:]) if i%4 != 2)
+        walls |= radial_walls
+        jebait_corridor = {
+            Hex(-2, -12), Hex(-1, -12), Hex(0, -12), Hex(1, -12), Hex(2, -12),
+            Hex(-2, -14), Hex(-1, -14), Hex(0, -14), Hex(1, -14), Hex(2, -14),
+        }
+        walls |= jebait_corridor
+        walls.add(Hex(0, -8))
+
+        pits = set()
+        pits |= {Hex(-2, -6), Hex(-1, -6), Hex(1, -6), Hex(2, -6)}
+        pits |= {Hex(-5, -12), Hex(-4, -12), Hex(4, -12), Hex(5, -12)}
+        pits |= {Hex(-2, -9), Hex(-1, -10), Hex(0, -10), Hex(1, -10), Hex(1, -9)}
+
+        for rot in range(6):
+            for spawn in spawns:
+                self.add_spawn(spawn.rotate(rot))
+            for pit in pits:
+                self.add_pit(pit.rotate(rot))
+            for wall in walls:
+                self.add_wall(wall.rotate(rot))
+
+        for rpit in range(15):
+            self.add_pit(self.empty_tiles.pop(0))
+        for rwall in range(15):
+            self.add_wall(self.empty_tiles.pop(0))
+
+
 MAPS = {
+    'classic': ClassicMap,
     'basic': BasicMap,
     'empty': EmptyMap,
     'giant': GiantMap,
