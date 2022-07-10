@@ -9,7 +9,7 @@ from gui.tilemap import TileMap
 # User-configurable settings
 FPS = Settings.get('gui._fps', 60)
 WINDOW_SIZE = Settings.get('gui._window_size', [1280, 720])
-START_MAXIMIZED = Settings.get('gui._window_maximize', False)
+START_MAXIMIZED = Settings.get('gui._window_maximize', True)
 LOG_HOTKEYS = Settings.get('gui.log_hotkeys', False)
 
 

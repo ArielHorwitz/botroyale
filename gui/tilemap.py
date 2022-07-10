@@ -11,9 +11,9 @@ from util.hexagon import Hex, WIDTH_HEIGHT_RATIO
 
 MAX_MAP_TILES = Settings.get('tilemap.max_draw_tiles', 2500)
 TILE_PADDING = Settings.get('tilemap._tile_padding', 10)
-MAX_TILE_RADIUS = Settings.get('tilemap.max_tile_radius', 200)
-UNIT_SIZE = Settings.get('tilemap.unit_size', 0.55)
-FONT_SIZE = Settings.get('tilemap.font_size', 12)
+MAX_TILE_RADIUS = Settings.get('tilemap.max_tile_radius', 300)
+UNIT_SIZE = Settings.get('tilemap.unit_size', 0.7)
+FONT_SIZE = Settings.get('tilemap.font_size', 20)
 HEX_PNG = str(Path.cwd() / 'assets' / 'hex.png')
 UNIT_PNG = str(Path.cwd() / 'assets' / 'unit.png')
 VFX_DIR = Path.cwd() / 'assets' / 'vfx'
