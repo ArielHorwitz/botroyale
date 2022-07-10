@@ -6,6 +6,7 @@ from api.actions import Move, Push
 
 class RandomBot(BaseBot):
     NAME = "RandomBot"
+    TESTING_ONLY = True
 
     def __init__(self, id):
         super().__init__(id)
