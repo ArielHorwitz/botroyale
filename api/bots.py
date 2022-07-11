@@ -29,3 +29,13 @@ class BaseBot:
 
     def get_action(self, world_state):
         return Move(Hex(0, 0))
+
+    def click_debug(self, hex, button):
+        """
+        Called when we are clicked on in the GUI.
+        May return a list of vfx args.
+        """
+        print(f'#{self.id} {self.name} received click_debug with button: {button}')
+        return [
+            {'name': 'mark-green', 'hex': hex, 'neighbor': None},
+        ]

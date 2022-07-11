@@ -250,3 +250,22 @@ class Battle(BaseLogicAPI):
         cond1 = self.round_count > MAX_ROUNDS
         cond2 = self.alive_mask.sum() <= 1
         return cond1 or cond2
+
+    def handle_hex_click(self, hex, button):
+        super().handle_hex_click(hex, button)
+        if hex in self.positions:
+            bot_id = self.positions.index(hex)
+            vfx_seq = self.bots[bot_id].click_debug(hex, button)
+            if vfx_seq is not None:
+                for vfx_kwargs in vfx_seq:
+                    vfx_kwargs['steps'] = 1
+                    self.add_vfx(**vfx_kwargs)
+        else:
+            self.logger(f'Clicked {button} on: {hex}')
+            if button == 'left':
+                vfx = 'mark-green'
+            elif button == 'right':
+                vfx = 'mark-red'
+            else:
+                vfx = 'mark-blue'
+            self.add_vfx(vfx, hex, steps=1)
