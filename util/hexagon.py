@@ -98,11 +98,39 @@ class Hexagon:
         row = r
         return col, row
 
-    def pixels(self, radius):
+    def pixel_position(self, radius):
+        """My position in pixels, given a radius of `radius` pixels."""
         offset_r = (self.y % 2 == 1) / 2
         x = radius * SQRT3 * (self.x + offset_r)
         y = radius * 3/2 * self.y
         return x, y
+
+    def pixel_position_to_hex(self, radius, pixel_coords):
+        """
+        The hex at position `pixel_coords` assuming self is centered at
+        position 0, 0.
+        """
+        x, y = pixel_coords[0] / radius, pixel_coords[1] / radius
+        q = (SQRT3/3 * x) + (-1/3 * y)
+        r = 2/3 * y
+        offset = self._round(q, r, -q-r)
+        return offset - self
+
+    @classmethod
+    def _round(cls, q_, r_, s_):
+        q = round(q_)
+        r = round(r_)
+        s = round(s_)
+        qdiff = abs(q - q_)
+        rdiff = abs(r - r_)
+        sdiff = abs(s - s_)
+        if qdiff > rdiff and qdiff > sdiff:
+            q = -r-s
+        elif rdiff > sdiff:
+            r = -q-s
+        else:
+            s = -q-r
+        return Hex(*cls._convert_cube2offset(q, r, s))
 
     # Representations
     @property

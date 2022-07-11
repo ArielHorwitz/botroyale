@@ -136,7 +136,7 @@ class TileMap(widgets.RelativeLayout):
                 self.tiles[hex] = Tile(bg=HEX_PNG, fg=UNIT_PNG)
             self.canvas.add(self.tiles[hex])
         for hex in currently_visible:
-            tile_pos = hex.pixels(tile_radius_padded) + screen_center
+            tile_pos = hex.pixel_position(tile_radius_padded) + screen_center
             self.tiles[hex].reset(tile_pos, tile_size)
         logger(f'Recreated tile map with ({cols} + 1) × {rows} = {len(currently_visible)} tiles. Radius: {tile_radius_padded:.2f} ({tile_radius:.2f} * {self.__tile_padding:.2f} padding) size: {tile_size}. Pixel size: {self.size}')
         self.__reposition_vfx()
@@ -275,7 +275,7 @@ class TileMap(widgets.RelativeLayout):
 
     def real2pix(self, real_hex):
         tile = self.real2tile(real_hex)
-        tile_pos = tile.pixels(self.tile_radius_padded) + self.screen_center
+        tile_pos = tile.pixel_position(self.tile_radius_padded) + self.screen_center
         return tile_pos
 
     def add_vfx(self, vfx_name, hex, neighbor=None, time=1):
