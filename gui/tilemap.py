@@ -278,7 +278,7 @@ class TileMap(widgets.RelativeLayout):
         tile_pos = tile.pixel_position(self.tile_radius_padded) + self.screen_center
         return tile_pos
 
-    def add_vfx(self, vfx_name, hex, neighbor=None, time=1):
+    def add_vfx(self, vfx_name, hex, neighbor=None, time=1, real_time=None):
         if neighbor is None:
             neighbor = hex.neighbors[0]
         assert neighbor in hex.neighbors
@@ -293,6 +293,9 @@ class TileMap(widgets.RelativeLayout):
         logger(f'Adding VFX: {vfx} @ {hex} -> {neighbor} with pos: {vfx.pos_center} rotation: {rotation} for {time:.3f} seconds')
         self.__vfx.add(vfx)
         self.canvas.after.add(vfx)
+        if real_time:
+            widgets.kvClock.schedule_once(
+                lambda *a: self.__remove_vfx(vfx), real_time)
 
     def clear_vfx(self, *a):
         all_vfx = list(self.__vfx)
@@ -300,6 +303,8 @@ class TileMap(widgets.RelativeLayout):
             self.__remove_vfx(vfx)
 
     def __remove_vfx(self, vfx):
+        if vfx not in self.__vfx:
+            return
         logger(f'Removing VFX: {vfx}')
         self.canvas.after.remove(vfx)
         self.__vfx.remove(vfx)

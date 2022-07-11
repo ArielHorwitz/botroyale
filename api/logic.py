@@ -6,7 +6,7 @@ from util.hexagon import Hex, is_hex
 
 
 TileGUI = namedtuple('TileGUI', ['bg_color', 'bg_text', 'fg_color', 'fg_text'])
-VFX = namedtuple('VFX', ['name', 'hex', 'neighbor', 'time'])
+VFX = namedtuple('VFX', ['name', 'hex', 'neighbor', 'time', 'real_time'])
 
 STEP_RATE = Settings.get('logic._step_rate_cap', 20)
 STEP_RATES = Settings.get('logic.|step_rates', [1, 3, 10, 20, 60])
@@ -64,14 +64,14 @@ class BaseLogicAPI:
         self.__vfx_queue = deque()
         self.unit_colors = [self.get_color(_) for _ in range(UNIT_COUNT)]
 
-    def add_vfx(self, name, hex, neighbor=None, steps=2):
+    def add_vfx(self, name, hex, neighbor=None, steps=2, real_time=None):
         """Add a single vfx to the queue."""
         assert isinstance(name, str)
         assert is_hex(hex)
         if neighbor is not None:
             assert is_hex(neighbor)
             assert neighbor in hex.neighbors
-        self.__vfx_queue.append(VFX(name, hex, neighbor, steps))
+        self.__vfx_queue.append(VFX(name, hex, neighbor, steps, real_time))
 
     def flush_vfx(self):
         """This method clears and returns the vfx from queue."""
