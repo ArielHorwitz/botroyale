@@ -158,6 +158,9 @@ class BaseLogicAPI:
             *step_rates,
         )
 
+    def handle_hex_click(self, hex, button):
+        pass
+
     def play_all(self, *args):
         self.logger('Playing battle to completion...')
         count = 0

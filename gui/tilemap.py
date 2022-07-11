@@ -32,12 +32,14 @@ class TileMap(widgets.RelativeLayout):
         self.get_tile_info = api.get_gui_tile_info
         self.get_vfx = api.flush_vfx
         self.get_logic_time = api.get_time
+        assert callable(api.handle_hex_click)
+        self.handle_hex_click = api.handle_hex_click
         self.tiles = {}
         self.visible_tiles = set()
         self.__vfx = set()
         self._create_grid()
         self.bind(size=self._resize)
-        self.bind(on_touch_down=self.scroll_wheel)
+        self.bind(on_touch_down=self.on_touch_down)
         app.im.register('pan_up', key='w', callback=lambda *a: self.pan(y=1))
         app.im.register('pan_down', key='s', callback=lambda *a: self.pan(y=-1))
         app.im.register('pan_right', key='d', callback=lambda *a: self.pan(x=1))
@@ -52,7 +54,10 @@ class TileMap(widgets.RelativeLayout):
         app.im.register('clear_vfx', key='^+ c', callback=self.clear_vfx)
         widgets.kvClock.schedule_once(self.reset_view, 1)
 
-    def scroll_wheel(self, w, m):
+    def on_touch_down(self, w, m=None):
+        if m is None:
+            # Not a mouse click
+            return
         if not self.collide_point(*m.pos):
             return False
         if m.button == 'scrollup':
@@ -60,6 +65,13 @@ class TileMap(widgets.RelativeLayout):
             return True
         elif m.button == 'scrolldown':
             self.zoom_in()
+            return True
+        else:
+            btn = m.button
+            pos = np.asarray(m.pos) - self.screen_center
+            hex = self.real_center.pixel_position_to_hex(self.tile_radius_padded, pos)
+            logger(f'Clicked {btn}: {pos} -> {hex}')
+            self.handle_hex_click(hex, btn)
             return True
         return False
 
