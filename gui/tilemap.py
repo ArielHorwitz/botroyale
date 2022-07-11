@@ -14,6 +14,7 @@ TILE_PADDING = Settings.get('tilemap._tile_padding', 10)
 MAX_TILE_RADIUS = Settings.get('tilemap.max_tile_radius', 300)
 UNIT_SIZE = Settings.get('tilemap.unit_size', 0.7)
 FONT_SIZE = Settings.get('tilemap.font_size', 20)
+REDRAW_COOLDOWN = Settings.get('tilemap.|redraw_cooldown', 0.3)
 HEX_PNG = str(Path.cwd() / 'assets' / 'hex.png')
 UNIT_PNG = str(Path.cwd() / 'assets' / 'unit.png')
 VFX_DIR = Path.cwd() / 'assets' / 'vfx'
@@ -22,6 +23,7 @@ VFX_DIR = Path.cwd() / 'assets' / 'vfx'
 class TileMap(widgets.RelativeLayout):
     def __init__(self, app, api, **kwargs):
         super().__init__(**kwargs)
+        self.__redraw_request = 0
         self.__current_grid = 0, 0, 0  # tile_radius, canvas_width, canvas_height
         self.__size_hint = api.map_size_hint
         self.__tile_radius = MAX_TILE_RADIUS
@@ -82,8 +84,26 @@ class TileMap(widgets.RelativeLayout):
         self._adjust_zoom(2/3)
 
     def _resize(self, w, size):
-        self.__tile_radius = self.__tile_radius_from_sizehint(self.__size_hint, size)
-        widgets.kvClock.schedule_once(lambda *a: self._create_grid(), 0)
+        """
+        When window is resized, the grid must be recreated.
+        However when a window is resized with a mouse drag, we will get size
+        for every frame. We don't want to redraw every frame so we set a
+        cooldown.
+        """
+        # Record the redraw request. A new resize will override this one.
+        self.__redraw_request += 1
+        request = self.__redraw_request
+        # Schedule the redraw in REDRAW_COOLDOWN time.
+        widgets.kvClock.schedule_once(
+            lambda *a: self._resize_redraw(request), REDRAW_COOLDOWN)
+
+    def _resize_redraw(self, redraw_request):
+        # Skip redrawing if this request is obsolete (if a new request has been
+        # made since).
+        if redraw_request != self.__redraw_request:
+            return
+        self.__tile_radius = self.__tile_radius_from_sizehint(self.__size_hint)
+        self._create_grid()
 
     def _create_grid(self):
         self.__tile_radius = max(self.__tile_radius, self.__get_minimum_radius(self.size))
@@ -119,6 +139,7 @@ class TileMap(widgets.RelativeLayout):
             tile_pos = hex.pixels(tile_radius_padded) + screen_center
             self.tiles[hex].reset(tile_pos, tile_size)
         logger(f'Recreated tile map with ({cols} + 1) × {rows} = {len(currently_visible)} tiles. Radius: {tile_radius_padded:.2f} ({tile_radius:.2f} * {self.__tile_padding:.2f} padding) size: {tile_size}. Pixel size: {self.size}')
+        self.__reposition_vfx()
 
     @property
     def tile_radius(self):
@@ -173,13 +194,14 @@ class TileMap(widgets.RelativeLayout):
         ]))
         return final_radius
 
-    def __tile_radius_from_sizehint(self, size_hint, pix_size):
+    def __tile_radius_from_sizehint(self, size_hint):
         """
         Finds the radius that will fit size_hint tiles on each side of the
-        center tile vertically and horizontally on to a canvas of pix_size.
+        center tile vertically and horizontally.
         E.g. a size_hint of 5 will result in a radius that will fit at least
         11 x 11 tiles (5 radius * 2 + center tile).
         """
+        pix_size = self.size
         diameter_tiles = size_hint * 2 + 1  # radius * 2 + center tile
         # For cols, we need just see how many fit side by side...
         half_tile_width = pix_size[0] / diameter_tiles / 2
@@ -217,7 +239,7 @@ class TileMap(widgets.RelativeLayout):
 
     def _adjust_zoom(self, d=None):
         if d is None:
-            new_radius = self.__tile_radius_from_sizehint(self.__size_hint, self.size)
+            new_radius = self.__tile_radius_from_sizehint(self.__size_hint)
         else:
             new_radius = self.__tile_radius * d
         minimum_radius = self.__get_minimum_radius(self.size)
@@ -229,7 +251,6 @@ class TileMap(widgets.RelativeLayout):
             new_radius = MAX_TILE_RADIUS
         self.__tile_radius = new_radius
         self._create_grid()
-        self.__reposition_vfx()
 
     @property
     def screen_center(self):
