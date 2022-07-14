@@ -261,7 +261,6 @@ class Battle(BaseLogicAPI):
                     vfx_kwargs['steps'] = 1
                     self.add_vfx(**vfx_kwargs)
         else:
-            self.logger(f'Clicked {button} on: {hex}')
             if button == 'left':
                 vfx = 'mark-green'
             elif button == 'right':

@@ -159,7 +159,7 @@ class BaseLogicAPI:
         )
 
     def handle_hex_click(self, hex, button):
-        pass
+        self.logger(f'Clicked {button} on: {hex}')
 
     def play_all(self, *args):
         self.logger('Playing battle to completion...')
