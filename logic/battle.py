@@ -243,6 +243,12 @@ class Battle(BaseLogicAPI):
             status_str = f'{autoplay} <= {1000 / self.step_interval_ms:.2f} steps/second'
         return f'{status_str}\n\n{state_str}'
 
+    @property
+    def highlight_tile(self):
+        if self.round_remaining_turns:
+            return self.positions[self.round_remaining_turns[0]]
+        return None
+
     def set_world_info(self):
         return world_info(
             positions=copy.copy(self.positions),

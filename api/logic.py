@@ -28,6 +28,7 @@ class BaseLogicAPI:
     positions = [Hex(_, 0) for _ in range(UNIT_COUNT)]
     walls = {Hex(0, 1)}
     pits = {Hex(1, 1)}
+    highlight_tile = Hex(0, 0)
     DEFAULT_CELL_BG = Settings.get('tilemap.|colors._default_tile', (0.25, 0.1, 0))
     WALL_COLOR = Settings.get('tilemap.|colors._walls', (1, 1, 1))
     PIT_COLOR = Settings.get('tilemap.|colors._pits', (0.05, 0.05, 0.05))
@@ -117,6 +118,8 @@ class BaseLogicAPI:
         # BG
         if hex in self.pits:
             bg_color = self.PIT_COLOR
+        elif hex is self.highlight_tile:
+            bg_color = 1, 1, 1
         else:
             bg_color = self.DEFAULT_CELL_BG
         bg_text = ', '.join(str(_) for _ in hex.xy) if self.debug_mode else ''
