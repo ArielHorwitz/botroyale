@@ -1,3 +1,4 @@
+# Maintainer: ninja
 import numpy as np
 from bots import BaseBot
 from api.actions import Idle, Move, Push
