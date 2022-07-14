@@ -1,6 +1,6 @@
 from collections import deque, namedtuple
 import numpy as np
-from util import ping, pong
+from util.time import ping, pong
 from util.settings import Settings
 from util.hexagon import Hex, is_hex
 
@@ -28,6 +28,7 @@ class BaseLogicAPI:
     positions = [Hex(_, 0) for _ in range(UNIT_COUNT)]
     walls = {Hex(0, 1)}
     pits = {Hex(1, 1)}
+    highlight_tile = Hex(0, 0)
     DEFAULT_CELL_BG = Settings.get('tilemap.|colors._default_tile', (0.25, 0.1, 0))
     WALL_COLOR = Settings.get('tilemap.|colors._walls', (1, 1, 1))
     PIT_COLOR = Settings.get('tilemap.|colors._pits', (0.05, 0.05, 0.05))
@@ -117,6 +118,8 @@ class BaseLogicAPI:
         # BG
         if hex in self.pits:
             bg_color = self.PIT_COLOR
+        elif hex is self.highlight_tile:
+            bg_color = 1, 1, 1
         else:
             bg_color = self.DEFAULT_CELL_BG
         bg_text = ', '.join(str(_) for _ in hex.xy) if self.debug_mode else ''
@@ -142,24 +145,25 @@ class BaseLogicAPI:
         return self.UNIT_COLORS[index % len(self.UNIT_COLORS)]
 
     def get_controls(self):
-        step_rates = []
-        for i, r in enumerate(STEP_RATES):
-            s = (
-                f'Set step rate {r}',
-                lambda r=r: self.set_step_rate(r),
-                str(i+1),
-                )
-            step_rates.append(s)
-        return (
+        """Return a list of (text, callback, hotkey) tuples for buttons in GUI."""
+        return [
             ('Logic debug', self.debug, None),
-            ('Play all', self.play_all, '^+ enter'),
             ('Next step', self.next_step, 'n'),
             ('Autoplay', self.toggle_autoplay, 'spacebar'),
-            *step_rates,
-        )
+        ]
+
+    def get_hotkeys(self):
+        """Return a list of (name, hotkey, callback) tuples for hotkeys in GUI."""
+        hks = []
+        for i, rate in enumerate(STEP_RATES[:5]):
+            hks.append((
+                f'Set step rate {rate}',
+                str(i+1),
+                lambda r=rate: self.set_step_rate(r)))
+        return hks
 
     def handle_hex_click(self, hex, button):
-        pass
+        self.logger(f'Clicked {button} on: {hex}')
 
     def play_all(self, *args):
         self.logger('Playing battle to completion...')

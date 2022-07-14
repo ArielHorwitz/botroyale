@@ -27,6 +27,9 @@ class BaseBot:
         self.id = id
         self.name = self.NAME
 
+    def setup(self, wi):
+        pass
+
     def get_action(self, world_state):
         return Move(Hex(0, 0))
 
@@ -39,3 +42,6 @@ class BaseBot:
         return [
             {'name': 'mark-green', 'hex': hex, 'neighbor': None},
         ]
+
+    def __repr__(self):
+        return f'<Bot #{self.id} {self.name}>'

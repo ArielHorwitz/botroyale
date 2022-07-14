@@ -1,5 +1,6 @@
 from collections import Counter
 import numpy as np
+from logic.maps import SELECTED_MAP_NAME
 
 
 HELP_STR = """
@@ -57,17 +58,21 @@ class CLI:
 
     def run_battles(self, count):
         def print_summary():
-            print(f'\n\n          Total Winrates (played {i} / {count} games)\n')
+            print(f'\n\n          Total Winrates (played {i} / {count} games)')
+            print(f'            MAP: {SELECTED_MAP_NAME}\n')
             if i <= 0:
                 return
             for bot, wins in counter.most_common():
                 print(f'{bot:>20}: {f"{wins/i*100:.2f}":>7} % ({str(wins):<4} wins)')
 
         counter = Counter()
+        last_battle_summary = ''
         for i in range(count):
             self.new_battle()
+            print(last_battle_summary)
             print_summary()
             winner, losers = self.play_complete()
+            last_battle_summary = self.battle.get_match_state()
             counter[winner] += 1
             for loser in losers:
                 counter[loser] += 0

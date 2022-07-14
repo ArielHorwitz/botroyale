@@ -1,3 +1,4 @@
+# Maintainer: ninja
 from collections import namedtuple
 import numpy as np
 from bots import BaseBot
@@ -18,6 +19,7 @@ def mlogger(*lines):
 class NinjaBotV001(BaseBot):
     NAME = 'ninja.001'
     COLOR_INDEX = 5
+    TESTING_ONLY = True
 
     TileValue = namedtuple('TileValue', ['tile', 'value'])
 

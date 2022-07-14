@@ -14,14 +14,14 @@ class Move(Action):
         self.target = target_tile
 
     def __repr__(self):
-        return f'<Move action: {self.target}>'
+        return f'<Move action: {self.target.x}, {self.target.y}>'
 
 
 class Push(Move):
     ap = 30
 
     def __repr__(self):
-        return f'<Push action: {self.target}>'
+        return f'<Push action: {self.target.x}, {self.target.y}>'
 
 
 class Idle(Action):

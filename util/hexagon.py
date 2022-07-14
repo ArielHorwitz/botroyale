@@ -180,6 +180,14 @@ DIRECTIONS = (
     Hexagon(-1, +1, 0),
     Hexagon(0, +1, -1),
     )
+DIAGONALS = (
+    Hexagon(2, -1, -1),
+    Hexagon(1, -2, 1),
+    Hexagon(-1, -1, 2),
+    Hexagon(-2, 1, 1),
+    Hexagon(-1, 2, -1),
+    Hexagon(1, 1, -2),
+)
 ALL_HEXES = {}
 
 

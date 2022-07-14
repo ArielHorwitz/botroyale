@@ -1,5 +1,9 @@
 import math
 from gui.kex import widgets
+from util.settings import Settings
+
+
+PANEL_FONT_SIZE = Settings.get('gui.panel_font_size', 16)
 
 
 class Panel(widgets.BoxLayout):
@@ -10,7 +14,10 @@ class Panel(widgets.BoxLayout):
         control_panel = self.add(ControlPanel(buttons=control_buttons))
         text_frame = self.add(widgets.AnchorLayout(
             anchor_x='left', anchor_y='top', padding=(15, 15)))
-        self.main_text = text_frame.add(widgets.Label(markup=True, valign='top', halign='left'))
+        self.main_text = text_frame.add(widgets.Label(
+            markup=True, font_size=PANEL_FONT_SIZE,
+            valign='top', halign='left',
+            ))
 
     def set_text(self, text):
         self.main_text.text = str(text)
@@ -22,6 +29,7 @@ class ControlPanel(widgets.GridLayout):
         super().__init__(orientation='tb-lr', rows=rows, **kwargs)
         for text, callback in buttons:
             btn = self.add(widgets.Button(
-                text=text, markup=True, on_release=lambda *a, c=callback: c()))
-            btn.set_size(y=40)
-        self.set_size(y=40*rows)
+                text=text, markup=True, font_size=PANEL_FONT_SIZE,
+                on_release=lambda *a, c=callback: c()))
+            btn.set_size(y=30)
+        self.set_size(y=30*rows)

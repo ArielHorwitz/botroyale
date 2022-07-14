@@ -51,6 +51,8 @@ class App(widgets.App):
             if key is None:
                 continue
             self.im.register(control, key, callback=lambda *a, c=callback: c())
+        for control, key, callback in self.logic.get_hotkeys():
+            self.im.register(control, key, callback=lambda *a, c=callback: c())
         self.update_widgets()
 
     def reset_logic(self):
