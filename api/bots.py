@@ -39,3 +39,6 @@ class BaseBot:
         return [
             {'name': 'mark-green', 'hex': hex, 'neighbor': None},
         ]
+
+    def __repr__(self):
+        return f'<Bot #{self.id} {self.name}>'
