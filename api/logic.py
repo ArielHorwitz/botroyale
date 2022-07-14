@@ -1,6 +1,6 @@
 from collections import deque, namedtuple
 import numpy as np
-from util import ping, pong
+from util.time import ping, pong
 from util.settings import Settings
 from util.hexagon import Hex, is_hex
 

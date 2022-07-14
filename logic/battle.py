@@ -4,6 +4,7 @@ from bots import make_bots
 from logic import maps
 from api.bots import world_info
 import copy
+from util.time import pingpong
 from util.settings import Settings
 from api.actions import Action, Move, Push, IllegalAction, Idle
 from util.hexagon import Hex
@@ -21,6 +22,8 @@ class Battle(BaseLogicAPI):
         # Bots
         self.num_of_bots = len(map.spawns)
         self.bots = make_bots(self.num_of_bots)
+        self.bot_block_totals = [0 for _ in range(self.num_of_bots)]
+        self.bot_block_rounds = [0 for _ in range(self.num_of_bots)]
         self.unit_colors = [self.get_color(bot.COLOR_INDEX) for bot in self.bots]
         # Map
         self.center = Hex(0, 0)
@@ -85,7 +88,14 @@ class Battle(BaseLogicAPI):
 
     def _get_bot_action(self, bot_id):
         world_state = self.set_world_info()
-        action = self.bots[bot_id].get_action(world_state)
+        bot = self.bots[bot_id]
+        pingpong_desc = f'{bot} get_action (step {self.step_count})'
+        self.bot_block_rounds[bot_id] = self.round_count
+        def add_bot_time(elapsed):
+            self.bot_block_totals[bot_id] += elapsed
+        with pingpong(pingpong_desc, logger=self.logger, return_elapsed=add_bot_time):
+            action = self.bots[bot_id].get_action(world_state)
+            self.logger('='*50)
         if not isinstance(action, Action):
             self.logger(f'Revceived NON-ACTION type from #{bot_id} {self.bots[bot_id].name}: {action} {self.bots[bot_id]}')
             return IllegalAction()
@@ -193,9 +203,14 @@ class Battle(BaseLogicAPI):
             ap = round(self.ap[bot_id])
             pos = self.positions[bot_id]
             name_label = f'#{bot_id:<2} {bot.name[:15]:<15}'
-            bot_str = f'{name_label} {ap:>3} AP {pos}'
+            bot_str = f'{name_label} {ap:>3} AP <{pos.x:>3},{pos.y:>3}>'
             if bot_id in self.casualties:
                 bot_str = f'[s]{bot_str}[/s]'
+            time_str = '  no time spent yet'
+            if self.bot_block_rounds[bot_id]:
+                time_per_round = round(self.bot_block_totals[bot_id] / self.bot_block_rounds[bot_id], 1)
+                time_str = f'{time_per_round:>6} ms/r ({self.bot_block_rounds[bot_id]} rounds)'
+            bot_str = f'{bot_str} {time_str}'
             return bot_str
         unit_strs = []
         unit_strs.extend(get_bot_string(bot_id) for bot_id in self.round_remaining_turns)
