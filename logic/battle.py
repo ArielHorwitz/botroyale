@@ -210,7 +210,7 @@ class Battle(BaseLogicAPI):
             time_str = '  no time spent yet'
             if self.bot_block_rounds[bot_id]:
                 time_per_round = round(self.bot_block_totals[bot_id] / self.bot_block_rounds[bot_id], 1)
-                time_str = f'{time_per_round:>6} ms/r ({self.bot_block_rounds[bot_id]} rounds)'
+                time_str = f'{time_per_round:>6} ms/t ({self.bot_block_rounds[bot_id]} turns)'
             bot_str = f'{bot_str} {time_str}'
             return bot_str
         unit_strs = []
