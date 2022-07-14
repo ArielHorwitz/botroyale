@@ -41,6 +41,10 @@ class Battle(BaseLogicAPI):
         # when round_priority is empty, round is over.
         self.round_remaining_turns = []
         self.history = []
+        # Once everything is ready, allow bots to prepare
+        wi = self.set_world_info()
+        for bot in self.bots:
+            bot.setup(wi)
 
     def next_step(self):
         if self.game_over:
