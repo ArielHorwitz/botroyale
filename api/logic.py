@@ -145,21 +145,22 @@ class BaseLogicAPI:
         return self.UNIT_COLORS[index % len(self.UNIT_COLORS)]
 
     def get_controls(self):
-        step_rates = []
-        for i, r in enumerate(STEP_RATES):
-            s = (
-                f'Set step rate {r}',
-                lambda r=r: self.set_step_rate(r),
-                str(i+1),
-                )
-            step_rates.append(s)
-        return (
+        """Return a list of (text, callback, hotkey) tuples for buttons in GUI."""
+        return [
             ('Logic debug', self.debug, None),
-            ('Play all', self.play_all, '^+ enter'),
             ('Next step', self.next_step, 'n'),
             ('Autoplay', self.toggle_autoplay, 'spacebar'),
-            *step_rates,
-        )
+        ]
+
+    def get_hotkeys(self):
+        """Return a list of (name, hotkey, callback) tuples for hotkeys in GUI."""
+        hks = []
+        for i, rate in enumerate(STEP_RATES[:5]):
+            hks.append((
+                f'Set step rate {rate}',
+                str(i+1),
+                lambda r=rate: self.set_step_rate(r)))
+        return hks
 
     def handle_hex_click(self, hex, button):
         self.logger(f'Clicked {button} on: {hex}')
