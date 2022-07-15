@@ -458,6 +458,23 @@ class DynamicHeight(GridLayout):
         self.set_size(hx=1, y=sum([_.height for _ in self.children]))
 
 
+class FlipZIndex(GridLayout):
+    def __init__(self, orientation, **kwargs):
+        self.__orientation = orientation
+        if orientation == 'horizontal':
+            kwargs['orientation'] = 'rl-tb'
+            kwargs['rows'] = 1
+        elif orientation == 'vertical':
+            kwargs['orientation'] = 'lr-bt'
+            kwargs['cols'] = 1
+        else:
+            raise ValueError(f'FlipZIndex orientation must be "horizontal" or "vertical"')
+        super().__init__(**kwargs)
+
+    def add(self, *args, **kwargs):
+        return super().add(*args, reverse_index=0, **kwargs)
+
+
 # BASIC WIDGETS
 class Label(kvLabel, KexWidget):
     def __init__(self, *a, halign='center', valign='center', **k):
@@ -581,25 +598,34 @@ class DropDownFrame(kvDropDown, KexWidget):
 
 
 class DropDownSelect(Button):
-    def __init__(self, callback, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+    def __init__(self, callback, invoke_set_label=True, **kwargs):
+        super().__init__(**kwargs)
+        self.__invoke_set_label = invoke_set_label
         assert callable(callback)
         self.callback = callback
         self.dropdown = DropDownFrame()
         self.dropdown.make_bg((0,0,0,0.75))
-        self.bind(on_release=self.dropdown.open)
+        self.bind(on_press=self.dropdown.open)
 
     def invoke_option(self, index, label):
-        self.text = label
+        if self.__invoke_set_label:
+            self.text = label
         self.callback(index, label)
         self.dropdown.dismiss()
 
-    def set_options(self, options):
+    def set_options(self, options, **kwargs):
         for index, label in enumerate(options):
-            btn = Button(text=label)
+            btn = Button(text=label, **kwargs)
+            btn.background_color = 0.3, 0.5, 0.5, 1
             btn.set_size(y=40)
             btn.bind(on_release=lambda w, i=index, l=label: self.invoke_option(i, l))
             self.dropdown.add_widget(btn)
+
+
+class DropDownMenu(DropDownSelect):
+    def __init__(self, *args, **kwargs):
+        kwargs['invoke_set_label'] = False
+        super().__init__(*args, **kwargs)
 
 
 class ColorSelect(kvLabel, KexWidget):

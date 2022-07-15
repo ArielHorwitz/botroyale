@@ -5,6 +5,7 @@ from pathlib import Path
 import numpy as np
 from gui import kex, center_sprite, FONT, logger
 import gui.kex.widgets as widgets
+from api.logic import GuiControlMenu, GuiControl
 from util.settings import Settings
 from util.hexagon import Hex, WIDTH_HEIGHT_RATIO, SQRT3
 
@@ -40,19 +41,25 @@ class TileMap(widgets.RelativeLayout):
         self._create_grid()
         self.bind(size=self._resize)
         self.bind(on_touch_down=self.on_touch_down)
-        app.im.register('pan_up', key='w', callback=lambda *a: self.pan(y=1))
-        app.im.register('pan_down', key='s', callback=lambda *a: self.pan(y=-1))
-        app.im.register('pan_right', key='d', callback=lambda *a: self.pan(x=1))
-        app.im.register('pan_left', key='a', callback=lambda *a: self.pan(x=-1))
-        app.im.register('pan_up2', key='+ w', callback=lambda *a: self.pan(y=1, zoom_scale=True))
-        app.im.register('pan_down2', key='+ s', callback=lambda *a: self.pan(y=-1, zoom_scale=True))
-        app.im.register('pan_right2', key='+ d', callback=lambda *a: self.pan(x=1, zoom_scale=True))
-        app.im.register('pan_left2', key='+ a', callback=lambda *a: self.pan(x=-1, zoom_scale=True))
-        app.im.register('reset_map', key='home', callback=self.reset_view)
-        app.im.register('map_zoom_in', key='pageup', callback=self.zoom_in)
-        app.im.register('map_zoom_out', key='pagedown', callback=self.zoom_out)
-        app.im.register('clear_vfx', key='^+ c', callback=self.clear_vfx)
         widgets.kvClock.schedule_once(self.reset_view, 1)
+
+    def get_controls(self):
+        return [
+            GuiControlMenu('Map', [
+                ('Zoom in', self.zoom_in, 'pageup'),
+                ('Zoom out', self.zoom_out, 'pagedown'),
+                ('Reset view', self.reset_view, 'home'),
+                ('Clear VFX', self.clear_vfx, '^+ c'),
+                ('Pan up', lambda: self.pan(y=1), 'w'),
+                ('Pan down', lambda: self.pan(y=-1), 's'),
+                ('Pan right', lambda: self.pan(x=1), 'd'),
+                ('Pan left', lambda: self.pan(x=-1), 'a'),
+                ('Page up', lambda: self.pan(y=1, zoom_scale=True), '+ w'),
+                ('Page down', lambda: self.pan(y=-1, zoom_scale=True), '+ s'),
+                ('Page right', lambda: self.pan(x=1, zoom_scale=True), '+ d'),
+                ('Page left', lambda: self.pan(x=-1, zoom_scale=True), '+ a'),
+            ]),
+        ]
 
     def on_touch_down(self, w, m=None):
         if m is None:

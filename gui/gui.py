@@ -1,8 +1,8 @@
 from util.settings import Settings
 from gui import kex, logger
 import gui.kex.widgets as widgets
-from api.logic import BaseLogicAPI
-from gui.panel import Panel
+from api.logic import BaseLogicAPI, GuiControlMenu, GuiControl, gui_control_menu_extend
+from gui.panel import Panel, MenuBar
 from gui.tilemap import TileMap
 
 
@@ -31,28 +31,35 @@ class App(widgets.App):
         logger('GUI initialized.')
 
     def make_widgets(self):
-        def get_control_button(control):
-            control, callback, key = control
-            if key:
-                control = f'{control} ([i]{self.im.humanize_keys(key)}[/i])'
-            return (control, lambda *a, c=callback: c())
+        self.panel = Panel()
+        self.map = TileMap(app=self, api=self.logic)
+        # Collect menu bar items
         controls = [
-            ('Quit', quit, '^+ q'),
-            ('Restart', kex.restart_script, '^+ w'),
-            ('GUI debug', self.debug, None),
-            ('New battle', self.reset_logic, '^ n'),
-            *self.logic.get_controls(),
+            GuiControlMenu('App', [
+                GuiControl('New battle', self.reset_logic, '^ n'),
+                GuiControl('Restart', kex.restart_script, '^+ w'),
+                GuiControl('Quit', quit, '^+ q'),
+            ]),
+            GuiControlMenu('Debug', [
+                GuiControl('GUI debug', self.debug, '^+ g'),
+            ]),
         ]
-        self.map = self.add(TileMap(app=self, api=self.logic))
-        self.panel = self.add(Panel(
-            control_buttons=[get_control_button(c) for c in controls]))
+        gui_control_menu_extend(controls, self.logic.get_controls())
+        gui_control_menu_extend(controls, self.map.get_controls())
+        # Widgets
+        vertical_splitter = self.add(widgets.FlipZIndex(orientation='vertical'))
+        self.bar = vertical_splitter.add(MenuBar(controls))
+        horizontal_splitter = vertical_splitter.add(widgets.FlipZIndex(orientation='horizontal'))
+        horizontal_splitter.add(self.panel)
         self.panel.set_size(hx=0.5)
-        for control, callback, key in controls:
-            if key is None:
-                continue
-            self.im.register(control, key, callback=lambda *a, c=callback: c())
-        for control, key, callback in self.logic.get_hotkeys():
-            self.im.register(control, key, callback=lambda *a, c=callback: c())
+        horizontal_splitter.add(self.map)
+        # Hotkeys
+        for submenu, subcontrols in controls:
+            for control, callback, key in subcontrols:
+                if key is None:
+                    continue
+                self.im.register(control, key, callback=lambda *a, c=callback: c())
+        # Update
         self.update_widgets()
 
     def reset_logic(self):

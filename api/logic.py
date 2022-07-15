@@ -7,6 +7,21 @@ from util.hexagon import Hex, is_hex
 
 TileGUI = namedtuple('TileGUI', ['bg_color', 'bg_text', 'fg_color', 'fg_text'])
 VFX = namedtuple('VFX', ['name', 'hex', 'neighbor', 'time', 'real_time'])
+GuiControlMenu = namedtuple('GuiControlMenu', ['label', 'controls'])
+GuiControl = namedtuple('GuiControl', ['label', 'callback', 'hotkey'])
+
+
+def gui_control_menu_extend(menu1, menu2):
+    """Extend a GuiControlMenu with elements from another GuiControlMenu."""
+    for submenu2 in menu2:
+        # Find matching submenu
+        for submenu1 in menu1:
+            if submenu2.label == submenu1.label:
+                submenu1.controls.extend(submenu2.controls)
+                break
+        else:
+            menu1.append(submenu2)
+
 
 STEP_RATE = Settings.get('logic._step_rate_cap', 20)
 STEP_RATES = Settings.get('logic.|step_rates', [1, 3, 10, 20, 60])
@@ -147,20 +162,15 @@ class BaseLogicAPI:
     def get_controls(self):
         """Return a list of (text, callback, hotkey) tuples for buttons in GUI."""
         return [
-            ('Logic debug', self.debug, None),
-            ('Next step', self.next_step, 'n'),
-            ('Autoplay', self.toggle_autoplay, 'spacebar'),
+            GuiControlMenu('Battle', [
+                ('Autoplay', self.toggle_autoplay, 'spacebar'),
+                ('Next step', self.next_step, 'n'),
+                *[(f'Set step rate {r}', lambda r=r: self.set_step_rate(r), str(i+1)) for i, r in enumerate(STEP_RATES[:5])]
+            ]),
+            GuiControlMenu('Debug', [
+                ('Logic debug', self.debug, '^+ d'),
+            ]),
         ]
-
-    def get_hotkeys(self):
-        """Return a list of (name, hotkey, callback) tuples for hotkeys in GUI."""
-        hks = []
-        for i, rate in enumerate(STEP_RATES[:5]):
-            hks.append((
-                f'Set step rate {rate}',
-                str(i+1),
-                lambda r=rate: self.set_step_rate(r)))
-        return hks
 
     def handle_hex_click(self, hex, button):
         self.logger(f'Clicked {button} on: {hex}')
