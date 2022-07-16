@@ -25,6 +25,7 @@ class Battle(BaseLogicAPI):
         self.bot_block_totals = [0 for _ in range(self.num_of_bots)]
         self.bot_block_rounds = [0 for _ in range(self.num_of_bots)]
         self.unit_colors = [self.get_color(bot.COLOR_INDEX) for bot in self.bots]
+        self.unit_sprites = [bot.SPRITE for bot in self.bots]
         # Map
         self.center = Hex(0, 0)
         # Ring contracts before the first round, so we set the ring even

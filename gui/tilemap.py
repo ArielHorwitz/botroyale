@@ -5,6 +5,7 @@ from pathlib import Path
 import numpy as np
 from gui import kex, center_sprite, FONT, logger
 import gui.kex.widgets as widgets
+from api.logic import GuiControlMenu, GuiControl
 from util.settings import Settings
 from util.hexagon import Hex, WIDTH_HEIGHT_RATIO, SQRT3
 
@@ -15,9 +16,9 @@ MAX_TILE_RADIUS = Settings.get('tilemap.max_tile_radius', 300)
 UNIT_SIZE = Settings.get('tilemap.unit_size', 0.7)
 FONT_SIZE = Settings.get('tilemap.font_size', 20)
 REDRAW_COOLDOWN = Settings.get('tilemap.|redraw_cooldown', 0.3)
-HEX_PNG = str(Path.cwd() / 'assets' / 'hex.png')
-UNIT_PNG = str(Path.cwd() / 'assets' / 'unit.png')
-VFX_DIR = Path.cwd() / 'assets' / 'vfx'
+ASSETS_DIR = Path.cwd() / 'assets'
+HEX_PNG = str(ASSETS_DIR / 'hex.png')
+VFX_DIR = ASSETS_DIR / 'vfx'
 
 
 class TileMap(widgets.RelativeLayout):
@@ -40,19 +41,25 @@ class TileMap(widgets.RelativeLayout):
         self._create_grid()
         self.bind(size=self._resize)
         self.bind(on_touch_down=self.on_touch_down)
-        app.im.register('pan_up', key='w', callback=lambda *a: self.pan(y=1))
-        app.im.register('pan_down', key='s', callback=lambda *a: self.pan(y=-1))
-        app.im.register('pan_right', key='d', callback=lambda *a: self.pan(x=1))
-        app.im.register('pan_left', key='a', callback=lambda *a: self.pan(x=-1))
-        app.im.register('pan_up2', key='+ w', callback=lambda *a: self.pan(y=1, zoom_scale=True))
-        app.im.register('pan_down2', key='+ s', callback=lambda *a: self.pan(y=-1, zoom_scale=True))
-        app.im.register('pan_right2', key='+ d', callback=lambda *a: self.pan(x=1, zoom_scale=True))
-        app.im.register('pan_left2', key='+ a', callback=lambda *a: self.pan(x=-1, zoom_scale=True))
-        app.im.register('reset_map', key='home', callback=self.reset_view)
-        app.im.register('map_zoom_in', key='pageup', callback=self.zoom_in)
-        app.im.register('map_zoom_out', key='pagedown', callback=self.zoom_out)
-        app.im.register('clear_vfx', key='^+ c', callback=self.clear_vfx)
         widgets.kvClock.schedule_once(self.reset_view, 1)
+
+    def get_controls(self):
+        return [
+            GuiControlMenu('Map', [
+                ('Zoom in', self.zoom_in, 'pageup'),
+                ('Zoom out', self.zoom_out, 'pagedown'),
+                ('Reset view', self.reset_view, 'home'),
+                ('Clear VFX', self.clear_vfx, '^+ c'),
+                ('Pan up', lambda: self.pan(y=1), 'w'),
+                ('Pan down', lambda: self.pan(y=-1), 's'),
+                ('Pan right', lambda: self.pan(x=1), 'd'),
+                ('Pan left', lambda: self.pan(x=-1), 'a'),
+                ('Page up', lambda: self.pan(y=1, zoom_scale=True), '+ w'),
+                ('Page down', lambda: self.pan(y=-1, zoom_scale=True), '+ s'),
+                ('Page right', lambda: self.pan(x=1, zoom_scale=True), '+ d'),
+                ('Page left', lambda: self.pan(x=-1, zoom_scale=True), '+ a'),
+            ]),
+        ]
 
     def on_touch_down(self, w, m=None):
         if m is None:
@@ -69,6 +76,7 @@ class TileMap(widgets.RelativeLayout):
         else:
             btn = m.button
             pos = np.asarray(m.pos) - self.screen_center
+            pos = self.to_widget(*pos, relative=True)
             hex = self.real_center.pixel_position_to_hex(self.tile_radius_padded, pos)
             logger(f'Clicked {btn}: {pos} -> {hex}')
             self.handle_hex_click(hex, btn)
@@ -145,7 +153,7 @@ class TileMap(widgets.RelativeLayout):
             self.canvas.remove(self.tiles[hex])
         for hex in newly_visible:
             if hex not in self.tiles:
-                self.tiles[hex] = Tile(bg=HEX_PNG, fg=UNIT_PNG)
+                self.tiles[hex] = Tile(bg=HEX_PNG, fg=HEX_PNG)
             self.canvas.add(self.tiles[hex])
         for hex in currently_visible:
             tile_pos = hex.pixel_position(tile_radius_padded) + screen_center
@@ -302,7 +310,7 @@ class TileMap(widgets.RelativeLayout):
             source=str(VFX_DIR / f'{vfx_name}.png'),
             )
         self.__reposition_vfx_single(vfx)
-        logger(f'Adding VFX: {vfx} @ {hex} -> {neighbor} with pos: {vfx.pos_center} rotation: {rotation} for {time:.3f} seconds')
+        logger(f'Adding VFX: {vfx} at position: {vfx.pos_center}')
         self.__vfx.add(vfx)
         self.canvas.after.add(vfx)
         if real_time:
@@ -322,24 +330,29 @@ class TileMap(widgets.RelativeLayout):
         self.__vfx.remove(vfx)
 
     def __reposition_vfx(self):
+        # For whatever reason, a Kivy canvas.after group does not adapt to
+        # relative layout position, unlike the normal canvas group.
+        offset = self.to_window(0, 0, initial=False, relative=True)
         size = self.__get_tile_and_neighbors_size(self.tile_radius_padded)
         for vfx in self.__vfx:
-            vfx.reset(self.real2pix(vfx.hex), size)
+            pos = self.real2pix(vfx.hex) + offset
+            vfx.reset(pos, size)
 
     def __reposition_vfx_single(self, vfx):
-        vfx.reset(
-            pos=self.real2pix(vfx.hex),
-            size=self.__get_tile_and_neighbors_size(self.tile_radius_padded)
-            )
+        # For whatever reason, a Kivy canvas.after group does not adapt to
+        # relative layout position, unlike the normal canvas group.
+        pos = self.to_window(*self.real2pix(vfx.hex), initial=False, relative=True)
+        size = self.__get_tile_and_neighbors_size(self.tile_radius_padded)
+        vfx.reset(pos, size)
 
     def debug(self):
-        pix = self.real2pix(Hex(0, 0))
         vfx_hex = Hex(random.randint(0, 5), random.randint(0, 5))
         vfx_neighbor = random.choice(vfx_hex.neighbors)
-        vfx_action = random.choice(('move', 'push'))
+        vfx_action = random.choice(('move', 'push', 'mark-red', 'mark-green', 'mark-blue'))
         self.add_vfx(vfx_action, vfx_hex, vfx_neighbor)
         logger('\n'.join([
-            f'Map center in pixel coords: {pix}',
+            f'Canvas size: {self.size} Offset: {self.pos} From real2pix: {self.real2pix(Hex(0, 0))}',
+            f'Canvas center: {self.screen_center} to_window: {self.to_window(*self.screen_center, initial=False, relative=True)}',
             f'Tile map size: {self.axis_sizes} = {len(self.visible_tiles)} tiles',
             f'Tile radius: {self.tile_radius:.3f} * {self.__tile_padding:.2f} padding = {self.tile_radius_padded:.3f}',
             f'Tile size: {self.__get_tile_size(self.tile_radius)}',
@@ -391,6 +404,7 @@ class Tile(widgets.kvInstructionGroup):
             self._fg_color.rgba = 0,0,0,0
         else:
             self._fg_color.rgba = (*tile_info.fg_color, 1)
+            self._fg.source = str(ASSETS_DIR / f'{tile_info.fg_sprite}.png')
 
         # Hide the fg text rect if no text is set
         if not tile_info.fg_text:
@@ -452,3 +466,6 @@ class VFX(widgets.kvInstructionGroup):
         self.rot.origin = pos
         self.rect.size = size
         self.rect.pos = center_sprite(pos, size)
+
+    def __repr__(self):
+        return f'<VFX {self.rect.source} @{self.hex} {round(self.rot.angle)}° x:{self.expiration}>'
