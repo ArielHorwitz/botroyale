@@ -20,6 +20,7 @@ world_info = namedtuple('WorldInfo', [
 
 class BaseBot:
     NAME = "BaseBot"
+    SPRITE = "circle"
     TESTING_ONLY = False
     COLOR_INDEX = 0
 

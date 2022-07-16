@@ -5,7 +5,7 @@ from util.settings import Settings
 from util.hexagon import Hex, is_hex
 
 
-TileGUI = namedtuple('TileGUI', ['bg_color', 'bg_text', 'fg_color', 'fg_text'])
+TileGUI = namedtuple('TileGUI', ['bg_color', 'bg_text', 'fg_color', 'fg_text', 'fg_sprite'])
 VFX = namedtuple('VFX', ['name', 'hex', 'neighbor', 'time', 'real_time'])
 GuiControlMenu = namedtuple('GuiControlMenu', ['label', 'controls'])
 GuiControl = namedtuple('GuiControl', ['label', 'callback', 'hotkey'])
@@ -79,6 +79,7 @@ class BaseLogicAPI:
         self.__last_step = ping()
         self.__vfx_queue = deque()
         self.unit_colors = [self.get_color(_) for _ in range(UNIT_COUNT)]
+        self.unit_sprites = ['circle' for _ in range(UNIT_COUNT)]
 
     def add_vfx(self, name, hex, neighbor=None, steps=2, real_time=None):
         """Add a single vfx to the queue."""
@@ -142,18 +143,22 @@ class BaseLogicAPI:
         if hex in self.walls:
             fg_text = ''
             fg_color = self.WALL_COLOR
+            fg_sprite = 'hex'
         elif hex in self.positions:
             unit_id = self.positions.index(hex)
             fg_color = self.unit_colors[unit_id]
             fg_text = f'{unit_id}'
+            fg_sprite = self.unit_sprites[unit_id]
         else:
             fg_color = None
             fg_text = ''
+            fg_sprite = None
         return TileGUI(
             bg_color=bg_color,
             bg_text=bg_text,
             fg_color=fg_color,
             fg_text=fg_text,
+            fg_sprite=fg_sprite,
             )
 
     def get_color(self, index):

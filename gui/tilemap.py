@@ -16,9 +16,9 @@ MAX_TILE_RADIUS = Settings.get('tilemap.max_tile_radius', 300)
 UNIT_SIZE = Settings.get('tilemap.unit_size', 0.7)
 FONT_SIZE = Settings.get('tilemap.font_size', 20)
 REDRAW_COOLDOWN = Settings.get('tilemap.|redraw_cooldown', 0.3)
-HEX_PNG = str(Path.cwd() / 'assets' / 'hex.png')
-UNIT_PNG = str(Path.cwd() / 'assets' / 'unit.png')
-VFX_DIR = Path.cwd() / 'assets' / 'vfx'
+ASSETS_DIR = Path.cwd() / 'assets'
+HEX_PNG = str(ASSETS_DIR / 'hex.png')
+VFX_DIR = ASSETS_DIR / 'vfx'
 
 
 class TileMap(widgets.RelativeLayout):
@@ -153,7 +153,7 @@ class TileMap(widgets.RelativeLayout):
             self.canvas.remove(self.tiles[hex])
         for hex in newly_visible:
             if hex not in self.tiles:
-                self.tiles[hex] = Tile(bg=HEX_PNG, fg=UNIT_PNG)
+                self.tiles[hex] = Tile(bg=HEX_PNG, fg=HEX_PNG)
             self.canvas.add(self.tiles[hex])
         for hex in currently_visible:
             tile_pos = hex.pixel_position(tile_radius_padded) + screen_center
@@ -404,6 +404,7 @@ class Tile(widgets.kvInstructionGroup):
             self._fg_color.rgba = 0,0,0,0
         else:
             self._fg_color.rgba = (*tile_info.fg_color, 1)
+            self._fg.source = str(ASSETS_DIR / f'{tile_info.fg_sprite}.png')
 
         # Hide the fg text rect if no text is set
         if not tile_info.fg_text:
