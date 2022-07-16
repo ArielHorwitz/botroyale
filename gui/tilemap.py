@@ -69,6 +69,7 @@ class TileMap(widgets.RelativeLayout):
         else:
             btn = m.button
             pos = np.asarray(m.pos) - self.screen_center
+            pos = self.to_widget(*pos, relative=True)
             hex = self.real_center.pixel_position_to_hex(self.tile_radius_padded, pos)
             logger(f'Clicked {btn}: {pos} -> {hex}')
             self.handle_hex_click(hex, btn)
@@ -302,7 +303,7 @@ class TileMap(widgets.RelativeLayout):
             source=str(VFX_DIR / f'{vfx_name}.png'),
             )
         self.__reposition_vfx_single(vfx)
-        logger(f'Adding VFX: {vfx} @ {hex} -> {neighbor} with pos: {vfx.pos_center} rotation: {rotation} for {time:.3f} seconds')
+        logger(f'Adding VFX: {vfx} at position: {vfx.pos_center}')
         self.__vfx.add(vfx)
         self.canvas.after.add(vfx)
         if real_time:
@@ -322,24 +323,29 @@ class TileMap(widgets.RelativeLayout):
         self.__vfx.remove(vfx)
 
     def __reposition_vfx(self):
+        # For whatever reason, a Kivy canvas.after group does not adapt to
+        # relative layout position, unlike the normal canvas group.
+        offset = self.to_window(0, 0, initial=False, relative=True)
         size = self.__get_tile_and_neighbors_size(self.tile_radius_padded)
         for vfx in self.__vfx:
-            vfx.reset(self.real2pix(vfx.hex), size)
+            pos = self.real2pix(vfx.hex) + offset
+            vfx.reset(pos, size)
 
     def __reposition_vfx_single(self, vfx):
-        vfx.reset(
-            pos=self.real2pix(vfx.hex),
-            size=self.__get_tile_and_neighbors_size(self.tile_radius_padded)
-            )
+        # For whatever reason, a Kivy canvas.after group does not adapt to
+        # relative layout position, unlike the normal canvas group.
+        pos = self.to_window(*self.real2pix(vfx.hex), initial=False, relative=True)
+        size = self.__get_tile_and_neighbors_size(self.tile_radius_padded)
+        vfx.reset(pos, size)
 
     def debug(self):
-        pix = self.real2pix(Hex(0, 0))
         vfx_hex = Hex(random.randint(0, 5), random.randint(0, 5))
         vfx_neighbor = random.choice(vfx_hex.neighbors)
-        vfx_action = random.choice(('move', 'push'))
+        vfx_action = random.choice(('move', 'push', 'mark-red', 'mark-green', 'mark-blue'))
         self.add_vfx(vfx_action, vfx_hex, vfx_neighbor)
         logger('\n'.join([
-            f'Map center in pixel coords: {pix}',
+            f'Canvas size: {self.size} Offset: {self.pos} From real2pix: {self.real2pix(Hex(0, 0))}',
+            f'Canvas center: {self.screen_center} to_window: {self.to_window(*self.screen_center, initial=False, relative=True)}',
             f'Tile map size: {self.axis_sizes} = {len(self.visible_tiles)} tiles',
             f'Tile radius: {self.tile_radius:.3f} * {self.__tile_padding:.2f} padding = {self.tile_radius_padded:.3f}',
             f'Tile size: {self.__get_tile_size(self.tile_radius)}',
@@ -452,3 +458,6 @@ class VFX(widgets.kvInstructionGroup):
         self.rot.origin = pos
         self.rect.size = size
         self.rect.pos = center_sprite(pos, size)
+
+    def __repr__(self):
+        return f'<VFX {self.rect.source} @{self.hex} {round(self.rot.angle)}° x:{self.expiration}>'
