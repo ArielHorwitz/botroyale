@@ -146,7 +146,10 @@ class BaseLogicAPI:
             fg_sprite = 'hex'
         elif hex in self.positions:
             unit_id = self.positions.index(hex)
-            fg_color = self.unit_colors[unit_id]
+            if not self.alive_mask[unit_id]:
+                fg_color = 0.5, 0.5, 0.5
+            else:
+                fg_color = self.unit_colors[unit_id]
             fg_text = f'{unit_id}'
             fg_sprite = self.unit_sprites[unit_id]
         else:
