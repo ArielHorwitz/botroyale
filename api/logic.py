@@ -26,7 +26,7 @@ def gui_control_menu_extend(menu1, menu2):
 
 STEP_RATE = Settings.get('logic._step_rate_cap', 20)
 STEP_RATES = Settings.get('logic.|step_rates', [1, 3, 10, 20, 60])
-LOGIC_DEBUG = Settings.get('logic.battle_debug', True)
+LOGIC_DEBUG = Settings.get('logging.battle', True)
 
 RNG = np.random.default_rng()
 MAX_STEPS = 1000

@@ -8,7 +8,7 @@ from util.hexagon import Hex
 from util.pathfinding import a_star
 
 
-DEBUG_LEVEL = Settings.get('bots.ninja.debug_level', 1)
+DEBUG_LEVEL = Settings.get('logging.bots.ninja.debug_level', 1)
 
 
 class NinjaBotV002(BaseBot):

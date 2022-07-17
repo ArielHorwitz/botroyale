@@ -10,7 +10,7 @@ from api.bots import world_info
 from util.settings import Settings
 from time import perf_counter
 
-DEBUG = Settings.get('bots.crazee.l.debug', False)
+DEBUG = Settings.get('logging.bots.crazee.l.debug', False)
 
 
 def debug(*lines):

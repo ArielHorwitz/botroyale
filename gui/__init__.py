@@ -4,7 +4,7 @@ from api.logging import logger as glogger
 from util.settings import Settings
 
 
-GUI_DEBUG = Settings.get('gui.debug', False)
+GUI_DEBUG = Settings.get('logging.gui', False)
 FONT = str(Path.cwd() / 'assets' / 'FiraCode-SemiBold.ttf')
 
 
