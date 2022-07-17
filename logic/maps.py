@@ -2,6 +2,7 @@ from collections import namedtuple
 import itertools
 import random
 import numpy as np
+from api.logging import logger
 from util.settings import Settings
 from util.hexagon import Hex
 
@@ -133,7 +134,7 @@ MAPS = {
     'empty': EmptyMap,
     'giant': GiantMap,
 }
-print('\n'.join([f'Available maps:', *(f'- {m}' for m in MAPS.keys())]))
+logger('\n'.join([f'Available maps:', *(f'- {m}' for m in MAPS.keys())]))
 
 def get_map():
     map = MAPS[SELECTED_MAP_NAME]()

@@ -4,6 +4,7 @@ import numpy as np
 from api.actions import Move, Push, Idle, Action
 from bots import BaseBot
 from util.hexagon import Hexagon, Hex
+from api.logging import logger as glogger
 from api.bots import world_info
 from util.settings import Settings
 from time import perf_counter
@@ -13,7 +14,7 @@ DEBUG = Settings.get('bots.crazee.debug', False)
 
 def debug(*lines):
     if DEBUG:
-        print('\n'.join(str(_) for _ in lines))
+        glogger('\n'.join(str(_) for _ in lines))
 
 
 class CrazeeBotAlpha(BaseBot):
@@ -103,14 +104,14 @@ class CrazeeBotAlpha(BaseBot):
             c_pos = new_cwi.positions
             c_ap = new_cwi.ap
             if type(action) is Push:
-                # print(f"My Pos: {c_pos[self.id]}, Target: {action.action.target}")
+                # debug(f"My Pos: {c_pos[self.id]}, Target: {action.action.target}")
                 end_tile = next(c_pos[self.id].straight_line(action.target))
                 enemy_index = [e for e in range(len(c_pos)) if c_pos[e] == action.target][0]
                 c_pos[enemy_index] = end_tile
             elif type(action) is Move:
                 c_pos[self.id] = action.target
             else:
-                print(action)
+                debug(action)
             c_ap[self.id] -= action.ap
             new_cwi.alive_mask[:] = [pos not in new_cwi.pits for pos in c_pos]
             return new_cwi
@@ -154,7 +155,7 @@ class CrazeeBotAlpha(BaseBot):
             if len(d_enemys) > 0:
                 enemy_score += (sum(d_enemys) / len(d_enemys))
             score = terrain_score + enemy_score + enemy_dead_score + ap_score
-            # print(f"Score: {score:.2f}, terrain: {terrain_score:.2f}, enemy: {enemy_score:.2f}, "
+            # debug(f"Score: {score:.2f}, terrain: {terrain_score:.2f}, enemy: {enemy_score:.2f}, "
             #       f"enemy_dead: {enemy_dead_score:.2f}, ap: {ap_score:.2f}")
             return score
 

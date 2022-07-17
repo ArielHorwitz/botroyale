@@ -5,6 +5,7 @@ import numpy as np
 from api.actions import Move, Push, Idle, Action
 from bots import BaseBot
 from util.hexagon import Hexagon, Hex
+from api.logging import logger as glogger
 from api.bots import world_info
 from util.settings import Settings
 from time import perf_counter
@@ -14,7 +15,7 @@ DEBUG = Settings.get('bots.crazee.l.debug', False)
 
 def debug(*lines):
     if DEBUG:
-        print('\n'.join(str(_) for _ in lines))
+        glogger('\n'.join(str(_) for _ in lines))
 
 
 class CrazeeBotLegacy(BaseBot):

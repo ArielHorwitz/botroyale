@@ -1,5 +1,6 @@
 from pathlib import Path
 import numpy as np
+from api.logging import logger as glogger
 from util.settings import Settings
 
 
@@ -15,4 +16,4 @@ def center_sprite(pos, size):
 
 def logger(m):
     if GUI_DEBUG:
-        print(m)
+        glogger(m)

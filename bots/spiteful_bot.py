@@ -5,6 +5,7 @@ from bots import BaseBot
 from util.hexagon import Hex, DIAGONALS, is_hex
 from util.settings import Settings
 from util.pathfinding import a_star
+from api.logging import logger as glogger
 from api.actions import Move, Push, Idle
 
 
@@ -14,7 +15,7 @@ LethalSequence = namedtuple('LethalSequence', ['ap_cost', 'actions', 'vfx'])
 
 def logger(m):
     if DEBUG:
-        print(str(m))
+        glogger(str(m))
 
 
 class SpitefulBot(BaseBot):
@@ -97,8 +98,8 @@ class SpitefulBot(BaseBot):
         obs_cost = float('inf') if is_obstacle else 0
         return 1 + obs_cost
 
-    def get_path(self, target, debug=False):
-        return a_star(self.pos, target, cost=self.move_tile_cost, debug=debug)
+    def get_path(self, target):
+        return a_star(self.pos, target, cost=self.move_tile_cost)
 
     def get_paths(self, targets, sort=len):
         targets = (t for t in targets if self.move_tile_cost(t) < float('inf'))

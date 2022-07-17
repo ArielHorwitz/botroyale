@@ -1,5 +1,6 @@
 from collections import deque, namedtuple
 import numpy as np
+from api.logging import logger as glogger
 from util.time import ping, pong
 from util.settings import Settings
 from util.hexagon import Hex, is_hex
@@ -209,4 +210,4 @@ class BaseLogicAPI:
     @staticmethod
     def logger(m):
         if LOGIC_DEBUG:
-            print(m)
+            glogger(m)

@@ -1,5 +1,6 @@
 from util.hexagon import Hex
 from collections import namedtuple
+from api.logging import logger as glogger
 from api.actions import Move, Push
 
 
@@ -39,7 +40,7 @@ class BaseBot:
         Called when we are clicked on in the GUI.
         May return a list of vfx args.
         """
-        print(f'#{self.id} {self.name} received click_debug with button: {button}')
+        glogger(f'#{self.id} {self.name} received click_debug with button: {button}')
         return [
             {'name': 'mark-green', 'hex': hex, 'neighbor': None},
         ]

@@ -1,6 +1,7 @@
 # Maintainer: ninja
 import numpy as np
 from bots import BaseBot
+from api.logging import logger
 from api.actions import Idle, Move, Push
 from util.settings import Settings
 from util.hexagon import Hex
@@ -12,7 +13,7 @@ DEBUG_LEVEL = Settings.get('bots.ninja.debug', 0)
 
 def mlogger(*lines, level=1):
     if DEBUG_LEVEL >= level:
-        print('\n'.join(str(_) for _ in lines))
+        logger('\n'.join(str(_) for _ in lines))
 
 
 class NinjaBotV002(BaseBot):
@@ -189,8 +190,8 @@ class NinjaBotV002(BaseBot):
         value_cost = -self.move_tile_value(tile)
         return 1 + obs_cost + value_cost
 
-    def get_path(self, target, debug=False):
-        return a_star(self.pos, target, cost=self.move_tile_cost, debug=debug)
+    def get_path(self, target):
+        return a_star(self.pos, target, cost=self.move_tile_cost)
 
     def get_paths(self, targets, sort=len):
         targets = (t for t in targets if self.move_tile_cost(t) < float('inf'))

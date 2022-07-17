@@ -2,6 +2,7 @@
 from collections import namedtuple
 import numpy as np
 from bots import BaseBot
+from api.logging import logger
 from api.actions import Idle, Move, Push
 from util.settings import Settings
 from util.hexagon import Hex
@@ -13,7 +14,7 @@ DEBUG = Settings.get('bots.ninja.debug', 0)
 
 def mlogger(*lines):
     if DEBUG:
-        print('\n'.join(str(_) for _ in lines))
+        logger('\n'.join(str(_) for _ in lines))
 
 
 class NinjaBotV001(BaseBot):
