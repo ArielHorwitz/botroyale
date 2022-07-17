@@ -25,7 +25,6 @@ def a_star(origin, target,
         get_neighbors=_get_neighbors,
         heuristic=_heuristic,
         cost=_cost,
-        debug=False,
         ):
     if origin is target:
         return None
@@ -43,21 +42,8 @@ def a_star(origin, target,
         if current is target:
             return _get_full_path(current, came_from)
         open_set.remove(current)
-        if debug:
-            open_set_str = '\n'.join(f'- {n}' for n in best_nodes[:10])
-            print('\n'.join([
-                '_'*50,
-                f'Best nodes score:',
-                *(f'- {n}: {guess_score[n]}' for n in best_nodes[:10]),
-                f'Best nodes distance from origin:',
-                *(f'- {n}: {partial_score[n]}' for n in best_nodes[:10]),
-                '_'*50,
-                f'Current: {current}',
-            ]))
         for neighbor in get_neighbors(current):
             tentative_partial_score = partial_score[current] + cost(neighbor)
-            if debug:
-                print(f'Neighbor: {neighbor} ({tentative_partial_score})')
             if tentative_partial_score < partial_score[neighbor]:
                 came_from[neighbor] = current
                 partial_score[neighbor] = tentative_partial_score

@@ -1,9 +1,10 @@
 from pathlib import Path
 import numpy as np
+from api.logging import logger as glogger
 from util.settings import Settings
 
 
-GUI_DEBUG = Settings.get('gui.debug', False)
+GUI_DEBUG = Settings.get('logging.gui', False)
 FONT = str(Path.cwd() / 'assets' / 'FiraCode-SemiBold.ttf')
 
 
@@ -15,4 +16,4 @@ def center_sprite(pos, size):
 
 def logger(m):
     if GUI_DEBUG:
-        print(m)
+        glogger(m)

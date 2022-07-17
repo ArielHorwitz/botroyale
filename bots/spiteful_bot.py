@@ -8,13 +8,7 @@ from util.pathfinding import a_star
 from api.actions import Move, Push, Idle
 
 
-DEBUG = Settings.get('bots.spiteful.debug', False)
 LethalSequence = namedtuple('LethalSequence', ['ap_cost', 'actions', 'vfx'])
-
-
-def logger(m):
-    if DEBUG:
-        print(str(m))
 
 
 class SpitefulBot(BaseBot):
@@ -49,20 +43,20 @@ class SpitefulBot(BaseBot):
     def get_action(self, wi):
         self.update(wi)
         if self.ap < 10:
-            logger(f'Out of AP.')
+            self.logger(f'Out of AP.')
             return Idle()
 
         if not self.current_sequence:
-            logger(f'No sequence.')
+            self.logger(f'No sequence.')
             seqs = self.find_lethal_sequences()
             if seqs:
                 seq_str = '\n'.join(f'{s.ap_cost} AP {" ".join(str(a) for a in s.actions)}' for s in seqs)
-                logger(f'Found sequences:\n{seq_str}')
+                self.logger(f'Found sequences:\n{seq_str}')
                 self.current_sequence = list(seqs[0].actions)
 
         if self.current_sequence:
             s = '\n'.join(f'-> {a}' for a in self.current_sequence)
-            logger(f'Remaining sequence:\n{s}')
+            self.logger(f'Remaining sequence:\n{s}')
             action = self.current_sequence.pop(0)
             return action
 
@@ -83,13 +77,13 @@ class SpitefulBot(BaseBot):
                         break
                 if trunc_path:
                     self.current_sequence = trunc_path
-                    logger(f'Moving to center: {self.current_sequence[0]} {len(self.current_sequence)} steps to target')
+                    self.logger(f'Moving to center: {self.current_sequence[0]} {len(self.current_sequence)} steps to target')
                     return self.current_sequence.pop(0)
-                logger(f'On edge but cannot reach safer tile!')
+                self.logger(f'On edge but cannot reach safer tile!')
             else:
-                logger(f'On edge but no path to center!')
+                self.logger(f'On edge but no path to center!')
 
-        logger(f'Idling.')
+        self.logger(f'Idling.')
         return Idle()
 
     def move_tile_cost(self, tile):
@@ -97,8 +91,8 @@ class SpitefulBot(BaseBot):
         obs_cost = float('inf') if is_obstacle else 0
         return 1 + obs_cost
 
-    def get_path(self, target, debug=False):
-        return a_star(self.pos, target, cost=self.move_tile_cost, debug=debug)
+    def get_path(self, target):
+        return a_star(self.pos, target, cost=self.move_tile_cost)
 
     def get_paths(self, targets, sort=len):
         targets = (t for t in targets if self.move_tile_cost(t) < float('inf'))
@@ -121,7 +115,7 @@ class SpitefulBot(BaseBot):
         return best_paths[0]
 
     def push_sequence_simple(self, pit, enemy):
-        logger(f'Considering simple push sequence: {enemy} -> {pit}')
+        self.logger(f'Considering simple push sequence: {enemy} -> {pit}')
         # Assert geometry
         assert pit not in self.blocked_pits
         assert pit in enemy.neighbors
@@ -150,11 +144,11 @@ class SpitefulBot(BaseBot):
             {'name': 'push', 'hex': enemy, 'neighbor': pit},
             {'name': 'mark-red', 'hex': pit},
             ]
-        logger(f'Good sequence!')
+        self.logger(f'Good sequence!')
         return LethalSequence(ap_cost, actions, vfx)
 
     def push_sequence_double(self, pit, enemy):
-        logger(f'Considering double push sequence: {enemy} -> {pit}')
+        self.logger(f'Considering double push sequence: {enemy} -> {pit}')
         # Assert geometry
         assert pit not in self.blocked_pits
         assert pit - enemy not in DIAGONALS
@@ -191,11 +185,11 @@ class SpitefulBot(BaseBot):
             {'name': 'push', 'hex': mid_point, 'neighbor': pit},
             {'name': 'mark-red', 'hex': pit},
         ]
-        logger(f'Good sequence!')
+        self.logger(f'Good sequence!')
         return LethalSequence(ap_cost, actions, vfx)
 
     def push_sequence_diag(self, pit, neighbor, enemy):
-        logger(f'Considering diagonal push sequence: {enemy} -> {neighbor} -> {pit}')
+        self.logger(f'Considering diagonal push sequence: {enemy} -> {neighbor} -> {pit}')
         # Assert geometry
         assert pit not in self.blocked_pits
         assert pit - enemy in DIAGONALS
@@ -232,7 +226,7 @@ class SpitefulBot(BaseBot):
             {'name': 'push', 'hex': neighbor, 'neighbor': pit},
             {'name': 'mark-red', 'hex': pit},
         ]
-        logger(f'Good sequence!')
+        self.logger(f'Good sequence!')
         return LethalSequence(ap_cost, actions, vfx)
 
     def find_lethal_sequences(self):
@@ -268,14 +262,6 @@ class SpitefulBot(BaseBot):
         lethal_sequences = sorted(
             lethal_sequences, key=lambda x: x.ap_cost + len(x.actions) / 100)
         return lethal_sequences
-
-    def click_debug(self, hex, button):
-        seqs = self.find_lethal_sequences()
-        if not seqs:
-            return None
-        ap_cost, actions, vfx = seqs[0]
-        logger('\n'.join(str(a) for a in actions))
-        return vfx
 
 
 BOT = SpitefulBot

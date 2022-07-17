@@ -8,14 +8,6 @@ from util.hexagon import Hex
 from util.pathfinding import a_star
 
 
-DEBUG = Settings.get('bots.ninja.debug', 0)
-
-
-def mlogger(*lines):
-    if DEBUG:
-        print('\n'.join(str(_) for _ in lines))
-
-
 class NinjaBotV001(BaseBot):
     NAME = 'ninja.001'
     COLOR_INDEX = 5
@@ -74,7 +66,7 @@ class NinjaBotV001(BaseBot):
             action = Push(push.tile)
             action_str = f'Pushing: {push.tile} {"LETHAL" if push.value > 0 else "not lethal"}'
 
-        mlogger(
+        self.logger('\n'.join([
             f'{action_str}',
             '',
             f'Turn step: {self.turn_step}',
@@ -85,7 +77,7 @@ class NinjaBotV001(BaseBot):
             '=== PUSH OPTIONS',
             '\n'.join(push_option_reprs),
             '_'*30,
-        )
+        ]))
         return action
 
     def move_options(self, wi):
