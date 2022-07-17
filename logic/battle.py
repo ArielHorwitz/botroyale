@@ -282,7 +282,7 @@ class Battle(BaseLogicAPI):
         super().handle_hex_click(hex, button)
         if hex in self.positions:
             bot_id = self.positions.index(hex)
-            vfx_seq = self.bots[bot_id].click_debug(hex, button)
+            vfx_seq = self.bots[bot_id].gui_click(hex, button)
             if vfx_seq is not None:
                 for vfx_kwargs in vfx_seq:
                     vfx_kwargs['steps'] = 1
