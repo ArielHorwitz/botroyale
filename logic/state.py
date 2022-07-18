@@ -1,11 +1,5 @@
 import numpy as np
-from api.logic import BaseLogicAPI
-from bots import make_bots
-from logic import maps
-from api.bots import world_info
 import copy
-from util.time import pingpong
-from util.settings import Settings
 from api.actions import Action, Move, Push, IllegalAction, Idle
 from util.hexagon import Hex
 

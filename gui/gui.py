@@ -1,7 +1,7 @@
 from util.settings import Settings
 from gui import kex, logger
 import gui.kex.widgets as widgets
-from api.logic import BaseLogicAPI, GuiControlMenu, GuiControl, gui_control_menu_extend
+from api.gui import GuiControlMenu, GuiControl, gui_control_menu_extend
 from gui.panel import Panel, MenuBar
 from gui.tilemap import TileMap
 
@@ -21,7 +21,6 @@ class App(widgets.App):
         kex.resize_window(WINDOW_SIZE)
         if START_MAXIMIZED:
             widgets.kvWindow.maximize()
-        assert issubclass(logic_cls, BaseLogicAPI)
         self.__logic_cls = logic_cls
         self.logic = self.__logic_cls()
         self.im = widgets.InputManager(
@@ -70,7 +69,7 @@ class App(widgets.App):
         self.make_widgets()
 
     def update_widgets(self):
-        self.panel.set_text(self.logic.get_match_state())
+        self.panel.set_text(self.logic.get_summary_str())
         self.map.update()
 
     def mainloop_hook(self, dt):

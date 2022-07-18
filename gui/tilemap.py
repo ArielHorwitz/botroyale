@@ -5,7 +5,7 @@ from pathlib import Path
 import numpy as np
 from gui import kex, center_sprite, FONT, logger
 import gui.kex.widgets as widgets
-from api.logic import GuiControlMenu, GuiControl
+from api.gui import GuiControlMenu, GuiControl
 from util.settings import Settings
 from util.hexagon import Hex, WIDTH_HEIGHT_RATIO, SQRT3
 

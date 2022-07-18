@@ -1,3 +1,4 @@
+import copy
 from util.hexagon import Hex
 from collections import namedtuple
 from api.logging import logger as glogger
@@ -17,6 +18,21 @@ world_info = namedtuple('WorldInfo', [
     # when round_priority is empty, round is over.
     'round_remaining_turns',  # list
     ])
+
+
+def state_to_world_info(state):
+    return world_info(
+        positions=copy.copy(state.positions),
+        walls=copy.copy(state.walls),
+        pits=copy.copy(state.pits),
+        ring_radius=state.death_radius,
+        alive_mask=copy.deepcopy(state.alive_mask),
+        turn_count=state.turn_count,
+        round_count=state.round_count,
+        ap=copy.deepcopy(state.ap),
+        round_ap_spent=copy.deepcopy(state.round_ap_spent),
+        round_remaining_turns=copy.deepcopy(state.round_remaining_turns),
+        )
 
 
 class BaseBot:
