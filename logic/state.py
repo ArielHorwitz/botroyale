@@ -54,6 +54,26 @@ class State:
             return self._do_apply_action(unit, action)
         return self._next_turn()
 
+    def copy(self):
+        return State(
+            positions=copy.copy(self.positions),
+            walls=copy.copy(self.walls),
+            pits=copy.copy(self.pits),
+            death_radius=self.death_radius,
+            alive_mask=copy.deepcopy(self.alive_mask),
+            ap=copy.deepcopy(self.ap),
+            round_ap_spent=copy.deepcopy(self.round_ap_spent),
+            round_remaining_turns=copy.deepcopy(self.round_remaining_turns),
+            step_count=self.step_count,
+            turn_count=self.turn_count,
+            round_count=self.round_count,
+            )
+
+    def check_legal_action(self, unit, action):
+        if isinstance(action, Idle):
+            return True
+        return self._check_legal_action(unit, action)
+
     def _next_turn(self):
         new_state = self.copy()
         new_state.round_remaining_turns.pop(0)
@@ -73,8 +93,8 @@ class State:
         self._apply_mortality()
 
     def _next_round_order(self):
-        bots_id = np.arange(self.num_of_units)
-        p = RNG.permutation(bots_id[self.alive_mask])
+        units = np.arange(self.num_of_units)
+        p = RNG.permutation(units[self.alive_mask])
         while len(p) > 0:
             min_index = np.argmin(self.round_ap_spent[p][self.alive_mask[p]])
             self.round_remaining_turns.append(p[min_index])
@@ -148,22 +168,7 @@ class State:
 
     @property
     def round_done_turns(self):
-        return [bid for bid in range(self.num_of_units) if (bid not in self.casualties and bid not in self.round_remaining_turns)]
-
-    def copy(self):
-        return State(
-            positions=copy.copy(self.positions),
-            walls=copy.copy(self.walls),
-            pits=copy.copy(self.pits),
-            death_radius=self.death_radius,
-            alive_mask=copy.deepcopy(self.alive_mask),
-            ap=copy.deepcopy(self.ap),
-            round_ap_spent=copy.deepcopy(self.round_ap_spent),
-            round_remaining_turns=copy.deepcopy(self.round_remaining_turns),
-            step_count=self.step_count,
-            turn_count=self.turn_count,
-            round_count=self.round_count,
-            )
+        return [unit for unit in range(self.num_of_units) if (unit not in self.casualties and unit not in self.round_remaining_turns)]
 
     @property
     def game_over(self):
