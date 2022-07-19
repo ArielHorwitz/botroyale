@@ -22,7 +22,7 @@ class Battle:
     step_interval_ms = 1000 / STEP_RATE
     debug_mode = False
     DEFAULT_CELL_BG = Settings.get('tilemap.|colors._default_tile', (0.25, 0.1, 0))
-    OUT_OF_BOUNDS_CELL_BG = Settings.get('tilemap.|colors._default_tile', (0.15, 0, 0))
+    OUT_OF_BOUNDS_CELL_BG = Settings.get('tilemap.|colors._out_of_bounds', (0.15, 0, 0))
     WALL_COLOR = Settings.get('tilemap.|colors._walls', (1, 1, 1))
     PIT_COLOR = Settings.get('tilemap.|colors._pits', (0.05, 0.05, 0.05))
     UNIT_COLORS = Settings.get('tilemap.|colors.|units', [
@@ -62,6 +62,7 @@ class Battle:
             pits=pits,
             walls=map.walls,
         )
+        self.state_history = []
         # Bots
         self.bot_count = len(map.spawns)
         self.bots = make_bots(self.bot_count)
@@ -78,8 +79,8 @@ class Battle:
     def _do_next_step(self):
         if self.__state.game_over:
             return
-        if not self.__state.round_remaining_turns:
-            self.__state._next_round()
+        if self.__state.end_of_round:
+            self._set_new_state(self.__state.increment_round())
             return
         bot_id = self.__state.round_remaining_turns[0]
         self.log_step(bot_id)
@@ -102,8 +103,15 @@ class Battle:
         return action
 
     def _apply_action(self, action):
-        new_state = self.__state.apply_action(action)
-        self.__state = new_state
+        new_state = self.__state.apply_action_no_round_increment(action)
+        self._set_new_state(new_state)
+        for effect in new_state.effects:
+            self.add_vfx(effect.name, effect.origin, effect.target)
+
+    def _set_new_state(self, state):
+        self.state_history.append(self.__state)
+        state.step_count = self.__state.step_count + 1
+        self.__state = state
 
     # GUI API
     def update(self):
@@ -138,12 +146,12 @@ class Battle:
         """This method is called for every hex currently visible on the map,
         and must return a TileGUI namedtuple."""
         # BG
-        if hex in self.__state.pits:
-            bg_color = self.PIT_COLOR
-        elif hex in self.highlighted_tiles:
+        if hex in self.highlighted_tiles:
             bg_color = 1, 1, 1
-        elif hex.get_distance(MAP_CENTER) > self.map_size_hint:
+        elif hex.get_distance(MAP_CENTER) >= self.__state.death_radius:
             bg_color = self.OUT_OF_BOUNDS_CELL_BG
+        elif hex in self.__state.pits:
+            bg_color = self.PIT_COLOR
         else:
             bg_color = self.DEFAULT_CELL_BG
         bg_text = ', '.join(str(_) for _ in hex.xy) if self.debug_mode else ''
@@ -296,7 +304,8 @@ class Battle:
         if neighbor is not None:
             assert is_hex(neighbor)
             assert neighbor in hex.neighbors
-        self.__vfx_queue.append(VFX(name, hex, neighbor, steps, real_time))
+        step_time = self.__state.step_count + steps
+        self.__vfx_queue.append(VFX(name, hex, neighbor, step_time, real_time))
 
     def get_color(self, index):
         return self.UNIT_COLORS[index % len(self.UNIT_COLORS)]

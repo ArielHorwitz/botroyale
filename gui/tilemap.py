@@ -303,9 +303,8 @@ class TileMap(widgets.RelativeLayout):
             neighbor = hex.neighbors[0]
         assert neighbor in hex.neighbors
         rotation = -60 * hex.neighbors.index(neighbor)
-        expiration = self.get_logic_time() + time
         vfx = VFX(hex,
-            expiration=expiration,
+            expiration=time,
             rotation=rotation,
             source=str(VFX_DIR / f'{vfx_name}.png'),
             )
