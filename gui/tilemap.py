@@ -17,8 +17,9 @@ UNIT_SIZE = Settings.get('tilemap.unit_size', 0.7)
 FONT_SCALE = Settings.get('tilemap.font_scale', 0.7)
 REDRAW_COOLDOWN = Settings.get('tilemap.|redraw_cooldown', 0.3)
 ASSETS_DIR = Path.cwd() / 'assets'
-HEX_PNG = str(ASSETS_DIR / 'hex.png')
+SPRITES_DIR = ASSETS_DIR / 'sprites'
 VFX_DIR = ASSETS_DIR / 'vfx'
+HEX_PNG = str(SPRITES_DIR / 'hex.png')
 
 
 class TileMap(widgets.RelativeLayout):
@@ -400,7 +401,7 @@ class Tile(widgets.kvInstructionGroup):
             self._fg_color.rgba = 0,0,0,0
         else:
             self._fg_color.rgba = (*tile_info.fg_color, 1)
-            self._fg.source = str(ASSETS_DIR / f'{tile_info.fg_sprite}.png')
+            self._fg.source = str(SPRITES_DIR / f'{tile_info.fg_sprite}.png')
 
         # Hide the fg text rect if no text is set
         if not tile_info.fg_text:
