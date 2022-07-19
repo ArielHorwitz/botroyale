@@ -1,4 +1,5 @@
 from util.settings import Settings
+from util.time import RateCounter
 from gui import kex, logger
 import gui.kex.widgets as widgets
 from api.gui import GuiControlMenu, GuiControl, gui_control_menu_extend
@@ -23,6 +24,7 @@ class App(widgets.App):
             widgets.kvWindow.maximize()
         self.__logic_cls = logic_cls
         self.logic = self.__logic_cls()
+        self.fps_counter = RateCounter(sample_size=FPS, starting_elapsed=1000/FPS)
         self.im = widgets.InputManager(
             logger=print if LOG_HOTKEYS else lambda *a: None)
         self.make_widgets()
@@ -71,8 +73,10 @@ class App(widgets.App):
     def update_widgets(self):
         self.panel.set_text(self.logic.get_summary_str())
         self.map.update()
+        self.bar.set_text(f'{self.fps_counter.rate:.2f} FPS')
 
     def mainloop_hook(self, dt):
+        self.fps_counter.tick()
         self.logic.update()
         self.update_widgets()
 

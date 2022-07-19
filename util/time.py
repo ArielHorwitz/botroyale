@@ -89,11 +89,11 @@ class RateCounter:
 
     @property
     def last_elapsed(self):
-        return self.sample[-1] / 1000
+        return self.sample[self.__sample_index] / 1000
 
     @property
     def last_elapsed_ms(self):
-        return self.sample[-1]
+        return self.sample[self.__sample_index]
 
     @property
     def timed_block(self):
