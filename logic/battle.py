@@ -258,11 +258,12 @@ class Battle:
 
     # GUI formatting
     def get_units_str(self):
-        unit_strs = [self.get_bot_string(bot_id) for bot_id in self.__state.round_remaining_turns]
+        include_timer = self.__state.step_count == self.history_size - 1
+        unit_strs = [self.get_bot_string(bot_id, include_timer) for bot_id in self.__state.round_remaining_turns]
         unit_strs.append('-'*10)
-        unit_strs.extend(self.get_bot_string(bot_id) for bot_id in self.__state.round_done_turns)
+        unit_strs.extend(self.get_bot_string(bot_id, include_timer) for bot_id in self.__state.round_done_turns)
         unit_strs.append('='*10)
-        unit_strs.extend(self.get_bot_string(bot_id) for bot_id in self.__state.casualties)
+        unit_strs.extend(self.get_bot_string(bot_id, include_timer) for bot_id in self.__state.casualties)
         return '\n'.join(unit_strs)
 
     def get_status_str(self):
@@ -285,16 +286,21 @@ class Battle:
         else:
             turn_str = f'starting new round'
 
+        # Last action
+        last_action_str = f'{self.__state.last_action}'
+        if not self.__state.is_last_action_legal:
+            last_action_str = f'{last_action_str}, [i]illegal[/i]'
         return '\n'.join([
             win_str,
             '\n',
             f'Ring of death radius:  {self.__state.death_radius}',
             f'Round: #{self.__state.round_count:<3} Turn: #{self.__state.turn_count:<4} Step: #{self.__state.step_count:<5}',
             f'Currently:  [u]{turn_str}[/u]',
+            f'Last action: {last_action_str}',
             '\n',
         ])
 
-    def get_bot_string(self, bot_id):
+    def get_bot_string(self, bot_id, include_timer=False):
         bot = self.bots[bot_id]
         ap = round(self.__state.ap[bot_id])
         pos = self.__state.positions[bot_id]
@@ -302,6 +308,8 @@ class Battle:
         bot_str = f'{name_label} {ap:>3} AP <{pos.x:>3},{pos.y:>3}>'
         if bot_id in self.__state.casualties:
             bot_str = f'[s]{bot_str}[/s]'
+        if not include_timer:
+            return bot_str
         time_str = '  no time spent yet'
         if self.bot_block_rounds[bot_id]:
             time_per_round = round(self.bot_block_totals[bot_id] / self.bot_block_rounds[bot_id], 1)
