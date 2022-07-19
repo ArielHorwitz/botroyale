@@ -376,10 +376,10 @@ class Tile(widgets.kvInstructionGroup):
 
         self.add(self._bg_color)
         self.add(self._bg)
-        self.add(self._bg_text_color)
-        self.add(self._bg_text)
         self.add(self._fg_color)
         self.add(self._fg)
+        self.add(self._bg_text_color)
+        self.add(self._bg_text)
         self.add(self._fg_text_color)
         self.add(self._fg_text)
 
@@ -426,15 +426,17 @@ class Tile(widgets.kvInstructionGroup):
     def set_text(self, bg, fg):
         if fg:
             font_size = FONT_SCALE * self._bg.size[1] / 2
+            outline_width = font_size / 10
             self._fg_text.texture = t = widgets.text_texture(fg,
-                font=FONT, font_size=font_size)
+                font=FONT, font_size=font_size, outline_width=outline_width)
             self._fg_text.size = t.size
             self._fg_text.pos = center_sprite(self.__pos, t.size)
             self._bg_text.size = 0, 0
         elif bg:
             font_size = FONT_SCALE * self._bg.size[1] / 2
+            outline_width = font_size / 10
             self._bg_text.texture = t = widgets.text_texture(bg,
-                font=FONT, font_size=font_size)
+                font=FONT, font_size=font_size, outline_width=outline_width)
             self._bg_text.size = t.size
             self._bg_text.pos = center_sprite(self.__pos, t.size)
             self._fg_text.size = 0, 0
