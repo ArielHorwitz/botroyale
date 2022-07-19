@@ -2,9 +2,16 @@ import numpy as np
 import copy
 from api.actions import Action, Move, Push, IllegalAction, Idle
 from util.hexagon import Hex
+from collections import namedtuple
 
 
 RNG = np.random.default_rng()
+
+Effect = namedtuple('Effect', [
+    'name',
+    'origin',
+    'target',
+    ])
 
 
 class OrderError(Exception):
@@ -43,16 +50,28 @@ class State:
         self.step_count = step_count
         self.turn_count = turn_count
         self.round_count = round_count
+        self.effects = []
 
     def apply_action(self, action):
-        if len(self.round_remaining_turns) == 0:
-            raise OrderError(f'cannot apply action, remaining turns is empty')
+        new_state = self.apply_action_no_round_increment(action)
+        if new_state.end_of_round:
+            new_state.increment_round()
+        return new_state
+
+    def apply_action_no_round_increment(self, action):
+        if self.end_of_round:
+            raise OrderError(f'cannot apply action, round is over, use increment_round()')
         unit = self.round_remaining_turns[0]
         if not action.has_effect:
             return self._next_turn()
         if self._check_legal_action(unit, action):
             return self._do_apply_action(unit, action)
         return self._next_turn()
+
+    def increment_round(self):
+        if not self.end_of_round:
+            raise OrderError('Not the end of round')
+        self._next_round()
 
     def copy(self):
         return State(
@@ -74,12 +93,18 @@ class State:
             return True
         return self._check_legal_action(unit, action)
 
+    def add_effect(self, name, origin, target):
+        effect = Effect(
+            name=name,
+            origin=origin,
+            target=target,
+        )
+        self.effects.append(effect)
+
     def _next_turn(self):
         new_state = self.copy()
         new_state.round_remaining_turns.pop(0)
         new_state.turn_count += 1
-        if len(new_state.round_remaining_turns) == 0:
-            new_state._next_round()
         return new_state
 
     def _next_round(self):
@@ -143,12 +168,14 @@ class State:
     def _do_apply_action(self, unit, action):
         assert action.has_effect
         new_state = self.copy()
+        self_pos = new_state.positions[unit]
         if isinstance(action, Push):
             opp_id = new_state.positions.index(action.target)
-            self_pos = new_state.positions[unit]
             new_state.positions[opp_id] = next(self_pos.straight_line(action.target))
+            self.add_effect('push', self_pos, action.target)
         elif isinstance(action, Move):
             new_state.positions[unit] = action.target
+            self.add_effect('move', self_pos, action.target)
         new_state._apply_mortality()
         new_state.ap[unit] -= action.ap
         new_state.round_ap_spent[unit] += action.ap
@@ -161,6 +188,11 @@ class State:
                 self.alive_mask[unit] = False
                 if unit in self.round_remaining_turns:
                     self.round_remaining_turns.remove(unit)
+                self.add_effect('death', self.positions[unit], None)
+
+    @property
+    def end_of_round(self):
+        return len(self.round_remaining_turns) == 0
 
     @property
     def casualties(self):
