@@ -47,7 +47,7 @@ class BaseBot:
         self.id = id
         self.name = self.NAME
 
-    def setup(self, wi):
+    def setup(self, state):
         pass
 
     def get_action(self, world_info):

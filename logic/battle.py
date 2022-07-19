@@ -76,7 +76,7 @@ class Battle:
         self.bot_block_rounds = [0 for _ in range(self.bot_count)]
         # Once everything is ready, allow bots to prepare
         for bot in self.bots:
-            bot.setup(state_to_world_info(initial_state))
+            bot.setup(initial_state)
 
     # History
     def increment_state_index(self, delta=1):
