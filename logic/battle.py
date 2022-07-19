@@ -11,8 +11,8 @@ from util.settings import Settings
 from util.hexagon import Hex, is_hex
 
 
-STEP_RATE = Settings.get('logic._step_rate_cap', 20)
-STEP_RATES = Settings.get('logic.|step_rates', [1, 3, 10, 20, 60])
+STEP_RATE = Settings.get('logic._step_rate_cap', 2)
+STEP_RATES = Settings.get('logic.|step_rates', [1, 2, 3, 5, 60])
 LOGIC_DEBUG = Settings.get('logging.battle', True)
 LINEBR = '='*50
 MAP_CENTER = Hex(0, 0)
@@ -22,7 +22,7 @@ class Battle:
     step_interval_ms = 1000 / STEP_RATE
     debug_mode = False
     DEFAULT_CELL_BG = Settings.get('tilemap.|colors._default_tile', (0.25, 0.1, 0))
-    OUT_OF_BOUNDS_CELL_BG = Settings.get('tilemap.|colors._out_of_bounds', (0.15, 0, 0))
+    OUT_OF_BOUNDS_CELL_BG = Settings.get('tilemap.|colors._out_of_bounds', (0.05, 0, 0.075))
     WALL_COLOR = Settings.get('tilemap.|colors._walls', (1, 1, 1))
     PIT_COLOR = Settings.get('tilemap.|colors._pits', (0.05, 0.05, 0.05))
     UNIT_COLORS = Settings.get('tilemap.|colors.|units', [
