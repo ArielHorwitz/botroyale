@@ -282,12 +282,12 @@ class TileMap(widgets.RelativeLayout):
         for hex in self.tiles:
             real_hex = hex - center
             self.tiles[hex].update(get_tile_info(real_hex))
+        logic_time = self.get_logic_time()
         for vfx_kwargs in self.get_vfx():
             self.add_vfx(*vfx_kwargs)
-        logic_time = self.get_logic_time()
         for vfx in list(self.__vfx):
-            if vfx.expiration <= logic_time:
-                logger(f'Found expired VFX {vfx.expiration} >= {logic_time} {vfx}')
+            if logic_time < vfx.start_step or vfx.expire_step <= logic_time:
+                logger(f'Found expired VFX {logic_time} < {vfx.start_step} | {vfx.expire_step} <= {logic_time} {vfx}')
                 self.__remove_vfx(vfx)
 
     def real2tile(self, real_hex):
@@ -298,23 +298,24 @@ class TileMap(widgets.RelativeLayout):
         tile_pos = tile.pixel_position(self.tile_radius_padded) + self.screen_center
         return tile_pos
 
-    def add_vfx(self, vfx_name, hex, neighbor=None, time=1, real_time=None):
+    def add_vfx(self, name, hex, neighbor, start_step, expire_step, expire_seconds):
         if neighbor is None:
             neighbor = hex.neighbors[0]
         assert neighbor in hex.neighbors
         rotation = -60 * hex.neighbors.index(neighbor)
         vfx = VFX(hex,
-            expiration=time,
+            start_step=start_step,
+            expire_step=expire_step,
             rotation=rotation,
-            source=str(VFX_DIR / f'{vfx_name}.png'),
+            source=str(VFX_DIR / f'{name}.png'),
             )
         self.__reposition_vfx_single(vfx)
         logger(f'Adding VFX: {vfx} at position: {vfx.pos_center}')
         self.__vfx.add(vfx)
         self.canvas.after.add(vfx)
-        if real_time:
+        if expire_seconds:
             widgets.kvClock.schedule_once(
-                lambda *a: self.__remove_vfx(vfx), real_time)
+                lambda *a: self.__remove_vfx(vfx), expire_seconds)
 
     def clear_vfx(self, *a):
         all_vfx = list(self.__vfx)
@@ -345,10 +346,6 @@ class TileMap(widgets.RelativeLayout):
         vfx.reset(pos, size)
 
     def debug(self):
-        vfx_hex = Hex(random.randint(0, 5), random.randint(0, 5))
-        vfx_neighbor = random.choice(vfx_hex.neighbors)
-        vfx_action = random.choice(('move', 'push', 'mark-red', 'mark-green', 'mark-blue'))
-        self.add_vfx(vfx_action, vfx_hex, vfx_neighbor)
         logger('\n'.join([
             f'Canvas size: {self.size} Offset: {self.pos} From real2pix: {self.real2pix(Hex(0, 0))}',
             f'Canvas center: {self.screen_center} to_window: {self.to_window(*self.screen_center, initial=False, relative=True)}',
@@ -447,9 +444,13 @@ class Tile(widgets.kvInstructionGroup):
 
 
 class VFX(widgets.kvInstructionGroup):
-    def __init__(self, hex, source, expiration, rotation=0, pos=None, size=None, **kwargs):
+    def __init__(self,
+            hex, source, start_step, expire_step,
+            rotation=0, pos=None, size=None,
+            **kwargs):
         super().__init__(**kwargs)
-        self.expiration = expiration
+        self.start_step = start_step
+        self.expire_step = expire_step
         self.pos_center = 0, 0
         self.hex = hex
         self.add(widgets.kvColor(1, 1, 1, 1))
@@ -469,4 +470,4 @@ class VFX(widgets.kvInstructionGroup):
         self.rect.pos = center_sprite(pos, size)
 
     def __repr__(self):
-        return f'<VFX {self.rect.source} @{self.hex} {round(self.rot.angle)}° x:{self.expiration}>'
+        return f'<VFX {self.rect.source} @{self.hex} {round(self.rot.angle)}° x:{self.expire_step}>'

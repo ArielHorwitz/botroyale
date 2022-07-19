@@ -3,13 +3,14 @@ from collections import namedtuple
 
 """
 VFX arguments:
-name        Name of image (without .png extension)
-hex         Hex on which to center the image
-neighbor    Neighbor Hex for image rotation
-time        How many in-game steps to show the image
-real_time   How many real-time seconds to show the image
+name            Name of image (without .png extension)
+hex             Hex on which to center the image
+neighbor        Neighbor Hex for image rotation
+start_step      The in-game step which marks the start of the visual effect
+expire_step     The in-game step which marks the end of the visual effect
+expire_seconds  Real-time seconds after which the visual effect is over
 """
-VFX = namedtuple('VFX', ['name', 'hex', 'neighbor', 'time', 'real_time'])
+VFX = namedtuple('VFX', ['name', 'hex', 'neighbor', 'start_step', 'expire_step', 'expire_seconds'])
 TileGUI = namedtuple('TileGUI', ['bg_color', 'bg_text', 'fg_color', 'fg_text', 'fg_sprite'])
 GuiControlMenu = namedtuple('GuiControlMenu', ['label', 'controls'])
 GuiControl = namedtuple('GuiControl', ['label', 'callback', 'hotkey'])

@@ -80,7 +80,14 @@ class Battle:
 
     # History
     def increment_state_index(self, delta=1):
-        self.set_state_index(self.state_index + delta)
+        if delta > 0:
+            self.set_state_index(self.state_index + delta)
+        else:
+            # Iterate the index several steps in advance to draw relevant vfx
+            target = self.state_index + delta
+            self.set_state_index(target - 2)
+            self.set_state_index(target - 1)
+            self.set_state_index(target)
 
     def set_state_index(self, index, apply_vfx=True):
         index = max(0, index)
@@ -232,9 +239,9 @@ class Battle:
                 GuiControl('Prev step', lambda: self.increment_state_index(-1), 'left'),
                 GuiControl('+10 steps', lambda: self.increment_state_index(10), '+ right'),
                 GuiControl('-10 steps', lambda: self.increment_state_index(-10), '+ left'),
-                GuiControl('+1M steps', lambda: self.increment_state_index(1_000_000), '^+ right'),
+                GuiControl('+1M steps <!!!>', lambda: self.increment_state_index(1_000_000), '^+ right'),
                 GuiControl('-1M steps', lambda: self.increment_state_index(-1_000_000), '^+ left'),
-                GuiControl('Preplay all steps', self.play_all, '^+ p'),
+                GuiControl('Preplay <!!!>', self.play_all, '^+ p'),
                 GuiControl('Autoplay', self.toggle_autoplay, 'spacebar'),
                 *[GuiControl(f'Set step rate {r}', lambda r=r: self.set_step_rate(r), f'{i+1}') for i, r in enumerate(STEP_RATES[:5])]
             ]),
@@ -319,15 +326,19 @@ class Battle:
         self.__last_step = ping()
 
     # Other
-    def add_vfx(self, name, hex, neighbor=None, steps=2, real_time=None):
+    def add_vfx(self, name, hex, neighbor=None, steps=2, expire_seconds=None):
         """Add a single vfx to the queue."""
         assert isinstance(name, str)
         assert is_hex(hex)
         if neighbor is not None:
             assert is_hex(neighbor)
             assert neighbor in hex.neighbors
-        step_time = self.__state.step_count + steps
-        self.__vfx_queue.append(VFX(name, hex, neighbor, step_time, real_time))
+        start_step = self.__state.step_count
+        expire_step = start_step + steps
+        self.__vfx_queue.append(VFX(
+            name, hex, neighbor,
+            start_step, expire_step, expire_seconds,
+            ))
 
     def get_color(self, index):
         return self.UNIT_COLORS[index % len(self.UNIT_COLORS)]
