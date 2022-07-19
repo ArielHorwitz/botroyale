@@ -1,6 +1,6 @@
 import numpy as np
 import copy
-from api.actions import Action, Move, Push, IllegalAction, Idle
+from api.actions import Move, Push, Idle, Jump
 from util.hexagon import Hex
 from collections import namedtuple
 
@@ -51,27 +51,38 @@ class State:
         self.turn_count = turn_count
         self.round_count = round_count
         self.effects = []
+        self.last_action = None
+        self.is_last_action_legal = False
 
     def apply_action(self, action):
         new_state = self.apply_action_no_round_increment(action)
         if new_state.end_of_round:
-            new_state.increment_round()
+            new_state._next_round()
         return new_state
 
     def apply_action_no_round_increment(self, action):
         if self.end_of_round:
             raise OrderError(f'cannot apply action, round is over, use increment_round()')
         unit = self.round_remaining_turns[0]
-        if not action.has_effect:
-            return self._next_turn()
-        if self._check_legal_action(unit, action):
-            return self._do_apply_action(unit, action)
-        return self._next_turn()
+        new_state = self.copy()
+        if isinstance(action, Idle):
+            new_state._next_turn()
+            new_state.is_last_action_legal = True
+        elif self._check_legal_action(unit, action):
+            new_state._do_apply_action(unit, action)
+            new_state.is_last_action_legal = True
+        else:
+            new_state._next_turn()
+            new_state._add_effect('illegal', self.positions[unit])
+        new_state.last_action = action
+        return new_state
 
     def increment_round(self):
         if not self.end_of_round:
             raise OrderError('Not the end of round')
-        self._next_round()
+        new_state = self.copy()
+        new_state._next_round()
+        return new_state
 
     def copy(self):
         return State(
@@ -93,19 +104,9 @@ class State:
             return True
         return self._check_legal_action(unit, action)
 
-    def add_effect(self, name, origin, target):
-        effect = Effect(
-            name=name,
-            origin=origin,
-            target=target,
-        )
-        self.effects.append(effect)
-
     def _next_turn(self):
-        new_state = self.copy()
-        new_state.round_remaining_turns.pop(0)
-        new_state.turn_count += 1
-        return new_state
+        self.round_remaining_turns.pop(0)
+        self.turn_count += 1
 
     def _next_round(self):
         self._next_round_order()
@@ -132,12 +133,17 @@ class State:
             return self._check_legal_push(unit, action.target)
         if isinstance(action, Move):
             return self._check_legal_move(unit, action.target)
+        if isinstance(action, Jump):
+            return self._check_legal_jump(unit, action.target)
         raise TypeError(f'Unknown action: {action}')
 
-    def _check_legal_move(self, unit, target_tile):
+    def _check_legal_jump(self, unit, target):
+        return self._check_legal_move(unit, target, distance=2)
+
+    def _check_legal_move(self, unit, target_tile, distance=1):
         # check if target is a neighbor
         self_position = self.positions[unit]
-        if not self_position.get_distance(target_tile) == 1:
+        if not self_position.get_distance(target_tile) == distance:
             return False
         # check if moving into a wall
         if target_tile in self.walls:
@@ -166,29 +172,39 @@ class State:
         return True
 
     def _do_apply_action(self, unit, action):
-        assert action.has_effect
-        new_state = self.copy()
-        self_pos = new_state.positions[unit]
+        assert not isinstance(action, Idle)
+        self_pos = self.positions[unit]
         if isinstance(action, Push):
-            opp_id = new_state.positions.index(action.target)
-            new_state.positions[opp_id] = next(self_pos.straight_line(action.target))
-            self.add_effect('push', self_pos, action.target)
+            opp_id = self.positions.index(action.target)
+            self.positions[opp_id] = next(self_pos.straight_line(action.target))
+            self._add_effect('push', self_pos, action.target)
         elif isinstance(action, Move):
-            new_state.positions[unit] = action.target
-            self.add_effect('move', self_pos, action.target)
-        new_state._apply_mortality()
-        new_state.ap[unit] -= action.ap
-        new_state.round_ap_spent[unit] += action.ap
-        return new_state
+            self.positions[unit] = action.target
+            self._add_effect('move', self_pos, action.target)
+        self._apply_mortality()
+        self.ap[unit] -= action.ap
+        self.round_ap_spent[unit] += action.ap
 
     def _apply_mortality(self):
         live_units = np.flatnonzero(self.alive_mask)
         for unit in live_units:
-            if self.positions[unit] in self.pits:
+            pos = self.positions[unit]
+            death_by_pits = pos in self.pits
+            death_by_ROD = pos.get_distance(self.center) >= self.death_radius
+            if death_by_pits or death_by_ROD:
                 self.alive_mask[unit] = False
                 if unit in self.round_remaining_turns:
                     self.round_remaining_turns.remove(unit)
-                self.add_effect('death', self.positions[unit], None)
+                self._add_effect('death', self.positions[unit])
+
+    def _add_effect(self, name, origin, target=None):
+        effect = Effect(
+            name=name,
+            origin=origin,
+            target=target,
+        )
+        self.effects.append(effect)
+
 
     @property
     def end_of_round(self):
