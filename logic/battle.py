@@ -88,6 +88,7 @@ class Battle:
             self.set_state_index(target - 2)
             self.set_state_index(target - 1)
             self.set_state_index(target)
+            self.autoplay = False
 
     def set_state_index(self, index, apply_vfx=True):
         index = max(0, index)
@@ -254,6 +255,7 @@ class Battle:
         self._extend_history(1_000_000)
         self.flush_vfx()
         self.set_state_index(0)
+        self.autoplay = False
         self.logger('Battle played to completion.')
 
     # GUI formatting
@@ -320,6 +322,7 @@ class Battle:
     # Autoplay
     def toggle_autoplay(self, set_to=None):
         if self.__state.game_over:
+            self.autoplay = False
             return
         if set_to is None:
             set_to = not self.autoplay
