@@ -106,6 +106,10 @@ class Battle:
         return len(self.__state_history)
 
     @property
+    def state(self):
+        return self.__state
+
+    @property
     def last_state(self):
         return self.__state_history[max(0, self.state_index-1)]
 
@@ -142,7 +146,7 @@ class Battle:
 
     # GUI API
     def update(self):
-        if self.__state.game_over:
+        if self.state.game_over:
             self.autoplay = False
         if not self.autoplay:
             return
@@ -175,21 +179,21 @@ class Battle:
         # BG
         if hex in self.highlighted_tiles:
             bg_color = 1, 1, 1
-        elif hex.get_distance(MAP_CENTER) >= self.__state.death_radius:
+        elif hex.get_distance(MAP_CENTER) >= self.state.death_radius:
             bg_color = self.OUT_OF_BOUNDS_CELL_BG
-        elif hex in self.__state.pits:
+        elif hex in self.state.pits:
             bg_color = self.PIT_COLOR
         else:
             bg_color = self.DEFAULT_CELL_BG
         bg_text = ', '.join(str(_) for _ in hex.xy) if self.debug_mode else ''
         # FG
-        if hex in self.__state.walls:
+        if hex in self.state.walls:
             fg_text = ''
             fg_color = self.WALL_COLOR
             fg_sprite = 'hex'
-        elif hex in self.__state.positions:
-            unit_id = self.__state.positions.index(hex)
-            if not self.__state.alive_mask[unit_id]:
+        elif hex in self.state.positions:
+            unit_id = self.state.positions.index(hex)
+            if not self.state.alive_mask[unit_id]:
                 fg_color = 0.5, 0.5, 0.5
             else:
                 fg_color = self.unit_colors[unit_id]
@@ -209,8 +213,8 @@ class Battle:
 
     def handle_hex_click(self, hex, button):
         self.logger(f'Clicked {button} on: {hex}')
-        if hex in self.__state.positions:
-            bot_id = self.__state.positions.index(hex)
+        if hex in self.state.positions:
+            bot_id = self.state.positions.index(hex)
             vfx_seq = self.bots[bot_id].gui_click(hex, button)
             if vfx_seq is not None:
                 for vfx_kwargs in vfx_seq:
@@ -228,12 +232,12 @@ class Battle:
     @property
     def highlighted_tiles(self):
         """A set of hexes to be highlighted."""
-        if self.__state.round_remaining_turns:
-            return {self.__state.positions[self.__state.round_remaining_turns[0]]}
+        if self.state.round_remaining_turns:
+            return {self.state.positions[self.state.round_remaining_turns[0]]}
         return set()
 
     def get_time(self):
-        return self.__state.step_count
+        return self.state.step_count
 
     def get_controls(self):
         """Return a list of GuiControlMenus of GuiControl objects for buttons/hotkeys in GUI."""
@@ -264,20 +268,20 @@ class Battle:
 
     # GUI formatting
     def get_units_str(self):
-        include_timer = self.__state.step_count == self.history_size - 1
-        unit_strs = [self.get_bot_string(bot_id, include_timer) for bot_id in self.__state.round_remaining_turns]
+        include_timer = self.state.step_count == self.history_size - 1
+        unit_strs = [self.get_bot_string(bot_id, include_timer) for bot_id in self.state.round_remaining_turns]
         unit_strs.append('-'*10)
-        unit_strs.extend(self.get_bot_string(bot_id, include_timer) for bot_id in self.__state.round_done_turns)
+        unit_strs.extend(self.get_bot_string(bot_id, include_timer) for bot_id in self.state.round_done_turns)
         unit_strs.append('='*10)
-        unit_strs.extend(self.get_bot_string(bot_id, include_timer) for bot_id in self.__state.casualties)
+        unit_strs.extend(self.get_bot_string(bot_id, include_timer) for bot_id in self.state.casualties)
         return '\n'.join(unit_strs)
 
     def get_status_str(self):
         # Playing/game over
-        if self.__state.game_over:
+        if self.state.game_over:
             winner_str = 'Draw!'
-            if self.__state.alive_mask.sum() == 1:
-                winner = np.arange(self.bot_count)[self.__state.alive_mask]
+            if self.state.alive_mask.sum() == 1:
+                winner = np.arange(self.bot_count)[self.state.alive_mask]
                 winner_str = f'This game winner is: unit #{winner[0]}'
             win_str = f'GAME OVER\n{winner_str}'
         else:
@@ -285,17 +289,17 @@ class Battle:
             win_str = f'{autoplay} <= {1000 / self.step_interval_ms:.2f} steps/second'
 
         # Current turn
-        if self.__state.round_remaining_turns:
-            bot_id = self.__state.round_remaining_turns[0]
+        if self.state.round_remaining_turns:
+            bot_id = self.state.round_remaining_turns[0]
             bot = self.bots[bot_id]
             turn_str = f'{bot}\'s turn'
-            ap_str = f'{round(self.__state.ap[bot_id])}'
+            ap_str = f'{round(self.state.ap[bot_id])}'
         else:
             turn_str = f'starting new round'
             ap_str = f''
 
         # Last action
-        if self.__state.step_count == 0:
+        if self.state.step_count == 0:
             last_turn_str = '[i]new game[/i]'
             last_action_str = f'[i]started new game[/i]'
         elif self.last_state.end_of_round:
@@ -305,17 +309,17 @@ class Battle:
             last_bot_id = self.last_state.round_remaining_turns[0]
             last_bot_name = self.bots[last_bot_id].name
             last_turn_str = f'#{last_bot_id} {last_bot_name}'
-            last_action_str = f'{self.__state.last_action}'
-            if not self.__state.is_last_action_legal:
+            last_action_str = f'{self.state.last_action}'
+            if not self.state.is_last_action_legal:
                 last_action_str = f'{last_action_str}\n[i]ILLEGAL[/i]'
 
         return '\n'.join([
             win_str,
             '',
-            f'Step: #{self.__state.step_count:<5}',
-            f'Turn: #{self.__state.turn_count:<4}',
-            f'Round: #{self.__state.round_count:<3}',
-            f'Ring of death radius:  {self.__state.death_radius}',
+            f'Step: #{self.state.step_count:<5}',
+            f'Turn: #{self.state.turn_count:<4}',
+            f'Round: #{self.state.round_count:<3}',
+            f'Ring of death radius:  {self.state.death_radius}',
             f'Currently: [u]{turn_str}[/u]',
             f'AP: {ap_str}',
             '',
@@ -326,11 +330,11 @@ class Battle:
 
     def get_bot_string(self, bot_id, include_timer=False):
         bot = self.bots[bot_id]
-        ap = round(self.__state.ap[bot_id])
-        pos = self.__state.positions[bot_id]
+        ap = round(self.state.ap[bot_id])
+        pos = self.state.positions[bot_id]
         name_label = f'#{bot_id:<2} {bot.name[:15]:<15}'
         bot_str = f'{name_label} {ap:>3} AP <{pos.x:>3},{pos.y:>3}>'
-        if bot_id in self.__state.casualties:
+        if bot_id in self.state.casualties:
             bot_str = f'[s]{bot_str}[/s]'
         if not include_timer:
             return bot_str
@@ -343,7 +347,7 @@ class Battle:
 
     # Autoplay
     def toggle_autoplay(self, set_to=None):
-        if self.__state.game_over:
+        if self.state.game_over:
             self.autoplay = False
             return
         if set_to is None:
@@ -365,7 +369,7 @@ class Battle:
         if neighbor is not None:
             assert is_hex(neighbor)
             assert neighbor in hex.neighbors
-        start_step = self.__state.step_count
+        start_step = self.state.step_count
         expire_step = start_step + steps
         self.__vfx_queue.append(VFX(
             name, hex, neighbor,
