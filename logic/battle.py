@@ -123,15 +123,14 @@ class Battle:
         return state
 
     def _get_bot_action(self, bot_id, state):
-        # state = self.__state.copy()
-        wi = state_to_world_info(state)
+        state = state.copy()
         bot = self.bots[bot_id]
         pingpong_desc = f'{bot} get_action (step {state.step_count})'
         self.bot_block_rounds[bot_id] = state.round_count
         def add_bot_time(elapsed):
             self.bot_block_totals[bot_id] += elapsed
         with pingpong(pingpong_desc, logger=self.logger, return_elapsed=add_bot_time):
-            action = self.bots[bot_id].get_action(wi)
+            action = self.bots[bot_id].poll_action(state)
             self.logger(LINEBR)
         self.logger(f'Received action: {action}')
         return action

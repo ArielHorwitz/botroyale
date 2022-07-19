@@ -49,8 +49,18 @@ class BaseBot:
     def setup(self, wi):
         pass
 
-    def get_action(self, world_state):
+    def get_action(self, world_info):
         return Move(Hex(0, 0))
+
+    def poll_action(self, state):
+        """
+        Called by a Battle on our turn.
+        Receive a State object and return an Action object.
+        """
+        # Backward compatibility for old get_action call.
+        glogger(f'get_action will be DEPRECATED, please override "poll_action" instead.')
+        wi = state_to_world_info(state)
+        return self.get_action(wi)
 
     def gui_click(self, hex, button):
         """
