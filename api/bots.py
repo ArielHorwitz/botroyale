@@ -37,7 +37,8 @@ def state_to_world_info(state):
 
 class BaseBot:
     NAME = "BaseBot"
-    SPRITE = "circle"
+    # SPRITE = "circle"
+    SPRITE = "bot"
     TESTING_ONLY = False
     COLOR_INDEX = 0
     logging_enabled = False

@@ -22,6 +22,7 @@ class CrazeeBotLegacy(BaseBot):
     NAME = "CrazeeBot-0.1"
     COLOR_INDEX = 1
     LETHAL_PUSH_SCORE = 1000
+    TESTING_ONLY = True
 
     def __init__(self, id):
         super().__init__(id)

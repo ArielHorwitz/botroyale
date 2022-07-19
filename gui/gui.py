@@ -8,7 +8,7 @@ from gui.panel import Panel, MenuBar
 from gui.tilemap import TileMap
 
 
-ICON = str(Path.cwd() / 'icon.png')
+ICON = str(Path.cwd() / 'icon.ico')
 # User-configurable settings
 FPS = Settings.get('gui._fps', 60)
 WINDOW_SIZE = Settings.get('gui._window_size', [1280, 720])
