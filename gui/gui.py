@@ -1,3 +1,4 @@
+from pathlib import Path
 from util.settings import Settings
 from util.time import RateCounter
 from gui import kex, logger
@@ -7,6 +8,7 @@ from gui.panel import Panel, MenuBar
 from gui.tilemap import TileMap
 
 
+ICON = str(Path.cwd() / 'icon.png')
 # User-configurable settings
 FPS = Settings.get('gui._fps', 60)
 WINDOW_SIZE = Settings.get('gui._window_size', [1280, 720])
@@ -19,6 +21,7 @@ class App(widgets.App):
         logger('Starting app...')
         super().__init__(**kwargs)
         self.title = 'Bot Royale'
+        self.icon = ICON
         kex.resize_window(WINDOW_SIZE)
         if START_MAXIMIZED:
             widgets.kvWindow.maximize()
