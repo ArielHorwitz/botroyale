@@ -56,13 +56,16 @@ class Battle:
         # We can add the pits for round 1 otherwise the initial state will
         # be confusing.
         pits = map.pits | set(MAP_CENTER.ring(radius=death_radius-1))
-        self.__state = State(
+        # State
+        initial_state = State(
             death_radius=death_radius,
             positions=map.spawns,
             pits=pits,
             walls=map.walls,
         )
-        self.state_history = []
+        self.__state = initial_state
+        self.__state_history = [initial_state]
+        self.state_index = 0
         # Bots
         self.bot_count = len(map.spawns)
         self.bots = make_bots(self.bot_count)
@@ -73,27 +76,51 @@ class Battle:
         self.bot_block_rounds = [0 for _ in range(self.bot_count)]
         # Once everything is ready, allow bots to prepare
         for bot in self.bots:
-            bot.setup(state_to_world_info(self.__state))
+            bot.setup(state_to_world_info(initial_state))
 
-    # Game management
-    def _do_next_step(self):
-        if self.__state.game_over:
-            return
-        if self.__state.end_of_round:
-            self._set_new_state(self.__state.increment_round())
-            return
-        bot_id = self.__state.round_remaining_turns[0]
-        self.log_step(bot_id)
-        action = self._get_bot_action(bot_id)
-        self.logger(f'Applying: {action}')
-        self._apply_action(action)
+    # History
+    def increment_state_index(self, delta=1):
+        self.set_state_index(self.state_index + delta)
 
-    def _get_bot_action(self, bot_id):
+    def set_state_index(self, index, apply_vfx=True):
+        index = max(0, index)
+        if len(self.__state_history) <= index:
+            self._extend_history(index)
+            index = min(index, self.history_size-1)
+        self.__state = self.__state_history[index]
+        self.state_index = index
+        if apply_vfx:
+            for effect in self.__state.effects:
+                self.add_vfx(effect.name, effect.origin, effect.target)
+
+    @property
+    def history_size(self):
+        return len(self.__state_history)
+
+    def _extend_history(self, index):
+        state = self.__state_history[-1]
+        while not state.game_over and self.history_size < index + 1:
+            state = self._do_next_state(state)
+            self.__state_history.append(state)
+
+    def _do_next_state(self, state):
+        if state.end_of_round:
+            state = state.increment_round()
+        else:
+            bot_id = state.round_remaining_turns[0]
+            self.log_step(bot_id, state)
+            action = self._get_bot_action(bot_id, state)
+            self.logger(f'Applying: {action}')
+            state = state.apply_action_no_round_increment(action)
+        state.step_count += 1
+        return state
+
+    def _get_bot_action(self, bot_id, state):
         # state = self.__state.copy()
-        wi = state_to_world_info(self.__state)
+        wi = state_to_world_info(state)
         bot = self.bots[bot_id]
-        pingpong_desc = f'{bot} get_action (step {self.__state.step_count})'
-        self.bot_block_rounds[bot_id] = self.__state.round_count
+        pingpong_desc = f'{bot} get_action (step {state.step_count})'
+        self.bot_block_rounds[bot_id] = state.round_count
         def add_bot_time(elapsed):
             self.bot_block_totals[bot_id] += elapsed
         with pingpong(pingpong_desc, logger=self.logger, return_elapsed=add_bot_time):
@@ -101,17 +128,6 @@ class Battle:
             self.logger(LINEBR)
         self.logger(f'Received action: {action}')
         return action
-
-    def _apply_action(self, action):
-        new_state = self.__state.apply_action_no_round_increment(action)
-        self._set_new_state(new_state)
-        for effect in new_state.effects:
-            self.add_vfx(effect.name, effect.origin, effect.target)
-
-    def _set_new_state(self, state):
-        self.state_history.append(self.__state)
-        state.step_count = self.__state.step_count + 1
-        self.__state = state
 
     # GUI API
     def update(self):
@@ -121,13 +137,13 @@ class Battle:
             return
         time_delta = pong(self.__last_step)
         if time_delta >= self.step_interval_ms:
-            self.next_step()
+            self.increment_state_index()
             leftover = time_delta - self.step_interval_ms
             self.__last_step = ping() - leftover
 
     def next_step(self):
         """Called when a single step (smallest unit of time) is to be played."""
-        self._do_next_step()
+        self.increment_state_index()
 
     def flush_vfx(self):
         """Clears and returns the vfx from queue."""
@@ -212,8 +228,14 @@ class Battle:
         """Return a list of GuiControlMenus of GuiControl objects for buttons/hotkeys in GUI."""
         return [
             GuiControlMenu('Battle', [
+                GuiControl('Next step', lambda: self.increment_state_index(1), 'right'),
+                GuiControl('Prev step', lambda: self.increment_state_index(-1), 'left'),
+                GuiControl('+10 steps', lambda: self.increment_state_index(10), '+ right'),
+                GuiControl('-10 steps', lambda: self.increment_state_index(-10), '+ left'),
+                GuiControl('+1M steps', lambda: self.increment_state_index(1_000_000), '^+ right'),
+                GuiControl('-1M steps', lambda: self.increment_state_index(-1_000_000), '^+ left'),
+                GuiControl('Preplay all steps', self.play_all, '^+ p'),
                 GuiControl('Autoplay', self.toggle_autoplay, 'spacebar'),
-                GuiControl('Next step', self.next_step, 'n'),
                 *[GuiControl(f'Set step rate {r}', lambda r=r: self.set_step_rate(r), f'{i+1}') for i, r in enumerate(STEP_RATES[:5])]
             ]),
             GuiControlMenu('Debug', [
@@ -223,10 +245,10 @@ class Battle:
 
     def play_all(self):
         self.logger('Playing battle to completion...')
-        while not self.__state.game_over:
-            self.next_step()
-        # Clear the vfx else they will all be drawn at once at the end
+        self._extend_history(1_000_000)
         self.flush_vfx()
+        self.set_state_index(0)
+        self.logger('Battle played to completion.')
 
     # GUI formatting
     def get_units_str(self):
@@ -319,9 +341,9 @@ class Battle:
         if LOGIC_DEBUG:
             glogger(text)
 
-    def log_step(self, bot_id):
+    def log_step(self, bot_id, state):
         self.logger('\n'.join([
             LINEBR,
-            f'R: {self.__state.round_count} T: {self.__state.turn_count} S: {self.__state.step_count} | {self.bots[bot_id]}',
+            f'R: {state.round_count} T: {state.turn_count} S: {state.step_count} | {self.bots[bot_id]}',
             LINEBR,
         ]))
