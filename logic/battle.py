@@ -105,6 +105,10 @@ class Battle:
     def history_size(self):
         return len(self.__state_history)
 
+    @property
+    def last_state(self):
+        return self.__state_history[max(0, self.state_index-1)]
+
     def _extend_history(self, index):
         state = self.__state_history[-1]
         while not state.game_over and self.history_size < index + 1:
@@ -284,20 +288,38 @@ class Battle:
         if self.__state.round_remaining_turns:
             bot_id = self.__state.round_remaining_turns[0]
             bot = self.bots[bot_id]
-            turn_str = f'#{bot_id:<2} {bot.name}\'s turn'
+            turn_str = f'{bot}\'s turn'
+            ap_str = f'{round(self.__state.ap[bot_id])}'
         else:
             turn_str = f'starting new round'
+            ap_str = f''
 
         # Last action
-        last_action_str = f'{self.__state.last_action}'
-        if not self.__state.is_last_action_legal:
-            last_action_str = f'{last_action_str}, [i]illegal[/i]'
+        if self.__state.step_count == 0:
+            last_turn_str = '[i]new game[/i]'
+            last_action_str = f'[i]started new game[/i]'
+        elif self.last_state.end_of_round:
+            last_turn_str = '[i]end of round[/i]'
+            last_action_str = f'[i]started new round[/i]'
+        else:
+            last_bot_id = self.last_state.round_remaining_turns[0]
+            last_bot_name = self.bots[last_bot_id].name
+            last_turn_str = f'#{last_bot_id} {last_bot_name}'
+            last_action_str = f'{self.__state.last_action}'
+            if not self.__state.is_last_action_legal:
+                last_action_str = f'{last_action_str}\n[i]ILLEGAL[/i]'
+
         return '\n'.join([
             win_str,
-            '\n',
+            '',
+            f'Step: #{self.__state.step_count:<5}',
+            f'Turn: #{self.__state.turn_count:<4}',
+            f'Round: #{self.__state.round_count:<3}',
             f'Ring of death radius:  {self.__state.death_radius}',
-            f'Round: #{self.__state.round_count:<3} Turn: #{self.__state.turn_count:<4} Step: #{self.__state.step_count:<5}',
-            f'Currently:  [u]{turn_str}[/u]',
+            f'Currently: [u]{turn_str}[/u]',
+            f'AP: {ap_str}',
+            '',
+            f'Last turn: {last_turn_str}',
             f'Last action: {last_action_str}',
             '\n',
         ])
