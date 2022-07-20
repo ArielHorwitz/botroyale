@@ -1,9 +1,11 @@
-import numpy as np
 import copy
-from api.actions import Move, Push, Idle, Jump
-from util.hexagon import Hex
 from collections import namedtuple
+from dataclasses import dataclass, field
+from typing import List, Set, Optional, Union
+import numpy as np
 
+from api.actions import Move, Push, Idle, Jump, Action
+from util.hexagon import Hex, Hexagon
 
 RNG = np.random.default_rng()
 
@@ -18,41 +20,40 @@ class OrderError(Exception):
     pass
 
 
+@dataclass
 class State:
-    def __init__(
-            self,
-            death_radius, positions, walls, pits, alive_mask=None,
-            ap=None,
-            round_ap_spent=None,
-            round_remaining_turns=None,
-            step_count=0, turn_count=0, round_count=0,
-            ):
-        self.num_of_units = len(positions)
-        # Map
-        self.center = Hex(0, 0)
-        self.death_radius = death_radius
-        self.positions = positions
-        self.walls = walls
-        self.pits = pits | set(self.center.ring(death_radius))
-        # Metadata
-        if alive_mask is None:
-            alive_mask = np.ones(self.num_of_units, dtype=bool)
-        self.alive_mask = alive_mask
-        if ap is None:
-            ap = np.zeros(self.num_of_units)
-        self.ap = ap
-        if round_ap_spent is None:
-            round_ap_spent = np.zeros(self.num_of_units)
-        self.round_ap_spent = round_ap_spent
-        if round_remaining_turns is None:
-            round_remaining_turns = []
-        self.round_remaining_turns = round_remaining_turns
-        self.step_count = step_count
-        self.turn_count = turn_count
-        self.round_count = round_count
-        self.effects = []
-        self.last_action = None
-        self.is_last_action_legal = False
+    
+    # Initialization parameters
+    death_radius: int = field(repr=True)
+    positions : List[Hexagon]
+    walls: Set[Hexagon]
+    pits: Set[Hexagon]
+    alive_mask: Optional[np.ndarray] = field(default=None)
+    ap: Optional[np.ndarray] = field(default=None)
+    round_ap_spent: Optional[np.ndarray] = field(default=None)
+    round_remaining_turns: List[int] = field(default_factory=list)
+    step_count: int = 0
+    turn_count: int = 0
+    round_count: int = field(default=0, repr=True)
+
+    num_of_units: int = field(init=False)
+    center: Hexagon = field(init=False, default=Hex(0, 0))
+    effects: List[Effect] = field(init=False, default_factory=list)
+    last_action: Union[Action, None] = field(init=False, default=None)
+    is_last_action_legal: bool = field(init=False, default=False)
+
+    def __post_init__(self):
+        self.num_of_units = len(self.positions)
+        self.pits = self.pits | set(self.center.ring(self.death_radius))
+
+        if self.alive_mask is None:
+            self.alive_mask = np.ones(self.num_of_units, dtype=bool)
+
+        if self.ap is None:
+            self.ap = np.zeros(self.num_of_units)
+
+        if self.round_ap_spent is None:
+            self.round_ap_spent = np.zeros(self.num_of_units)
 
     def apply_action(self, action):
         new_state = self.apply_action_no_round_increment(action)
