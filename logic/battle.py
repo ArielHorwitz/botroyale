@@ -283,8 +283,8 @@ class Battle:
         # Playing/game over
         if self.state.game_over:
             winner_str = 'Draw!'
-            if self.state.alive_mask.sum() == 1:
-                winner_id = np.arange(self.bot_count)[self.state.alive_mask][0]
+            winner_id = self.state.winner
+            if winner_id:
                 winner = self.bots[winner_id]
                 winner_str = f'Winner: {winner.gui_label}'
             win_str = f'GAME OVER\n{winner_str}'

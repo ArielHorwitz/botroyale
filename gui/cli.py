@@ -32,7 +32,7 @@ class CLI:
             self.print_battle()
 
     def print_battle(self):
-        print(self.battle.get_match_state())
+        print(self.battle.get_summary_str())
 
     def next_step(self, do_print=True):
         self.battle.next_step()
@@ -45,12 +45,11 @@ class CLI:
         self.print_battle()
 
     def play_complete(self):
-        while not self.battle.game_over:
-            self.battle.next_step()
+        self.battle.play_all()
+        self.battle.increment_state_index(1_000_000)
         self.print_battle()
-        alive = np.flatnonzero(self.battle.alive_mask)
-        if len(alive):
-            winner_id = alive[0]
+        winner_id = self.battle.state.winner
+        if winner_id:
             winner = self.battle.bots[winner_id].name
             losers = [b.name for b in self.battle.bots if b.id != winner_id]
         else:
@@ -75,7 +74,7 @@ class CLI:
             print_summary()
             print('\nPlaying next battle...\n')
             winner, losers = self.play_complete()
-            last_battle_summary = self.battle.get_match_state()
+            last_battle_summary = self.battle.get_summary_str()
             counter[winner] += 1
             for loser in losers:
                 counter[loser] += 0
