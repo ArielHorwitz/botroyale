@@ -79,7 +79,7 @@ class Battle:
             bot.setup(initial_state)
 
     # History
-    def increment_state_index(self, delta=1):
+    def increment_state_index(self, delta=1, disable_autoplay=True):
         if delta > 0:
             self.set_state_index(self.state_index + delta)
         else:
@@ -88,6 +88,7 @@ class Battle:
             self.set_state_index(target - 2)
             self.set_state_index(target - 1)
             self.set_state_index(target)
+        if disable_autoplay:
             self.autoplay = False
 
     def set_state_index(self, index, apply_vfx=True):
@@ -154,7 +155,7 @@ class Battle:
             return
         time_delta = pong(self.__last_step)
         if time_delta >= self.step_interval_ms:
-            self.increment_state_index()
+            self.increment_state_index(disable_autoplay=False)
             leftover = time_delta - self.step_interval_ms
             self.__last_step = ping() - leftover
 
