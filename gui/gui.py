@@ -1,11 +1,14 @@
+from pathlib import Path
 from util.settings import Settings
+from util.time import RateCounter
 from gui import kex, logger
 import gui.kex.widgets as widgets
-from api.logic import BaseLogicAPI, GuiControlMenu, GuiControl, gui_control_menu_extend
+from api.gui import GuiControlMenu, GuiControl, gui_control_menu_extend
 from gui.panel import Panel, MenuBar
 from gui.tilemap import TileMap
 
 
+ICON = str(Path.cwd() / 'icon.ico')
 # User-configurable settings
 FPS = Settings.get('gui._fps', 60)
 WINDOW_SIZE = Settings.get('gui._window_size', [1280, 720])
@@ -18,12 +21,13 @@ class App(widgets.App):
         logger('Starting app...')
         super().__init__(**kwargs)
         self.title = 'Bot Royale'
+        self.icon = ICON
         kex.resize_window(WINDOW_SIZE)
         if START_MAXIMIZED:
             widgets.kvWindow.maximize()
-        assert issubclass(logic_cls, BaseLogicAPI)
         self.__logic_cls = logic_cls
         self.logic = self.__logic_cls()
+        self.fps_counter = RateCounter(sample_size=FPS, starting_elapsed=1000/FPS)
         self.im = widgets.InputManager(
             logger=print if LOG_HOTKEYS else lambda *a: None)
         self.make_widgets()
@@ -70,10 +74,12 @@ class App(widgets.App):
         self.make_widgets()
 
     def update_widgets(self):
-        self.panel.set_text(self.logic.get_match_state())
+        self.panel.set_text(self.logic.get_summary_str())
         self.map.update()
+        self.bar.set_text(f'{self.fps_counter.rate:.2f} FPS')
 
     def mainloop_hook(self, dt):
+        self.fps_counter.tick()
         self.logic.update()
         self.update_widgets()
 

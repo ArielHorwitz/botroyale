@@ -3,7 +3,6 @@ from util.hexagon import is_hex
 
 class Action:
     ap = 0
-    has_effect = True
 
 
 class Move(Action):
@@ -24,15 +23,15 @@ class Push(Move):
         return f'<Push action: {self.target.x}, {self.target.y}>'
 
 
+class Jump(Move):
+    ap = 40
+
+    def __repr__(self):
+        return f'<Jump action: {self.target.x}, {self.target.y}>'
+
+
 class Idle(Action):
-    has_effect = False
 
     def __repr__(self):
         return f'<Idle action>'
 
-
-class IllegalAction(Action):
-    has_effect = False
-
-    def __repr__(self):
-        return f'<Illegal action>'

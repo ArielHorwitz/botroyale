@@ -5,7 +5,7 @@ from pathlib import Path
 import numpy as np
 from gui import kex, center_sprite, FONT, logger
 import gui.kex.widgets as widgets
-from api.logic import GuiControlMenu, GuiControl
+from api.gui import GuiControlMenu, GuiControl
 from util.settings import Settings
 from util.hexagon import Hex, WIDTH_HEIGHT_RATIO, SQRT3
 
@@ -17,8 +17,9 @@ UNIT_SIZE = Settings.get('tilemap.unit_size', 0.7)
 FONT_SCALE = Settings.get('tilemap.font_scale', 0.7)
 REDRAW_COOLDOWN = Settings.get('tilemap.|redraw_cooldown', 0.3)
 ASSETS_DIR = Path.cwd() / 'assets'
-HEX_PNG = str(ASSETS_DIR / 'hex.png')
+SPRITES_DIR = ASSETS_DIR / 'sprites'
 VFX_DIR = ASSETS_DIR / 'vfx'
+HEX_PNG = str(SPRITES_DIR / 'hex.png')
 
 
 class TileMap(widgets.RelativeLayout):
@@ -282,12 +283,12 @@ class TileMap(widgets.RelativeLayout):
         for hex in self.tiles:
             real_hex = hex - center
             self.tiles[hex].update(get_tile_info(real_hex))
+        logic_time = self.get_logic_time()
         for vfx_kwargs in self.get_vfx():
             self.add_vfx(*vfx_kwargs)
-        logic_time = self.get_logic_time()
         for vfx in list(self.__vfx):
-            if vfx.expiration <= logic_time:
-                logger(f'Found expired VFX {vfx.expiration} >= {logic_time} {vfx}')
+            if logic_time < vfx.start_step or vfx.expire_step <= logic_time:
+                logger(f'Found expired VFX {logic_time} < {vfx.start_step} | {vfx.expire_step} <= {logic_time} {vfx}')
                 self.__remove_vfx(vfx)
 
     def real2tile(self, real_hex):
@@ -298,24 +299,34 @@ class TileMap(widgets.RelativeLayout):
         tile_pos = tile.pixel_position(self.tile_radius_padded) + self.screen_center
         return tile_pos
 
-    def add_vfx(self, vfx_name, hex, neighbor=None, time=1, real_time=None):
-        if neighbor is None:
-            neighbor = hex.neighbors[0]
-        assert neighbor in hex.neighbors
-        rotation = -60 * hex.neighbors.index(neighbor)
-        expiration = self.get_logic_time() + time
+    def add_vfx(self, name, hex, direction, start_step, expire_step, expire_seconds):
+        if direction is None:
+            direction = hex.neighbors[0]
+        if direction in hex.neighbors:
+            # Shortcut for angle of rotation
+            rotation = -60 * hex.neighbors.index(direction)
+        else:
+            # Trigonometry for angle of rotation
+            target_vector = direction - hex
+            tx, ty = target_vector.pixel_position(radius=1)
+            if tx:
+                theta = math.atan(ty/tx) + math.pi * (tx < 0)
+                rotation = math.degrees(theta)
+            else:
+                rotation = 90 if ty > 0 else -90
         vfx = VFX(hex,
-            expiration=expiration,
+            start_step=start_step,
+            expire_step=expire_step,
             rotation=rotation,
-            source=str(VFX_DIR / f'{vfx_name}.png'),
+            source=str(VFX_DIR / f'{name}.png'),
             )
         self.__reposition_vfx_single(vfx)
         logger(f'Adding VFX: {vfx} at position: {vfx.pos_center}')
         self.__vfx.add(vfx)
         self.canvas.after.add(vfx)
-        if real_time:
+        if expire_seconds:
             widgets.kvClock.schedule_once(
-                lambda *a: self.__remove_vfx(vfx), real_time)
+                lambda *a: self.__remove_vfx(vfx), expire_seconds)
 
     def clear_vfx(self, *a):
         all_vfx = list(self.__vfx)
@@ -346,10 +357,6 @@ class TileMap(widgets.RelativeLayout):
         vfx.reset(pos, size)
 
     def debug(self):
-        vfx_hex = Hex(random.randint(0, 5), random.randint(0, 5))
-        vfx_neighbor = random.choice(vfx_hex.neighbors)
-        vfx_action = random.choice(('move', 'push', 'mark-red', 'mark-green', 'mark-blue'))
-        self.add_vfx(vfx_action, vfx_hex, vfx_neighbor)
         logger('\n'.join([
             f'Canvas size: {self.size} Offset: {self.pos} From real2pix: {self.real2pix(Hex(0, 0))}',
             f'Canvas center: {self.screen_center} to_window: {self.to_window(*self.screen_center, initial=False, relative=True)}',
@@ -380,10 +387,10 @@ class Tile(widgets.kvInstructionGroup):
 
         self.add(self._bg_color)
         self.add(self._bg)
-        self.add(self._bg_text_color)
-        self.add(self._bg_text)
         self.add(self._fg_color)
         self.add(self._fg)
+        self.add(self._bg_text_color)
+        self.add(self._bg_text)
         self.add(self._fg_text_color)
         self.add(self._fg_text)
 
@@ -404,7 +411,7 @@ class Tile(widgets.kvInstructionGroup):
             self._fg_color.rgba = 0,0,0,0
         else:
             self._fg_color.rgba = (*tile_info.fg_color, 1)
-            self._fg.source = str(ASSETS_DIR / f'{tile_info.fg_sprite}.png')
+            self._fg.source = str(SPRITES_DIR / f'{tile_info.fg_sprite}.png')
 
         # Hide the fg text rect if no text is set
         if not tile_info.fg_text:
@@ -430,15 +437,17 @@ class Tile(widgets.kvInstructionGroup):
     def set_text(self, bg, fg):
         if fg:
             font_size = FONT_SCALE * self._bg.size[1] / 2
+            outline_width = font_size / 10
             self._fg_text.texture = t = widgets.text_texture(fg,
-                font=FONT, font_size=font_size)
+                font=FONT, font_size=font_size, outline_width=outline_width)
             self._fg_text.size = t.size
             self._fg_text.pos = center_sprite(self.__pos, t.size)
             self._bg_text.size = 0, 0
         elif bg:
             font_size = FONT_SCALE * self._bg.size[1] / 2
+            outline_width = font_size / 10
             self._bg_text.texture = t = widgets.text_texture(bg,
-                font=FONT, font_size=font_size)
+                font=FONT, font_size=font_size, outline_width=outline_width)
             self._bg_text.size = t.size
             self._bg_text.pos = center_sprite(self.__pos, t.size)
             self._fg_text.size = 0, 0
@@ -448,9 +457,13 @@ class Tile(widgets.kvInstructionGroup):
 
 
 class VFX(widgets.kvInstructionGroup):
-    def __init__(self, hex, source, expiration, rotation=0, pos=None, size=None, **kwargs):
+    def __init__(self,
+            hex, source, start_step, expire_step,
+            rotation=0, pos=None, size=None,
+            **kwargs):
         super().__init__(**kwargs)
-        self.expiration = expiration
+        self.start_step = start_step
+        self.expire_step = expire_step
         self.pos_center = 0, 0
         self.hex = hex
         self.add(widgets.kvColor(1, 1, 1, 1))
@@ -470,4 +483,4 @@ class VFX(widgets.kvInstructionGroup):
         self.rect.pos = center_sprite(pos, size)
 
     def __repr__(self):
-        return f'<VFX {self.rect.source} @{self.hex} {round(self.rot.angle)}° x:{self.expiration}>'
+        return f'<VFX {self.rect.source} @{self.hex} {round(self.rot.angle)}° x:{self.expire_step}>'

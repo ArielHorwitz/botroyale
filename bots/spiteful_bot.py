@@ -13,6 +13,7 @@ LethalSequence = namedtuple('LethalSequence', ['ap_cost', 'actions', 'vfx'])
 
 class SpitefulBot(BaseBot):
     NAME = 'spiteful'
+    SPRITE = 'fox'
     COLOR_INDEX = 0
     map_center = Hex(0, 0)
 
@@ -140,8 +141,8 @@ class SpitefulBot(BaseBot):
             ]
         vfx = [
             {'name': 'mark-green', 'hex': start_pos},
-            {'name': 'push', 'hex': start_pos, 'neighbor': enemy},
-            {'name': 'push', 'hex': enemy, 'neighbor': pit},
+            {'name': 'push', 'hex': start_pos, 'direction': enemy},
+            {'name': 'push', 'hex': enemy, 'direction': pit},
             {'name': 'mark-red', 'hex': pit},
             ]
         self.logger(f'Good sequence!')
@@ -178,11 +179,11 @@ class SpitefulBot(BaseBot):
             ]
         vfx = [
             {'name': 'mark-green', 'hex': start_pos},
-            {'name': 'push', 'hex': start_pos, 'neighbor': enemy},
-            {'name': 'push', 'hex': enemy, 'neighbor': mid_point},
-            {'name': 'move', 'hex': start_pos, 'neighbor': enemy},
-            {'name': 'push', 'hex': enemy, 'neighbor': mid_point},
-            {'name': 'push', 'hex': mid_point, 'neighbor': pit},
+            {'name': 'push', 'hex': start_pos, 'direction': enemy},
+            {'name': 'push', 'hex': enemy, 'direction': mid_point},
+            {'name': 'move', 'hex': start_pos, 'direction': enemy},
+            {'name': 'push', 'hex': enemy, 'direction': mid_point},
+            {'name': 'push', 'hex': mid_point, 'direction': pit},
             {'name': 'mark-red', 'hex': pit},
         ]
         self.logger(f'Good sequence!')
@@ -218,12 +219,12 @@ class SpitefulBot(BaseBot):
             ]
         vfx = [
             {'name': 'mark-green', 'hex': start_pos},
-            {'name': 'push', 'hex': start_pos, 'neighbor': enemy},
-            {'name': 'push', 'hex': enemy, 'neighbor': neighbor},
-            {'name': 'move', 'hex': start_pos, 'neighbor': enemy},
-            {'name': 'move', 'hex': enemy, 'neighbor': mid_pos},
-            {'name': 'push', 'hex': mid_pos, 'neighbor': neighbor},
-            {'name': 'push', 'hex': neighbor, 'neighbor': pit},
+            {'name': 'push', 'hex': start_pos, 'direction': enemy},
+            {'name': 'push', 'hex': enemy, 'direction': neighbor},
+            {'name': 'move', 'hex': start_pos, 'direction': enemy},
+            {'name': 'move', 'hex': enemy, 'direction': mid_pos},
+            {'name': 'push', 'hex': mid_pos, 'direction': neighbor},
+            {'name': 'push', 'hex': neighbor, 'direction': pit},
             {'name': 'mark-red', 'hex': pit},
         ]
         self.logger(f'Good sequence!')

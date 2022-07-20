@@ -42,8 +42,12 @@ class MenuBar(widgets.BoxLayout):
             btn.set_options(options, markup=True, font_size=PANEL_FONT_SIZE)
             btn.set_size(x=250)
         self.set_size(y=30)
+        self.label = self.add(widgets.MLabel())
 
     def handle_button(self, label):
         assert label in self.callbacks
         c = self.callbacks[label]
         c()
+
+    def set_text(self, text):
+        self.label.text = str(text)
