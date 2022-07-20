@@ -14,7 +14,7 @@ from util.hexagon import Hex, is_hex
 STEP_RATE = Settings.get('logic._step_rate_cap', 2)
 STEP_RATES = Settings.get('logic.|step_rates', [1, 2, 3, 5, 60])
 LOGIC_DEBUG = Settings.get('logging.battle', True)
-LINEBR = '='*50
+LINEBR = '='*75
 MAP_CENTER = Hex(0, 0)
 
 
@@ -121,15 +121,17 @@ class Battle:
 
     def _do_next_state(self, state):
         if state.end_of_round:
-            state = state.increment_round()
+            new_state = state.increment_round()
         else:
             bot_id = state.round_remaining_turns[0]
             self.log_step(bot_id, state)
             action = self._get_bot_action(bot_id, state)
             self.logger(f'Applying: {action}')
-            state = state.apply_action_no_round_increment(action)
-        state.step_count += 1
-        return state
+            new_state = state.apply_action_no_round_increment(action)
+            if not new_state.is_last_action_legal:
+                self.logger(f'ILLEGAL: {action}')
+        new_state.step_count += 1
+        return new_state
 
     def _get_bot_action(self, bot_id, state):
         state = state.copy()
@@ -281,8 +283,9 @@ class Battle:
         if self.state.game_over:
             winner_str = 'Draw!'
             if self.state.alive_mask.sum() == 1:
-                winner = np.arange(self.bot_count)[self.state.alive_mask]
-                winner_str = f'This game winner is: unit #{winner[0]}'
+                winner_id = np.arange(self.bot_count)[self.state.alive_mask][0]
+                winner = self.bots[winner_id]
+                winner_str = f'Winner: {winner.gui_label}'
             win_str = f'GAME OVER\n{winner_str}'
         else:
             autoplay = 'Playing' if self.autoplay else 'Paused'
@@ -292,11 +295,9 @@ class Battle:
         if self.state.round_remaining_turns:
             bot_id = self.state.round_remaining_turns[0]
             bot = self.bots[bot_id]
-            turn_str = f'{bot}\'s turn'
-            ap_str = f'{round(self.state.ap[bot_id])}'
+            turn_str = f'{bot.gui_label} ({round(self.state.ap[bot_id])} AP)'
         else:
             turn_str = f'starting new round'
-            ap_str = f''
 
         # Last action
         if self.state.step_count == 0:
@@ -306,9 +307,8 @@ class Battle:
             last_turn_str = '[i]end of round[/i]'
             last_action_str = f'[i]started new round[/i]'
         else:
-            last_bot_id = self.last_state.round_remaining_turns[0]
-            last_bot_name = self.bots[last_bot_id].name
-            last_turn_str = f'#{last_bot_id} {last_bot_name}'
+            last_bot = self.bots[self.last_state.round_remaining_turns[0]]
+            last_turn_str = last_bot.gui_label
             last_action_str = f'{self.state.last_action}'
             if not self.state.is_last_action_legal:
                 last_action_str = f'{last_action_str}\n[i]ILLEGAL[/i]'
@@ -316,12 +316,11 @@ class Battle:
         return '\n'.join([
             win_str,
             '',
-            f'Step: #{self.state.step_count:<5}',
-            f'Turn: #{self.state.turn_count:<4}',
-            f'Round: #{self.state.round_count:<3}',
+            f'Step:  {self.state.step_count:<5}',
+            f'Turn:  {self.state.turn_count:<4}',
+            f'Round: {self.state.round_count:<3}',
             f'Ring of death radius:  {self.state.death_radius}',
-            f'Currently: [u]{turn_str}[/u]',
-            f'AP: {ap_str}',
+            f'Currently: {turn_str}',
             '',
             f'Last turn: {last_turn_str}',
             f'Last action: {last_action_str}',
@@ -332,7 +331,7 @@ class Battle:
         bot = self.bots[bot_id]
         ap = round(self.state.ap[bot_id])
         pos = self.state.positions[bot_id]
-        name_label = f'#{bot_id:<2} {bot.name[:15]:<15}'
+        name_label = f'{bot.gui_label[:20]:<20}'
         bot_str = f'{name_label} {ap:>3} AP <{pos.x:>3},{pos.y:>3}>'
         if bot_id in self.state.casualties:
             bot_str = f'[s]{bot_str}[/s]'
@@ -391,6 +390,12 @@ class Battle:
     def log_step(self, bot_id, state):
         self.logger('\n'.join([
             LINEBR,
-            f'R: {state.round_count} T: {state.turn_count} S: {state.step_count} | {self.bots[bot_id]}',
+            ' '.join([
+                f'Step {str(state.step_count):^4}',
+                f'Turn: {str(state.turn_count):^4}',
+                f'Round: {str(state.round_count):^3}',
+                '|',
+                f'{self.bots[bot_id]}',
+                ]),
             LINEBR,
         ]))

@@ -104,3 +104,7 @@ class BaseBot:
 
     def __repr__(self):
         return f'<Bot #{self.id} {self.name}>'
+
+    @property
+    def gui_label(self):
+        return f'#{self.id} {self.name}'
