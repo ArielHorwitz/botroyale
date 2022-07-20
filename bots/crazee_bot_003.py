@@ -1,29 +1,20 @@
 import copy
 import numpy as np
 
-from api.actions import Move, Push, Idle, Action
+from api.actions import Move, Push, Idle, Action, Jump
 from bots import BaseBot
 from util.hexagon import Hexagon, Hex
-from api.logging import logger as glogger
 from api.bots import world_info
 from util.settings import Settings
 from time import perf_counter
 
-DEBUG = Settings.get('logging.bots.crazee.debug', False)
-
-
-def debug(*lines):
-    if DEBUG:
-        glogger('\n'.join(str(_) for _ in lines))
-
 
 class CrazeeBotAlpha(BaseBot):
-    NAME = "CrazeeBot-0.2"
-    COLOR_INDEX = 7
+    NAME = "CrazeeBot"
+    COLOR_INDEX = 9
     MAX_AP = 100
     AP_REGEN = 50
     CENTER_TILE = Hex(0, 0)
-    LETHAL_PUSH_SCORE = 1000
     SPRITE = 'flower'
 
     def __init__(self, id):
@@ -38,13 +29,11 @@ class CrazeeBotAlpha(BaseBot):
         self.pos: Hexagon = wi.positions[self.id]
         self.ap = wi.ap[self.id]
         self.enemy_positions: set = set(wi.positions) - {self.pos}
-        # action = self.pick_action(wi)
         action = self.plan_action(wi)
         if not action:
-            debug(f"NO LEGAL MOVES FOR ME TO DO, Bot {self.id}")
+            self.logger(f"NO LEGAL MOVES FOR ME TO DO, Bot {self.id}")
             action = Idle()
-            # action = Move(Hex(100, 100))
-        debug(f"{self.NAME}-{self.id} took {(perf_counter() - t1_start) * 1000:.2f}ms")
+        self.logger(f"{self.NAME}-{self.id} took {(perf_counter() - t1_start) * 1000:.2f}ms")
         return action
 
     def plan_action(self, wi: world_info):
@@ -63,10 +52,11 @@ class CrazeeBotAlpha(BaseBot):
         enemy_mask[self.id] = False
         enemy_ids = np.flatnonzero(enemy_mask)
         enemy_positions = set(wi.positions[uid] for uid in enemy_ids)
-        # obstacles = wi.pits | wi.walls | enemy_positions
-        obstacles = wi.walls | enemy_positions
+        obstacles = wi.pits | wi.walls | enemy_positions
+        # obstacles = wi.walls | enemy_positions
         legal_moves = set(pos.neighbors) - obstacles
         actions.extend([Move(m) for m in legal_moves])
+
         if my_ap < Push.ap:
             return actions
         pos: Hexagon = wi.positions[self.id]
@@ -78,8 +68,13 @@ class CrazeeBotAlpha(BaseBot):
             if end_tile in wi.walls or end_tile in wi.positions:
                 continue
             legal_options.add(Push(push_tile))
-
         actions.extend(legal_options)
+
+        if my_ap < Jump.ap:
+            return actions
+
+        legal_jumps = set(pos.ring(2)) - obstacles
+        actions.extend([Jump(m) for m in legal_jumps])
         return actions
 
     def calc_turn(self, wi: world_info):
@@ -105,14 +100,16 @@ class CrazeeBotAlpha(BaseBot):
             c_pos = new_cwi.positions
             c_ap = new_cwi.ap
             if type(action) is Push:
-                # debug(f"My Pos: {c_pos[self.id]}, Target: {action.action.target}")
+                # self.logger(f"My Pos: {c_pos[self.id]}, Target: {action.action.target}")
                 end_tile = next(c_pos[self.id].straight_line(action.target))
                 enemy_index = [e for e in range(len(c_pos)) if c_pos[e] == action.target][0]
                 c_pos[enemy_index] = end_tile
             elif type(action) is Move:
                 c_pos[self.id] = action.target
+            elif type(action) is Jump:
+                c_pos[self.id] = action.target
             else:
-                debug(action)
+                self.logger(action)
             c_ap[self.id] -= action.ap
             new_cwi.alive_mask[:] = [pos not in new_cwi.pits for pos in c_pos]
             return new_cwi
@@ -156,7 +153,7 @@ class CrazeeBotAlpha(BaseBot):
             if len(d_enemys) > 0:
                 enemy_score += (sum(d_enemys) / len(d_enemys))
             score = terrain_score + enemy_score + enemy_dead_score + ap_score
-            # debug(f"Score: {score:.2f}, terrain: {terrain_score:.2f}, enemy: {enemy_score:.2f}, "
+            # self.logger(f"Score: {score:.2f}, terrain: {terrain_score:.2f}, enemy: {enemy_score:.2f}, "
             #       f"enemy_dead: {enemy_dead_score:.2f}, ap: {ap_score:.2f}")
             return score
 
@@ -189,7 +186,7 @@ class CrazeeBotAlpha(BaseBot):
         if len(result_chain) > 1:
             temp = result_chain.pop(0)
             result_chain.append(temp)
-        debug('\n'.join(str(_) for _ in result_chain))
+        self.logger('\n'.join(str(_) for _ in result_chain))
         return result_chain
 
 
