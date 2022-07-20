@@ -224,3 +224,9 @@ class State:
     @property
     def game_over(self):
         return self.alive_mask.sum() <= 1
+
+    @property
+    def winner(self):
+        if self.alive_mask.sum() == 1:
+            return np.flatnonzero(self.alive_mask)[0]
+        return None

@@ -5,43 +5,22 @@ from api.logging import logger as glogger
 from api.actions import Move, Push
 
 
-world_info = namedtuple('WorldInfo', [
-    'positions',  # list of tiles
-    'walls',  # set of tiles
-    'pits',  # set of tiles
-    'ring_radius',  # int
-    'alive_mask',  # ndarray mask
-    'turn_count',  # int
-    'round_count',  # int
-    'ap',  # ndarray
-    'round_ap_spent',  # ndarray
-    # when round_priority is empty, round is over.
-    'round_remaining_turns',  # list
-    ])
+CENTER = Hex(0, 0)
 
 
-def state_to_world_info(state):
-    return world_info(
-        positions=copy.copy(state.positions),
-        walls=copy.copy(state.walls),
-        pits=copy.copy(state.pits),
-        ring_radius=state.death_radius,
-        alive_mask=copy.deepcopy(state.alive_mask),
-        turn_count=state.turn_count,
-        round_count=state.round_count,
-        ap=copy.deepcopy(state.ap),
-        round_ap_spent=copy.deepcopy(state.round_ap_spent),
-        round_remaining_turns=copy.deepcopy(state.round_remaining_turns),
-        )
+def center_distance(hex):
+    """Returns distance from the map center."""
+    return CENTER.get_distance(hex)
 
 
 class BaseBot:
     NAME = "BaseBot"
-    # SPRITE = "circle"
     SPRITE = "bot"
     TESTING_ONLY = False
     COLOR_INDEX = 0
     logging_enabled = False
+    max_ap = 100
+    ap_regen = 50
 
     def __init__(self, id: int):
         self.id = id
@@ -108,3 +87,34 @@ class BaseBot:
     @property
     def gui_label(self):
         return f'#{self.id} {self.name}'
+
+
+# Backward compatibility
+world_info = namedtuple('WorldInfo', [
+    'positions',  # list of tiles
+    'walls',  # set of tiles
+    'pits',  # set of tiles
+    'ring_radius',  # int
+    'alive_mask',  # ndarray mask
+    'turn_count',  # int
+    'round_count',  # int
+    'ap',  # ndarray
+    'round_ap_spent',  # ndarray
+    # when round_priority is empty, round is over.
+    'round_remaining_turns',  # list
+    ])
+
+
+def state_to_world_info(state):
+    return world_info(
+        positions=copy.copy(state.positions),
+        walls=copy.copy(state.walls),
+        pits=copy.copy(state.pits),
+        ring_radius=state.death_radius,
+        alive_mask=copy.deepcopy(state.alive_mask),
+        turn_count=state.turn_count,
+        round_count=state.round_count,
+        ap=copy.deepcopy(state.ap),
+        round_ap_spent=copy.deepcopy(state.round_ap_spent),
+        round_remaining_turns=copy.deepcopy(state.round_remaining_turns),
+        )
