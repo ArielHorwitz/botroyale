@@ -129,12 +129,12 @@ class State:
     def _check_legal_action(self, unit, action):
         if self.ap[unit] < action.ap:
             return False
+        if isinstance(action, Jump):
+            return self._check_legal_jump(unit, action.target)
         if isinstance(action, Push):
             return self._check_legal_push(unit, action.target)
         if isinstance(action, Move):
             return self._check_legal_move(unit, action.target)
-        if isinstance(action, Jump):
-            return self._check_legal_jump(unit, action.target)
         raise TypeError(f'Unknown action: {action}')
 
     def _check_legal_jump(self, unit, target):
@@ -178,6 +178,9 @@ class State:
             opp_id = self.positions.index(action.target)
             self.positions[opp_id] = next(self_pos.straight_line(action.target))
             self._add_effect('push', self_pos, action.target)
+        elif isinstance(action, Jump):
+            self.positions[unit] = action.target
+            self._add_effect('jump', self_pos, action.target)
         elif isinstance(action, Move):
             self.positions[unit] = action.target
             self._add_effect('move', self_pos, action.target)
