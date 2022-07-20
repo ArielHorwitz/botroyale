@@ -75,7 +75,7 @@ class BaseBot:
             glogger(f'{self} logging: {self.logging_enabled}')
             vfx_name = 'mark-green' if self.logging_enabled else 'mark-red'
             return [
-                {'name': vfx_name, 'hex': hex, 'neighbor': None, 'expire_seconds': 0.5},
+                {'name': vfx_name, 'hex': hex, 'direction': None, 'expire_seconds': 0.5},
             ]
         elif button == 'middle':
             return self.gui_click_debug_alt(hex)
@@ -86,7 +86,7 @@ class BaseBot:
         mouse button. May return a list of vfx args.
         """
         return [
-            {'name': 'mark-blue', 'hex': hex, 'neighbor': None},
+            {'name': 'mark-blue', 'hex': hex},
         ]
 
     def gui_click_debug_alt(self, hex):
@@ -95,7 +95,7 @@ class BaseBot:
         mouse button. May return a list of vfx args.
         """
         return [
-            {'name': 'mark-blue', 'hex': hex, 'neighbor': None},
+            {'name': 'mark-blue', 'hex': hex},
         ]
 
     def logger(self, text):

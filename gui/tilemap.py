@@ -299,11 +299,21 @@ class TileMap(widgets.RelativeLayout):
         tile_pos = tile.pixel_position(self.tile_radius_padded) + self.screen_center
         return tile_pos
 
-    def add_vfx(self, name, hex, neighbor, start_step, expire_step, expire_seconds):
-        if neighbor is None:
-            neighbor = hex.neighbors[0]
-        assert neighbor in hex.neighbors
-        rotation = -60 * hex.neighbors.index(neighbor)
+    def add_vfx(self, name, hex, direction, start_step, expire_step, expire_seconds):
+        if direction is None:
+            direction = hex.neighbors[0]
+        if direction in hex.neighbors:
+            # Shortcut for angle of rotation
+            rotation = -60 * hex.neighbors.index(direction)
+        else:
+            # Trigonometry for angle of rotation
+            target_vector = direction - hex
+            tx, ty = target_vector.pixel_position(radius=1)
+            if tx:
+                theta = math.atan(ty/tx) + math.pi * (tx < 0)
+                rotation = math.degrees(theta)
+            else:
+                rotation = 90 if ty > 0 else -90
         vfx = VFX(hex,
             start_step=start_step,
             expire_step=expire_step,

@@ -361,17 +361,16 @@ class Battle:
         self.__last_step = ping()
 
     # Other
-    def add_vfx(self, name, hex, neighbor=None, steps=2, expire_seconds=None):
+    def add_vfx(self, name, hex, direction=None, steps=2, expire_seconds=None):
         """Add a single vfx to the queue."""
         assert isinstance(name, str)
         assert is_hex(hex)
-        if neighbor is not None:
-            assert is_hex(neighbor)
-            assert neighbor in hex.neighbors
+        if direction is not None:
+            assert is_hex(direction)
         start_step = self.state.step_count
         expire_step = start_step + steps
         self.__vfx_queue.append(VFX(
-            name, hex, neighbor,
+            name, hex, direction,
             start_step, expire_step, expire_seconds,
             ))
 
