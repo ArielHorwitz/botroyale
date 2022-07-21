@@ -165,7 +165,10 @@ class Hexagon:
         return f'<Hex {self.x}, {self.y}>'
 
     def __repr__(self):
-        return f'{super().__repr__()} {self.x}, {self.y}'
+        copy_str = ''
+        if self.xy not in ALL_HEXES or self is not Hex(*self.xy):
+            copy_str = ' copy'
+        return f'<Hex {self.x}, {self.y}{copy_str}>'
 
     def __hash__(self):
         return hash(self.__cube)
