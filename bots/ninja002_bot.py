@@ -1,11 +1,11 @@
 # Maintainer: ninja
+from collections import defaultdict
 import numpy as np
 from bots import BaseBot
 from api.logging import logger
 from api.actions import Idle, Move, Push
 from util.settings import Settings
 from util.hexagon import Hex
-from util.pathfinding import a_star
 
 
 DEBUG_LEVEL = Settings.get('logging.bots.ninja.debug_level', 1)
@@ -80,13 +80,13 @@ class NinjaBotV002(BaseBot):
         on_edge = self.pos.get_distance(self.map_center) == self.ring_of_death - 1
         if on_edge:
             self.logger(f'On edge of map...')
-        if on_edge and self.ap <= 30:
+        if on_edge and self.ap <= Push.ap:
             best_neighbor = sorted(self.pos.neighbors, key=lambda n: self.move_tile_value(n))[-1]
             self.logger(f'Too close to edge, moving away to: {best_neighbor}.')
             return Move(best_neighbor)
 
         # Try push
-        if self.ap >= 30:
+        if self.ap >= Push.ap:
             push_tile, push_value = self.get_best_pushes(self.pos)[0]
             if push_value > 0:
                 self.logger(f'Found good push: {push_tile} {push_value}')
@@ -96,22 +96,25 @@ class NinjaBotV002(BaseBot):
             self.logger(f'Not enough AP for push.')
 
         # Try go to center
-        path_to_center = self.path_as_close(self.map_center, sort=lambda x: -self.evaulate_path(x))
-        if path_to_center:
-            path_str = 'Best path:\n'+'\n'.join(f'-> {n.xy} : {self.move_tile_value(n):.3f} move value' for n in path_to_center)
-            self.logger(path_str, level=2)
-            if self.evaulate_path(path_to_center) > self.my_tile_value:
-                self.logger(f'Moving as close as possible to center.')
-                return Move(path_to_center[0])
-            self.logger(f'No good paths toward the center, saving AP.')
+        if self.ap >= Move.ap:
+            path_to_center = self.path_as_close(self.map_center, sort=lambda x: -self.evaulate_path(x))
+            if path_to_center:
+                path_str = 'Best path:\n'+'\n'.join(f'-> {n.xy} : {self.move_tile_value(n):.3f} move value' for n in path_to_center)
+                self.logger(path_str, level=2)
+                if self.evaulate_path(path_to_center) > self.my_tile_value:
+                    self.logger(f'Moving as close as possible to center.')
+                    return Move(path_to_center[0])
+                self.logger(f'No good paths toward the center, saving AP.')
+            else:
+                self.logger(f'No paths toward the center!')
         else:
-            self.logger(f'No paths toward the center!')
+            self.logger(f'Not enough AP for move.')
 
 
         # Spend AP if useful
         best_neighbor = sorted(self.pos.neighbors, key=lambda n: self.move_tile_value(n))[-1]
         better_value = self.move_tile_value(best_neighbor) > self.my_tile_value
-        move_cost = self.move_tile_cost(best_neighbor)
+        move_cost = self.move_tile_cost(None, best_neighbor)
         if move_cost < float('inf'):
             if better_value:
                 self.logger(f'Free AP, repositioning: {self.pos} -> {best_neighbor}.')
@@ -125,7 +128,7 @@ class NinjaBotV002(BaseBot):
     def evaulate_path(self, path):
         last_tile_value = self.move_tile_value(path[-1])
         radius_delta_value = path[0].get_distance(self.map_center) - path[-1].get_distance(self.map_center)
-        turn_distance_cover = int(self.ap / 10)
+        turn_distance_cover = int(self.ap / Move.ap)
         can_reach_this_turn = len(path) <= turn_distance_cover
         if can_reach_this_turn:
             stop_tile_value = last_tile_value
@@ -142,7 +145,7 @@ class NinjaBotV002(BaseBot):
         return final_value
 
     def get_best_defence(self, tile):
-        if self.ap >= 30:
+        if self.ap >= Push.ap:
             nset = set(tile.neighbors)
             enemies = nset & self.pos_set
             if 0 < len(enemies) < 6:
@@ -162,17 +165,17 @@ class NinjaBotV002(BaseBot):
         self.logger(f'Push options:\n{push_str}', level=2)
         return push_options
 
-    def move_tile_cost(self, tile):
-        is_obstacle = tile in (self.pits | self.walls | self.other_pos)
+    def move_tile_cost(self, origin, target):
+        is_obstacle = target in (self.pits | self.walls | self.other_pos)
         obs_cost = float('inf') if is_obstacle else 0
-        value_cost = -self.move_tile_value(tile)
+        value_cost = -self.move_tile_value(target)
         return 1 + obs_cost + value_cost
 
     def get_path(self, target):
         return a_star(self.pos, target, cost=self.move_tile_cost)
 
     def get_paths(self, targets, sort=len):
-        targets = (t for t in targets if self.move_tile_cost(t) < float('inf'))
+        targets = (t for t in targets if self.move_tile_cost(None, t) < float('inf'))
         path_results = (self.get_path(t) for t in targets)
         paths = [p for p in path_results if p is not None]
         if sort:
@@ -270,5 +273,41 @@ class NinjaBotV002(BaseBot):
     def logger(self, text, level=1):
         if DEBUG_LEVEL >= level:
             super().logger(text)
+
+
+def a_star(origin, target, cost):
+    def _get_full_path(node, came_from):
+        full_path = [node]
+        while node in came_from:
+            node = came_from[node]
+            full_path.insert(0, node)
+        return tuple(full_path[1:])
+
+    if origin is target:
+        return None
+
+    open_set = {origin}
+    came_from = {}
+    partial_score = defaultdict(lambda: float('inf'))
+    partial_score[origin] = 0
+    guess_score = defaultdict(lambda: float('inf'))
+    guess_score[origin] = origin.get_distance(target)
+
+    while open_set:
+        best_nodes = sorted(open_set, key=lambda x: guess_score[x])
+        current = best_nodes[0]
+        if current is target:
+            return _get_full_path(current, came_from)
+        open_set.remove(current)
+        for neighbor in current.neighbors:
+            tentative_partial_score = partial_score[current] + cost(current, neighbor)
+            if tentative_partial_score < partial_score[neighbor]:
+                came_from[neighbor] = current
+                partial_score[neighbor] = tentative_partial_score
+                guess_score[neighbor] = tentative_partial_score + neighbor.get_distance(target)
+                if neighbor not in open_set:
+                    open_set.add(neighbor)
+    return None
+
 
 BOT = NinjaBotV002
