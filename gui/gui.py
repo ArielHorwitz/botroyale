@@ -75,6 +75,7 @@ class App(widgets.App):
 
     def update_widgets(self):
         self.panel.set_text(self.logic.get_summary_str())
+        self.panel.make_bg(self.logic.panel_color)
         self.map.update()
         self.bar.set_text(f'{self.fps_counter.rate:.2f} FPS')
 

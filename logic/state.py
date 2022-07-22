@@ -61,8 +61,10 @@ class State:
         return new_state
 
     def apply_action_no_round_increment(self, action):
+        if self.game_over:
+            raise OrderError(f'Game over, no more actions allowed')
         if self.end_of_round:
-            raise OrderError(f'cannot apply action, round is over, use increment_round()')
+            raise OrderError(f'Cannot apply action, round is over, use increment_round()')
         unit = self.round_remaining_turns[0]
         new_state = self.copy()
         if isinstance(action, Idle):
@@ -78,6 +80,8 @@ class State:
         return new_state
 
     def increment_round(self):
+        if self.game_over:
+            raise OrderError(f'Game over, no more rounds')
         if not self.end_of_round:
             raise OrderError('Not the end of round')
         new_state = self.copy()
@@ -230,3 +234,10 @@ class State:
         if self.alive_mask.sum() == 1:
             return np.flatnonzero(self.alive_mask)[0]
         return None
+
+    @property
+    def current_unit(self):
+        if not self.end_of_round:
+            return self.round_remaining_turns[0]
+        else:
+            return None

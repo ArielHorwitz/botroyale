@@ -114,6 +114,10 @@ class Battle:
     def last_state(self):
         return self.__state_history[max(0, self.state_index-1)]
 
+    @property
+    def replay_mode(self):
+        return self.state_index == len(self.__state_history) - 1
+
     def _extend_history(self, index):
         state = self.__state_history[-1]
         while not state.game_over and self.history_size < index + 1:
@@ -260,6 +264,12 @@ class Battle:
                 GuiControl('Logic debug', self.debug, '^+ d'),
             ]),
         ]
+
+    @property
+    def panel_color(self):
+        if self.replay_mode:
+            return (0.15, 0.3, 0.05)
+        return (0.1, 0.25, 0.2)
 
     def play_all(self):
         self.logger('Playing battle to completion...')
