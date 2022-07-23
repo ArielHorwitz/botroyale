@@ -10,6 +10,7 @@ from util.settings import Settings
 from util.hexagon import Hex, WIDTH_HEIGHT_RATIO, SQRT3
 
 
+AUTO_ZOOM = Settings.get('tilemap.autozoom', True)
 MAX_MAP_TILES = Settings.get('tilemap.max_draw_tiles', 2500)
 TILE_PADDING = Settings.get('tilemap._tile_padding', 10)
 MAX_TILE_RADIUS = Settings.get('tilemap.max_tile_radius', 300)
@@ -25,15 +26,18 @@ HEX_PNG = str(SPRITES_DIR / 'hex.png')
 class TileMap(widgets.RelativeLayout):
     def __init__(self, app, api, **kwargs):
         super().__init__(**kwargs)
-        self.__redraw_request = 0
-        self.__current_grid = 0, 0, 0  # tile_radius, canvas_width, canvas_height
-        self.__size_hint = api.map_size_hint
-        self.__tile_radius = MAX_TILE_RADIUS
-        self.__tile_padding = 1 + (TILE_PADDING / 100)
-        self.real_center = Hex(0, 0)
         self.get_tile_info = api.get_gui_tile_info
         self.get_vfx = api.flush_vfx
         self.get_logic_time = api.get_time
+        self.check_clear_vfx_flag = api.clear_vfx_flag
+        self.get_map_size_hint = api.get_map_size_hint
+
+        self.__redraw_request = 0
+        self.__current_grid = 0, 0, 0  # tile_radius, canvas_width, canvas_height
+        self.__size_hint = self.get_map_size_hint()
+        self.__tile_radius = MAX_TILE_RADIUS
+        self.__tile_padding = 1 + (TILE_PADDING / 100)
+        self.real_center = Hex(0, 0)
         assert callable(api.handle_hex_click)
         self.handle_hex_click = api.handle_hex_click
         self.tiles = {}
@@ -278,6 +282,12 @@ class TileMap(widgets.RelativeLayout):
         return np.asarray(self.size) / 2
 
     def update(self):
+        if self.check_clear_vfx_flag():
+            self.clear_vfx()
+        new_size_hint = self.get_map_size_hint()
+        if self.__size_hint != new_size_hint:
+            self.__size_hint = new_size_hint
+            self._adjust_zoom()
         center = self.real_center
         get_tile_info = self.get_tile_info
         for hex in self.tiles:
