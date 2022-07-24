@@ -165,9 +165,6 @@ class Hexagon:
     def cube(self):
         return self.__cube
 
-    def __str__(self):
-        return f'<Hex {self.x}, {self.y}>'
-
     def __repr__(self):
         copy_str = ''
         if self.xy not in ALL_HEXES or self is not Hex(*self.xy):
@@ -244,15 +241,15 @@ if __name__ == '__main__':
     print(f'{tile2} is {tile3}: {tile2 is tile3}')
     print('=== Distances')
     print(f'Distance {tile1} -> {tile2}: {tile1.get_distance(tile2)}')
-    print('=== Straight lines')
+    print('=== Hexes as vectors')
     dir = tile2 - tile1
     tile4 = tile2 + dir
-    print(f'Straight line from {tile1} -> {tile2} : {tile4}')
+    print(f'Straight line using vector {dir} from {tile1} -> {tile2} : {tile4}')
     hex_set = {tile1, tile2, tile3, tile4}
     print('=== Sets and containment')
     print(f'Set: {hex_set}')
     print(f'{tile1} in {hex_set} : {tile1 in hex_set}')
     print('=== Pixel offset')
-    print(f'{tile2} pixels w/ 50 radius: {tile1.pixels(radius=50)}')
-    print(f'{tile1} pixels w/ 22 radius: {tile1.pixels(radius=22)}')
-    print(f'{tile4} pixels w/ 80 radius: {tile1.pixels(radius=80)}')
+    print(f'{tile2} pixels w/ 50 radius: {tile1.pixel_position(radius=50)}')
+    print(f'{tile1} pixels w/ 22 radius: {tile1.pixel_position(radius=22)}')
+    print(f'{tile4} pixels w/ 80 radius: {tile1.pixel_position(radius=80)}')
