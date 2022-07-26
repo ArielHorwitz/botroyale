@@ -158,6 +158,10 @@ class Hexagon:
         return self.__cube[2]
 
     @property
+    def qr(self):
+        return self.__cube[:2]
+
+    @property
     def cube(self):
         return self.__cube
 
