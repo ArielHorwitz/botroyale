@@ -1,6 +1,6 @@
 import numpy as np
 import copy
-from api.actions import Move, Push, Idle, Jump
+from api.actions import Move, Push, Idle, Jump, Action
 from util.hexagon import Hex
 from collections import namedtuple
 
@@ -25,6 +25,7 @@ class State:
             ap=None,
             round_ap_spent=None,
             round_remaining_turns=None,
+            casualties=None,
             step_count=0, turn_count=0, round_count=0,
             ):
         self.num_of_units = len(positions)
@@ -47,12 +48,16 @@ class State:
         if round_remaining_turns is None:
             round_remaining_turns = []
         self.round_remaining_turns = round_remaining_turns
+        if casualties is None:
+            casualties = np.zeros(self.num_of_units, dtype=int) - 1
+        self.casualties = casualties
         self.step_count = step_count
         self.turn_count = turn_count
         self.round_count = round_count
         self.effects = []
         self.last_action = None
         self.is_last_action_legal = False
+
 
     def apply_action(self, action):
         new_state = self.apply_action_no_round_increment(action)
@@ -61,6 +66,7 @@ class State:
         return new_state
 
     def apply_action_no_round_increment(self, action):
+        assert isinstance(action, Action)
         if self.game_over:
             raise OrderError(f'Game over, no more actions allowed')
         if self.end_of_round:
@@ -77,6 +83,7 @@ class State:
             new_state._next_turn()
             new_state._add_effect('illegal', self.positions[unit])
         new_state.last_action = action
+        new_state.step_count += 1
         return new_state
 
     def increment_round(self):
@@ -94,10 +101,11 @@ class State:
             walls=copy.copy(self.walls),
             pits=copy.copy(self.pits),
             death_radius=self.death_radius,
-            alive_mask=copy.deepcopy(self.alive_mask),
-            ap=copy.deepcopy(self.ap),
-            round_ap_spent=copy.deepcopy(self.round_ap_spent),
-            round_remaining_turns=copy.deepcopy(self.round_remaining_turns),
+            alive_mask=np.copy(self.alive_mask),
+            ap=np.copy(self.ap),
+            round_ap_spent=np.copy(self.round_ap_spent),
+            round_remaining_turns=copy.copy(self.round_remaining_turns),
+            casualties=np.copy(self.casualties),
             step_count=self.step_count,
             turn_count=self.turn_count,
             round_count=self.round_count,
@@ -117,6 +125,7 @@ class State:
         self.round_ap_spent = np.zeros(self.num_of_units)
         self.ap[self.alive_mask] += 50
         self.ap[self.ap > 100] = 100
+        self.step_count += 1
         self.round_count += 1
         self.death_radius -= 1
         self.pits |= set(self.center.ring(self.death_radius))
@@ -200,6 +209,7 @@ class State:
             death_by_ROD = pos.get_distance(self.center) >= self.death_radius
             if death_by_pits or death_by_ROD:
                 self.alive_mask[unit] = False
+                self.casualties[unit] = self.step_count
                 if unit in self.round_remaining_turns:
                     self.round_remaining_turns.remove(unit)
                 self._add_effect('death', self.positions[unit])
@@ -212,18 +222,18 @@ class State:
         )
         self.effects.append(effect)
 
-
     @property
     def end_of_round(self):
         return len(self.round_remaining_turns) == 0
 
     @property
-    def casualties(self):
-        return np.arange(self.num_of_units)[~self.alive_mask]
+    def death_order(self):
+        dead_units = np.flatnonzero(~self.alive_mask)
+        return sorted(dead_units, key=lambda u: self.casualties[u])
 
     @property
     def round_done_turns(self):
-        return [unit for unit in range(self.num_of_units) if (unit not in self.casualties and unit not in self.round_remaining_turns)]
+        return [unit for unit in range(self.num_of_units) if (unit not in self.death_order and unit not in self.round_remaining_turns)]
 
     @property
     def game_over(self):
