@@ -135,7 +135,6 @@ class Battle:
             new_state = state.apply_action_no_round_increment(action)
             if not new_state.is_last_action_legal:
                 self.logger(f'ILLEGAL: {action}')
-        new_state.step_count += 1
         return new_state
 
     def _get_bot_action(self, bot_id, state):
@@ -286,7 +285,7 @@ class Battle:
         unit_strs.append('-'*10)
         unit_strs.extend(self.get_bot_string(bot_id, include_timer) for bot_id in self.state.round_done_turns)
         unit_strs.append('='*10)
-        unit_strs.extend(self.get_bot_string(bot_id, include_timer) for bot_id in self.state.casualties)
+        unit_strs.extend(self.get_bot_string(bot_id, include_timer) for bot_id in self.state.death_order)
         return '\n'.join(unit_strs)
 
     def get_status_str(self):
@@ -344,7 +343,7 @@ class Battle:
         pos = self.state.positions[bot_id]
         name_label = f'{bot.gui_label[:20]:<20}'
         bot_str = f'{name_label} {ap:>3} AP <{pos.x:>3},{pos.y:>3}>'
-        if bot_id in self.state.casualties:
+        if bot_id in self.state.death_order:
             bot_str = f'[s]{bot_str}[/s]'
         if not include_timer:
             return bot_str
