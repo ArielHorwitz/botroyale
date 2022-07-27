@@ -39,9 +39,11 @@ class CrazeeBotAlpha(BaseBot):
     @staticmethod
     def get_legal_actions(state: State):
         pos = state.positions[state.current_unit]
-        obstacles = state.pits | state.walls | set(state.positions)
-        neighbors = set(pos.neighbors) - obstacles
-        push_neighbors = set(pos.neighbors) & set(state.positions)
+        pos_s = set(state.positions)
+        neighbors_s = set(pos.neighbors)
+        obstacles = state.pits | state.walls | pos_s
+        neighbors = neighbors_s - obstacles
+        push_neighbors = neighbors_s & pos_s
         neighbors2 = set(pos.ring(2)) - obstacles
         possible_actions = []
         ap = state.ap[state.current_unit]
@@ -124,14 +126,15 @@ class CrazeeBotAlpha(BaseBot):
             if return_fx == 2:
                 score = s.score
                 fx_name = ''
+                threshold = 12
                 if score == float('inf'):
                     fx_name = ['mark-green']
                 elif score == float('-inf'):
                     fx_name = ['death']
-                elif score >= - 15:
-                    fx_name = ['mark-blue'] * (int(score + 15) + 1)
+                elif score >= -threshold:
+                    fx_name = ['mark-blue'] * (int(score + threshold) + 1)
                 else:
-                    fx_name = ['mark-red'] * (int(-score - 15) + 1)
+                    fx_name = ['mark-red'] * (int(-score - threshold) + 1)
 
                 vfx.extend({'name': fx, 'hex': _state.positions[_state.current_unit]} for fx in fx_name)
 
