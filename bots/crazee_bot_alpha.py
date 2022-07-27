@@ -18,7 +18,7 @@ def debug(*lines):
 
 
 class CrazeeBotAlpha(BaseBot):
-    NAME = "CrazeeBot"
+    NAME = "CrazeeBot-0.2"
     COLOR_INDEX = 7
     MAX_AP = 100
     AP_REGEN = 50

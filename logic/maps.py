@@ -128,11 +128,81 @@ class ClassicMap(Map):
             self.add_wall(self.empty_tiles.pop(0))
 
 
+class DangerMap(Map):
+    radius = 12
+    random_radius = 10
+
+    pits_spiral_start_pos = Hex(0, 0)
+    pits_spiral_line_sizes = (2, 3, 5, 8)
+    pits_gap_prob = 0.075
+
+    walls_spiral_start_pos = Hex(0, 0)
+    walls_spiral_line_sizes = (2, 3, 5, 8)
+    walls_gap_prob = 0.05
+
+    def make_map(self):
+        # Spawns
+        spawns = Hex(0, -10), Hex(5, -10)
+        for rot in range(6):
+            for spawn in spawns:
+                spawn_tile = spawn.rotate(rot)
+                safe_tiles = spawn_tile.neighbors
+                self.empty_tiles = [t for t in self.empty_tiles if t not in safe_tiles]
+                self.add_spawn(spawn_tile)
+
+        center_pits = [Hex(0, -1), Hex(-1, 0), Hex(0, 1), Hex(-4, 3), Hex(-4, 1),
+                       Hex(2, 3), Hex(4, 2), Hex(1, -4), Hex(-1, -5)]
+        for pit in center_pits:
+            self.add_pit(pit)
+
+        spiral_pits = self.spiral_calc(self.pits_spiral_start_pos,
+                                       self.pits_spiral_line_sizes,
+                                       False,
+                                       self.pits_gap_prob
+                                       )
+        spiral_walls = self.spiral_calc(self.walls_spiral_start_pos,
+                                        self.walls_spiral_line_sizes,
+                                        True,
+                                        self.walls_gap_prob
+                                        )
+        for rot in range(3):
+            for pit in spiral_pits:
+                pit_pos = pit.rotate(rot * 2)
+                if pit_pos in self.empty_tiles:
+                    self.add_pit(pit_pos)
+
+            for wall in spiral_walls:
+                wall_pos = wall.rotate((rot * 2))
+                if wall_pos in self.empty_tiles:
+                    self.add_wall(wall_pos)
+
+        random_tile_options = [t for t in self.empty_tiles if t.get_distance(Hex(0, 0)) >= self.random_radius]
+        if len(random_tile_options) > 40:
+            for rpit in range(15):
+                self.add_pit(random_tile_options.pop(0))
+            for rwall in range(15):
+                self.add_wall(random_tile_options.pop(0))
+
+    def spiral_calc(self, start_pos=Hex(0, 0), line_sizes=(2, 3, 5, 8),
+                    inverse=False, gap_prob=0.2):
+        spiral = set()
+        pos = start_pos
+        for n_index in range(len(line_sizes)):
+            current_neighbor = pos.neighbors[((6 - n_index) if inverse else n_index) % 6]
+            spiral.add(current_neighbor)
+            for tile in pos.straight_line(current_neighbor, line_sizes[n_index] - 1):
+                if tile not in self.spawns and gap_prob < random.random():
+                    spiral.add(tile)
+                pos = tile
+        return spiral
+
+
 MAPS = {
     'classic': ClassicMap,
     'basic': BasicMap,
     'empty': EmptyMap,
     'giant': GiantMap,
+    'danger': DangerMap,
 }
 logger('\n'.join([f'Available maps:', *(f'- {m}' for m in MAPS.keys())]))
 
