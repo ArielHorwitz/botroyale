@@ -5,12 +5,12 @@ import numpy as np
 
 def ping():
     """Generate a time value to be later used by pong."""
-    return time.time() * 1000
+    return time.perf_counter() * 1000
 
 
-def pong(ping_):
+def pong(ping_: float):
     """Returns the time delta in ms."""
-    return (time.time() * 1000) - ping_
+    return (time.perf_counter() * 1000) - ping_
 
 
 @contextlib.contextmanager
