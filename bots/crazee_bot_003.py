@@ -1,5 +1,4 @@
 import contextlib
-from time import perf_counter
 import numpy as np
 
 from api.actions import Move, Push, Idle, Action, Jump
@@ -7,6 +6,7 @@ from bots import BaseBot
 from logic.state import State
 from util.hexagon import Hexagon, Hex
 from api.bots import CENTER
+from util.time import pingpong
 
 
 class CrazeeBotAlpha(BaseBot):
@@ -15,7 +15,7 @@ class CrazeeBotAlpha(BaseBot):
     MAX_AP = 100
     AP_REGEN = 50
     CENTER_TILE = CENTER
-    logging_enabled = True
+    logging_enabled = False
     SPRITE = 'flower'
 
     def __init__(self, id):
@@ -225,16 +225,7 @@ def hash_state(state):
         ])
 
 
-@contextlib.contextmanager
-def pingpong(description='Pingpong', logger=None, return_elapsed=None):
-    """A context manager to print and record the elapsed time of execution of a code block."""
-    p = perf_counter()
-    yield p
-    elapsed = perf_counter() - p
-    if callable(logger):
-        logger(f'{description} elapsed in: {elapsed * 1000:.3f} ms')
-    if callable(return_elapsed):
-        return_elapsed(elapsed)
+
 
 
 BOT = CrazeeBotAlpha
