@@ -1,10 +1,9 @@
-import contextlib
 import numpy as np
 
 from api.actions import Move, Push, Idle, Action, Jump
 from bots import BaseBot
 from logic.state import State
-from util.hexagon import Hexagon, Hex
+from util.hexagon import Hexagon
 from api.bots import CENTER
 from util.time import pingpong
 
@@ -223,9 +222,6 @@ def hash_state(state):
         hash(state.turn_count),
         hash(state.round_count),
         ])
-
-
-
 
 
 BOT = CrazeeBotAlpha
