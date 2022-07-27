@@ -111,7 +111,10 @@ class CrazeeBotAlpha(BaseBot):
         vfx = []
 
         def get_next_state(_state: State, action: Action):
-            s = _state.apply_action(action)
+            if _state.game_over:
+                s = _state.copy()
+            else:
+                s = _state.apply_action(action)
             s.score = self.get_state_score(s)
             if return_fx == 1 and type(action) != Idle:
                 fx_name = ''
