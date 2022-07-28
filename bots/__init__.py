@@ -33,7 +33,7 @@ def bot_importer():
     return bots
 
 
-BOT_REQ = Settings.get("bots.bot_names", ['basebot', 'basebot'])
+BOT_REQ = Settings.get("bots.bot_names", [])
 BOTS_IGNORED = Settings.get("bots.bot_names_ignore", [])
 BOTS = bot_importer()
 
