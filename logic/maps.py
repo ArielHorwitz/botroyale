@@ -9,7 +9,7 @@ from util.settings import Settings
 from util.hexagon import Hex
 
 
-DEFAULT_MAP_NAME = Settings.get('map.selected_map', 'classic')
+DEFAULT_MAP_NAME = Settings.get('map.selected_map', 'danger')
 
 
 class MapGenerator:
