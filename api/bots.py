@@ -86,7 +86,8 @@ class BaseBot:
 
     @property
     def gui_label(self):
-        return f'#{self.id} {self.name}'
+        id_label = f'#{self.id}'
+        return f'{id_label:>3} {self.name}'
 
 
 # Backward compatibility
