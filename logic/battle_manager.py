@@ -145,11 +145,16 @@ class BattleManager(Battle):
         super().play_all()
         self.set_replay_index()
 
-    def play_to_next_round(self):
-        """Overrides the base class method in order to set the replay index to
-        the current state index."""
-        super().play_to_next_round()
-        self.set_replay_index()
+    def set_to_next_round(self, backwards: bool = False):
+        """Set the replay to the next "end of round" state (or game over).
+        If backwards is set, it will search for a previous state."""
+        delta = 1 if not backwards else -1
+        if self.replay_state.end_of_round:
+            self.set_replay_index(index_delta=1 if not backwards else -1)
+        while not self.replay_state.end_of_round:
+            if self.replay_state.game_over and not backwards:
+                break
+            self.set_replay_index(index_delta=delta)
 
     # Info strings
     def get_info_str(self, state_index: Optional[int] = None) -> str:
@@ -460,12 +465,11 @@ class BattleManager(Battle):
                 GuiControl('Prev step', lambda: self.set_replay_index(index_delta=-1), 'left'),
                 GuiControl('+10 steps', lambda: self.set_replay_index(index_delta=10), '+ right'),
                 GuiControl('-10 steps', lambda: self.set_replay_index(index_delta=-10), '+ left'),
-                GuiControl('+50 steps', lambda: self.set_replay_index(index_delta=50), '^ right'),
-                GuiControl('-50 steps', lambda: self.set_replay_index(index_delta=-50), '^ left'),
-                GuiControl('Next round', lambda: self.play_to_next_round(), '^+ r'),
-                GuiControl('Skip to start', lambda: self.set_replay_index(0), '^+ left'),
-                GuiControl('Skip to end <!!!>', lambda: self.play_all(), '^+ right'),
-                GuiControl('Skip to live', lambda: self.set_replay_index(), '^ l'),
+                GuiControl('Next round', lambda: self.set_to_next_round(), '^ right'),
+                GuiControl('Prev round', lambda: self.set_to_next_round(backwards=True), '^ left'),
+                GuiControl('Battle start', lambda: self.set_replay_index(0), '^+ left'),
+                GuiControl('Battle end <!!!>', lambda: self.play_all(), '^+ right'),
+                GuiControl('Live', lambda: self.set_replay_index(), '^ l'),
                 GuiControl('Preplay <!!!>', self.preplay, '^+ p'),
                 *[GuiControl(f'Set step rate {r}', lambda r=r: self.set_step_rate(r), f'{i+1}') for i, r in enumerate(STEP_RATES[:5])],
             ]),

@@ -114,12 +114,6 @@ class Battle:
         while not self.state.game_over:
             self.play_state()
 
-    def play_to_next_round(self):
-        """Plays until the first state in the next round."""
-        start_round = self.state.round_count
-        while not self.state.game_over and self.state.round_count == start_round:
-            self.play_state()
-
     def _get_bot_action(self, unit_id: int, state: State):
         state = state.copy()
         bot = self.bots[unit_id]
