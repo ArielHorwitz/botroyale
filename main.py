@@ -1,4 +1,4 @@
-print('\n\nWelcome to Bot Royale.')
+print('\n\nWelcome to Bot Royale.\n')
 
 from util.settings import Settings
 

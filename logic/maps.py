@@ -209,11 +209,11 @@ class DangerMap(MapGenerator):
 
 
 MAPS = {
+    'danger': DangerMap,
     'classic': ClassicMap,
     'basic': BasicMap,
-    'empty': EmptyMap,
     'giant': GiantMap,
-    'danger': DangerMap,
+    'empty': EmptyMap,
 }
 logger('\n'.join([f'Available maps:', *(f'- {m}' for m in MAPS.keys())]))
 

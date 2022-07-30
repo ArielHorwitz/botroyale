@@ -23,31 +23,38 @@ class Battle:
     def __init__(self,
             initial_state: Optional[State] = None,
             bot_classes_getter: Callable[[int], Sequence[type]] = get_bot_classes,
-            only_bot_turn_states: bool = True,
             enable_logging: bool = True,
+            only_bot_turn_states: bool = True,
             threshold_bot_block_seconds: float = 20.0,
             ):
         """
-        initial_state -- the first state of the battle. If initial_state is not
+        initial_state -- The first state of the battle. If initial_state is not
         provided, it will be generated using the map generator based on
         configured settings.
 
-        bot_classes_getter -- a function that takes an integer and returns that
+        bot_classes_getter -- A function that takes an integer and returns that
         many bots classes. If bot_classes_getter is not provided, the default
         `get_bot_classes` will be used that is based on configured settings.
 
-        only_bot_turn_states -- determines whether to skip "end_of_round" states
+        enable_logging -- Passing False will disable the logger for the battle.
+        It also disables logging while calling the bot_classes_getter.
+
+        only_bot_turn_states -- Determines whether to skip "end_of_round" states
         and other states that are not expecting an action from a unit. This is
         useful for bot developers who may not care about "mid-states" and only
         care to see when a bot needs to take action. This essentially determines
         whether actions are applied to states with `apply_action` or
         `apply_action_no_round_increment`.
+
+        threshold_bot_block_seconds -- Threshold of calculation time for bots to
+        trigger a warning in the log.
         """
         self.enable_logging = enable_logging
         self._map_name = 'Custom initial state'
         if initial_state is None:
             initial_state = get_map_state()
             self._map_name = DEFAULT_MAP_NAME
+        self.logger(f'Making battle on map: {self._map_name}')
         self.__current_state: State = initial_state
         self.history: list[State] = [initial_state]
         self.__only_bot_turn_states: bool = only_bot_turn_states
@@ -155,7 +162,7 @@ class Battle:
         assert isinstance(action, Action)
         ttime = self.bot_timer.get_time(unit_id)
         if ttime > self.__threshold_bot_block_ms:
-            self.logger(f'BLOCK THRESHOLD WARNING : {bot} has taken {ttime/1000:.2f} seconds this turn')
+            self.logger(f'BLOCK TIME WARNING : {bot} has taken {ttime/1000:.2f} seconds this turn')
         return action
 
     # Logging
