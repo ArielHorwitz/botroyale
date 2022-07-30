@@ -1,3 +1,4 @@
+import contextlib
 from util.settings import Settings
 
 
@@ -5,11 +6,26 @@ GLOBAL_LOGGING = Settings.get('logging.global', True)
 
 
 class Logger:
-    enable_logging = GLOBAL_LOGGING
+    enable_logging = True
 
-    def __call__(self, text):
-        if self.enable_logging:
+    @classmethod
+    def log(cls, text):
+        """Output text to console. Considers if logging is enabled."""
+        if cls.enable_logging and GLOBAL_LOGGING:
             print(text)
 
+    @classmethod
+    def __call__(cls, text):
+        cls.log(text)
 
-logger = Logger()
+    @classmethod
+    @contextlib.contextmanager
+    def set_logging_temp(cls, enabled: bool):
+        """Context manager for temporarily setting the logger enabled/disabled."""
+        last_state = cls.enable_logging
+        cls.enable_logging = enabled
+        yield last_state
+        cls.enable_logging = last_state
+
+
+logger = Logger.log
