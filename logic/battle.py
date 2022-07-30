@@ -58,7 +58,7 @@ class Battle:
         with Logger.set_logging_temp(enable_logging):
             bot_classes = bot_classes_getter(bot_count)
         assert len(bot_classes) == bot_count
-        self.bots: tuple[BaseBot] = tuple(bcls(i) for i, bcls in enumerate(bot_classes))
+        self.bots = tuple(bcls(i) for i, bcls in enumerate(bot_classes))
         # Allow bots to prepare
         for uid, bot in enumerate(self.bots):
             assert isinstance(bot, BaseBot)

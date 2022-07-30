@@ -60,4 +60,5 @@ def get_bot_classes(num_of_bots: int) -> list[type]:
             game_classes.append(non_testing_bots[idx])
     logger('Selected bots:')
     logger('\n'.join(f'#{i:<2} {cls.NAME}' for i, cls in enumerate(game_classes[:num_of_bots])))
+    game_classes = game_classes[:num_of_bots]
     return game_classes
