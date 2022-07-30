@@ -1,5 +1,5 @@
 from collections import Counter
-from api.logging import logger
+from api.logging import Logger
 from bots import BOTS, BaseBot
 from api.time_test import timing_test
 from logic.battle_manager import BattleManager
@@ -28,35 +28,30 @@ class CLI:
             for bot, wins in counter.most_common():
                 print(f'{bot:>20}: {f"{wins/battles_played*100:.2f}":>7} % ({str(wins):<4} wins)')
 
-        logging_enabled_default = logger.enable_logging
-        logger.enable_logging = False
         counter = Counter()
         battles_played = 0
-        last_battle_summary = ''
         while True:
-            battle = BattleManager()
-            print('-'*75)
-            print(last_battle_summary)
+            with Logger.set_logging_temp(False):
+                battle = BattleManager()
             print_summary()
             print(f'\nPlaying next battle (map: {battle.map_name})...\n')
             winner, losers = cls.play_complete(battle)
-            last_battle_summary = battle.get_info_panel_text()
+            print(battle.get_info_panel_text())
             counter[winner] += 1
             for loser in losers:
                 counter[loser] += 0
             battles_played += 1
         print_summary()
-        logger.enable_logging = logging_enabled_default
 
     @classmethod
     def timing_test(cls):
         def print_available():
             print('\nAvailable bots:\n'+'\n'.join([f'- {bn}' for bn in available_bots if bn not in selected_names]))
         def print_selected():
-            print('\nSelected bots:\n'+'\n'.join(f'- {bn}' for bn in selected_names))
+            print('\nSelected bots:\n'+'\n'.join(f'++ {bn}' for bn in selected_names))
         def get_bot_name():
-            return input('\nEnter bot name to add (or leave blank to finish): ')
-        available_bots = [bn for bn, bc in BOTS.items() if bn != 'dummy' and not bc.TESTING_ONLY]
+            return input('\nEnter bot name to add (leave blank to finish): ')
+        available_bots = [bcls.NAME for bcls in BOTS.values() if not bcls.TESTING_ONLY]
         selected_names = []
         print_available()
         bot_name = get_bot_name()
@@ -72,7 +67,8 @@ class CLI:
             selected_names = available_bots
         print_selected()
         bot_classes = [BOTS[bn] for bn in selected_names]
-        battle_count = int(input('\nEnter number of battles to play: '))
+        ucount = input('\nNumber of battles to play (leave blank for 10,000): ')
+        battle_count = int(ucount) if ucount else 10_000
         timing_test(bot_classes, battle_count)
 
     @classmethod
