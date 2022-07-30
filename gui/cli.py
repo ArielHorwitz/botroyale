@@ -71,17 +71,39 @@ class CLI:
         timing_test(bot_classes, battle_count)
 
     @classmethod
+    def competitive_timing_test(cls):
+        bot_classes = [bcls for bcls in BOTS.values() if not bcls.TESTING_ONLY]
+        threshold_ms = 20_000
+        results = timing_test(
+            bots=bot_classes,
+            battle_count=10,
+            verbose_results=False,
+            shuffle_bots=True,
+            disable_logging=True,
+            )
+        fails = ', '.join(bn for bn, tr in results.items() if tr.max > threshold_ms)
+        print('\n\n')
+        if fails:
+            print(f'FAILED: {fails}')
+        else:
+            print('No fails.')
+        print('\n')
+
+    @classmethod
     def run(cls):
         print('\n'.join([
             '\n\n',
             'Select operation:',
             '1. Winrates',
             '2. Bot timer tests',
+            '3. Bot timer tests for competition',
             '',
         ]))
         selection = int(input('Enter selection: '))
-        assert 1 <= selection <= 2
+        assert 1 <= selection <= 3
         if selection == 1:
             cls.run_battles()
         elif selection == 2:
             cls.timing_test()
+        elif selection == 3:
+            cls.competitive_timing_test()
