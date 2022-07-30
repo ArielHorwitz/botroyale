@@ -12,7 +12,7 @@ class CLI:
         assert battle.state.game_over
         winner_id = battle.state.winner
         winner = battle.bots[winner_id].name if winner_id is not None else 'draw'
-        losers = [b.name for b in battle.losers]
+        losers = [battle.bots[loser_id].name for loser_id in battle.losers]
         return winner, losers
 
     @classmethod

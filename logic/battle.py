@@ -169,7 +169,7 @@ class Battle:
     def losers(self) -> Union[list[int], None]:
         """Returns a list of unit ids that did not win, or None if game isn't over."""
         if self.state.game_over:
-            return [b for b in self.bots if b.id != self.winner]
+            return [b.id for b in self.bots if b.id != self.winner]
         return None
 
 
