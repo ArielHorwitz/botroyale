@@ -25,6 +25,7 @@ class Battle:
             initial_state: Optional[State] = None,
             bot_classes_getter: Callable[[int], Sequence[type]] = get_bot_classes,
             only_bot_turn_states: bool = True,
+            enable_logging: bool = True,
             ):
         """
         initial_state -- the first state of the battle. If initial_state is not
@@ -42,6 +43,7 @@ class Battle:
         whether actions are applied to states with `apply_action` or
         `apply_action_no_round_increment`.
         """
+        self.enable_logging = enable_logging
         self._map_name = 'Custom initial state'
         if initial_state is None:
             initial_state = get_map_state()
@@ -131,7 +133,7 @@ class Battle:
 
     # Logging
     def logger(self, text: str):
-        if LOGIC_DEBUG:
+        if self.enable_logging and LOGIC_DEBUG:
             glogger(text)
 
     def log_state(self, state: State):
