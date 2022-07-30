@@ -71,8 +71,7 @@ def timing_test(
         glogger('\n_________________________________________')
 
     for battle_index in range(battle_count):
-        with Logger.set_logging_temp(not disable_logging):
-            battle = BattleManager(bot_classes_getter=get_bots)
+        battle = BattleManager(bot_classes_getter=get_bots, enable_logging=not disable_logging)
 
         glogger(f'\nPlaying battle {battle_index+1} / {battle_count} (map: {battle.map_name})...')
         battle.play_all(print_progress=disable_logging)

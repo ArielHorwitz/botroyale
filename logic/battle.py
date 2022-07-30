@@ -10,7 +10,6 @@ from util.time import pingpong
 from util.settings import Settings
 
 
-LOGIC_DEBUG = Settings.get('logging.battle', True)
 LINEBR = '='*75
 
 
@@ -56,7 +55,8 @@ class Battle:
         # Bots
         bot_count = initial_state.num_of_units
         self.bot_timer: TurnTimer = TurnTimer(bot_count)
-        bot_classes = bot_classes_getter(bot_count)
+        with Logger.set_logging_temp(enable_logging):
+            bot_classes = bot_classes_getter(bot_count)
         assert len(bot_classes) == bot_count
         self.bots: tuple[BaseBot] = tuple(bcls(i) for i, bcls in enumerate(bot_classes))
         # Allow bots to prepare
@@ -160,7 +160,7 @@ class Battle:
 
     # Logging
     def logger(self, text: str):
-        if self.enable_logging and LOGIC_DEBUG:
+        if self.enable_logging:
             glogger(text)
 
     def log_state(self, state: State):

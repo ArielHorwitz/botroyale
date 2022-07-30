@@ -31,8 +31,7 @@ class CLI:
         counter = Counter()
         battles_played = 0
         while True:
-            with Logger.set_logging_temp(False):
-                battle = BattleManager()
+            battle = BattleManager(enable_logging=False)
             print_summary()
             print(f'\nPlaying next battle (map: {battle.map_name})...\n')
             winner, losers = cls.play_complete(battle)

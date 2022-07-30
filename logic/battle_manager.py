@@ -11,6 +11,7 @@ from logic.state import State
 
 STEP_RATE = Settings.get('logic._step_rate_cap', 2)
 STEP_RATES = Settings.get('logic.|step_rates', [1, 2, 3, 5, 60])
+LOGIC_DEBUG = Settings.get('logging.battle', True)
 MAP_CENTER = Hex(0, 0)
 
 
@@ -68,6 +69,7 @@ class BattleManager(Battle):
         self.__clear_vfx_flag = False
         if gui_mode:
             kwargs['only_bot_turn_states'] = False
+            kwargs['enable_logging'] = LOGIC_DEBUG
             spoiler_mode = False
         super().__init__(*args, **kwargs)
         self.unit_colors = [self.UNIT_COLORS[bot.COLOR_INDEX % len(self.UNIT_COLORS)] for bot in self.bots]
