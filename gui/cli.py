@@ -73,18 +73,25 @@ class CLI:
     @classmethod
     def competitive_timing_test(cls):
         bot_classes = [bcls for bcls in BOTS.values() if not bcls.TESTING_ONLY]
-        threshold_ms = 20_000
+        battle_sample_size = 10
+        max_threshold_ms = 10_000
+        mean_threshold_ms = 5_000
         results = timing_test(
             bots=bot_classes,
-            battle_count=10,
+            battle_count=battle_sample_size,
             verbose_results=False,
             shuffle_bots=True,
             disable_logging=True,
             )
-        fails = ', '.join(bn for bn, tr in results.items() if tr.max > threshold_ms)
+        fail_mean = [bn for bn, tr in results.items() if tr.mean > mean_threshold_ms]
+        fail_max = [bn for bn, tr in results.items() if tr.max > max_threshold_ms]
+        fail_names = set(fail_max) | set(fail_mean)
         print('\n\n')
-        if fails:
-            print(f'FAILED: {fails}')
+        print(f'Fail conditions: mean > {mean_threshold_ms:,} ms ; max > {max_threshold_ms:,} ms')
+        print('')
+        if fail_names:
+            fail_str = '\n'.join(f'- {f}' for f in fail_names)
+            print(f'FAILED:\n{fail_str}')
         else:
             print('No fails.')
         print('\n')
