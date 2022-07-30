@@ -38,11 +38,12 @@ BOTS_IGNORED = Settings.get("bots.bot_names_ignore", [])
 BOTS = bot_importer()
 
 
-def make_bots(num_of_bots: int) -> list[BaseBot]:
+def get_bot_classes(num_of_bots: int) -> list[type]:
     """
-    makes bots using bots from BOTS
-    :param num_of_bots: number of bots to make
-    :return: list of instances of bots
+    Returns a list of bot classes from BOTS as configured in settings.
+
+    :param num_of_bots:     number of bots classes to collect
+    :return:                list of bot classes
     """
     if len(BOTS) == 0:
         game_classes = [BaseBot] * num_of_bots
@@ -59,5 +60,4 @@ def make_bots(num_of_bots: int) -> list[BaseBot]:
             game_classes.append(non_testing_bots[idx])
     logger('Selected bots:')
     logger('\n'.join(f'#{i:<2} {cls.NAME}' for i, cls in enumerate(game_classes[:num_of_bots])))
-    bots_instances = [game_classes[i](i) for i in range(num_of_bots)]
-    return bots_instances
+    return game_classes

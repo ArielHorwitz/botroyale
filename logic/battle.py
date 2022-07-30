@@ -3,7 +3,7 @@ import numpy as np
 from api.logging import logger as glogger
 from api.bots import BaseBot
 from api.actions import Action
-from bots import make_bots
+from bots import get_bot_classes
 from logic.maps import get_map_state, DEFAULT_MAP_NAME
 from logic.state import State
 from util.time import pingpong
@@ -23,7 +23,7 @@ class Battle:
 
     def __init__(self,
             initial_state: Optional[State] = None,
-            bot_getter: Callable[[int], Sequence[BaseBot]] = make_bots,
+            bot_classes_getter: Callable[[int], Sequence[type]] = get_bot_classes,
             only_bot_turn_states: bool = True,
             ):
         """
@@ -31,9 +31,9 @@ class Battle:
         provided, it will be generated using the map generator based on
         configured settings.
 
-        bot_getter -- a function that takes a number and returns that many
-        initialized bots. If bot_getter is not provided, the default `make_bots`
-        will be used that is based on configured settings.
+        bot_classes_getter -- a function that takes an integer and returns that
+        many bots classes. If bot_classes_getter is not provided, the default
+        `get_bot_classes` will be used that is based on configured settings.
 
         only_bot_turn_states -- determines whether to skip "end_of_round" states
         and other states that are not expecting an action from a unit. This is
@@ -47,15 +47,17 @@ class Battle:
             initial_state = get_map_state()
             self._map_name = DEFAULT_MAP_NAME
         self.__current_state: State = initial_state
-        self.history: Sequence[State] = [initial_state]
+        self.history: list[State] = [initial_state]
         self.__only_bot_turn_states: bool = only_bot_turn_states
         # Bots
-        bot_count: int = initial_state.num_of_units
-        self.bots: Sequence[BaseBot] = bot_getter(bot_count)
-        # Bot timers
+        bot_count = initial_state.num_of_units
         self.bot_timer: TurnTimer = TurnTimer(bot_count)
-        # Once everything is ready, allow bots to prepare
-        for bot in self.bots:
+        bot_classes = bot_classes_getter(bot_count)
+        assert len(bot_classes) == bot_count
+        self.bots: tuple[BaseBot] = tuple(bcls(i) for i, bcls in enumerate(bot_classes))
+        # Allow bots to prepare
+        for uid, bot in enumerate(self.bots):
+            assert isinstance(bot, BaseBot)
             bot.setup(initial_state)
         # Skip to the first bot's turn if set to do so
         assert self.state.round_count == 0
@@ -164,7 +166,7 @@ class Battle:
         return self.state.winner
 
     @property
-    def losers(self) -> Union[Sequence[int], None]:
+    def losers(self) -> Union[list[int], None]:
         """Returns a list of unit ids that did not win, or None if game isn't over."""
         if self.state.game_over:
             return [b for b in self.bots if b.id != self.winner]

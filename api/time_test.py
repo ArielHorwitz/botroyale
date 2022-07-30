@@ -38,8 +38,7 @@ def timing_test(
         selected_bot_classes.extend([DummyBot] * missing_units)
         if shuffle_bots:
             random.shuffle(selected_bot_classes)
-        selected_bots = [b(i) for i, b in enumerate(selected_bot_classes)]
-        return selected_bots
+        return selected_bot_classes
 
     glogger(f'\n\n========== Timing Test ==========')
     glogger('Selected:\n'+'\n'.join(f'- {i:>2} : {b.NAME}' for i, b in enumerate(bots)))
@@ -48,7 +47,7 @@ def timing_test(
         Logger.enable_logging = False
     results = {bot.NAME: TimeResult([], []) for bot in bots}
     for battle_number in range(battle_count):
-        battle = BattleManager(bot_getter=get_bots)
+        battle = BattleManager(bot_classes_getter=get_bots)
         Logger.enable_logging = True
         glogger(f'\nPlaying battle {battle_number+1} / {battle_count} (map: {battle.map_name})...')
         if disable_logging:
