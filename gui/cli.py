@@ -8,7 +8,7 @@ from logic.battle_manager import BattleManager
 class CLI:
     @staticmethod
     def play_complete(battle):
-        battle.play_all()
+        battle.play_all(print_progress=True)
         assert battle.state.game_over
         winner_id = battle.state.winner
         winner = battle.bots[winner_id].name if winner_id is not None else 'draw'

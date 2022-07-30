@@ -139,10 +139,10 @@ class BattleManager(Battle):
         nothing_to_spoil = state_index == self.history_size - 1
         return self.__spoiler_mode or nothing_to_spoil
 
-    def play_all(self):
+    def play_all(self, *args, **kwargs):
         """Overrides the base class method in order to set the replay index to
         the current state index."""
-        super().play_all()
+        super().play_all(*args, **kwargs)
         self.set_replay_index()
 
     def set_to_next_round(self, backwards: bool = False):

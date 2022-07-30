@@ -1,6 +1,6 @@
 from typing import Union, Optional, Sequence, Callable
 import numpy as np
-from api.logging import logger as glogger
+from api.logging import Logger, logger as glogger
 from api.bots import BaseBot
 from api.actions import Action
 from bots import get_bot_classes
@@ -115,10 +115,32 @@ class Battle:
             self.play_state()
             count -= 1
 
-    def play_all(self):
-        """Plays the battle to completion."""
-        while not self.state.game_over:
-            self.play_state()
+    def play_all(self, disable_logging: bool = False, print_progress: bool = False):
+        """Plays the battle to completion.
+
+        disable_logging     -- disable logging globally while playing
+        print_progress      -- disable logging globally while playing and print
+                                    a progress bar to console
+        """
+        def print_progress_bar():
+            rc = self.state.round_count
+            done = '█' * rc
+            remaining = '░' * (self.state.death_radius - 1)
+            pbar = f'{done}{remaining}  ({rc} / {rc+self.state.death_radius-1} rounds)'
+            print(f'\r{pbar}', end='')
+
+        if print_progress:
+            disable_logging = True
+            print_progress_bar()
+        last_rc = self.state.round_count
+        with Logger.set_logging_temp(not disable_logging):
+            while not self.state.game_over:
+                last_rc = self.state.round_count
+                self.play_state()
+                if print_progress and self.state.round_count > last_rc:
+                    print_progress_bar()
+        if print_progress:
+            print('')
 
     def _get_bot_action(self, unit_id: int, state: State):
         state = state.copy()

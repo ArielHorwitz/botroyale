@@ -50,10 +50,7 @@ def timing_test(
         battle = BattleManager(bot_classes_getter=get_bots)
         Logger.enable_logging = True
         glogger(f'\nPlaying battle {battle_number+1} / {battle_count} (map: {battle.map_name})...')
-        if disable_logging:
-            Logger.enable_logging = False
-        battle.play_all()
-        Logger.enable_logging = True
+        battle.play_all(print_progress=True)
         glogger(battle.get_timer_str())
         if disable_logging:
             Logger.enable_logging = False
