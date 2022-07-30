@@ -26,6 +26,7 @@ class Battle:
             bot_classes_getter: Callable[[int], Sequence[type]] = get_bot_classes,
             only_bot_turn_states: bool = True,
             enable_logging: bool = True,
+            threshold_bot_block_seconds: float = 20.0,
             ):
         """
         initial_state -- the first state of the battle. If initial_state is not
@@ -51,6 +52,7 @@ class Battle:
         self.__current_state: State = initial_state
         self.history: list[State] = [initial_state]
         self.__only_bot_turn_states: bool = only_bot_turn_states
+        self.__threshold_bot_block_ms: float = threshold_bot_block_seconds * 1000
         # Bots
         bot_count = initial_state.num_of_units
         self.bot_timer: TurnTimer = TurnTimer(bot_count)
@@ -129,6 +131,9 @@ class Battle:
         self.logger(LINEBR)
         self.logger(f'Received action: {action}')
         assert isinstance(action, Action)
+        ttime = self.bot_timer.get_time(unit_id)
+        if ttime > self.__threshold_bot_block_ms:
+            self.logger(f'BLOCK THRESHOLD WARNING : {bot} has taken {ttime/1000:.2f} seconds this turn')
         return action
 
     # Logging
@@ -193,30 +198,52 @@ class TurnTimer:
         return self.round_timers
 
     def rounds_played(self, unit_id: int) -> int:
+        """Return the number of rounds that have times recorded for a unit."""
         return int(np.sum(self.round_timers[:, unit_id] > 0))
 
     def total(self, unit_id: int) -> float:
+        """Return the total time recorded for a unit."""
         return float(np.sum(self.round_timers[:, unit_id]))
 
     def mean(self, unit_id: int) -> float:
-        """Returns the mean of unit_id. Assumes rounds with 0.0 time do not count."""
+        """Return the mean of times recorded for a unit.
+
+        Assumes rounds with 0.0 time do not count.
+        """
         rounds_played = self.rounds_played(unit_id)
         if rounds_played > 0:
             return float(self.total(unit_id) / rounds_played)
         return 0.0
 
     def max(self, unit_id: int) -> float:
+        """Return the max of times recorded for a unit."""
         return float(np.max(self.round_timers[:, unit_id]))
 
     @property
     def round_count(self) -> int:
+        """Number of rounds in the table."""
         return len(self.round_timers)
 
     def add_round(self):
+        """Add a new round to the table."""
         new_row = np.zeros(self.num_of_units, dtype=np.float64)
         self.round_timers = np.vstack((self.round_timers, new_row))
 
     def add_time(self, unit_id: int, time: float, round: Optional[int] = None):
+        """Add time for a unit at a given round.
+
+        Will use the last round if none is provided.
+        """
         if round is None:
             round = self.round_count - 1
         self.round_timers[round, unit_id] += time
+
+    def get_time(self, unit_id: int, round: Optional[int] = None) -> float:
+        """Get the time recorded for a unit at a given round.
+
+        Will use the last round if none is provided.
+        See also: TurnTimer.all_times
+        """
+        if round is None:
+            round = self.round_count - 1
+        return float(self.round_timers[round, unit_id])
