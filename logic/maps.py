@@ -1,18 +1,18 @@
+from typing import Optional
 from collections import namedtuple
 import itertools
 import random
 import numpy as np
+from logic.state import State
 from api.logging import logger
 from util.settings import Settings
 from util.hexagon import Hex
 
 
-RNG = np.random.default_rng()
-MapGen = namedtuple('Map', ['radius', 'spawns', 'pits', 'walls'])
-SELECTED_MAP_NAME = Settings.get('map.selected_map', 'classic')
+DEFAULT_MAP_NAME = Settings.get('map.selected_map', 'danger')
 
 
-class Map:
+class MapGenerator:
     radius = 5
     def __init__(self):
         self.center = Hex(0, 0)
@@ -27,28 +27,39 @@ class Map:
         self.spawns.append(tile)
         if tile in self.empty_tiles:
             self.empty_tiles.remove(tile)
+        self.validate_map()
 
     def add_pit(self, tile):
         self.pits.add(tile)
         if tile in self.empty_tiles:
             self.empty_tiles.remove(tile)
+        self.validate_map()
 
     def add_wall(self, tile):
         self.walls.add(tile)
         if tile in self.empty_tiles:
             self.empty_tiles.remove(tile)
+        self.validate_map()
 
     def make_map(self):
         pass
 
-    def get(self):
+    def validate_map(self):
         assert not set(self.spawns) & self.pits
         assert not set(self.spawns) & self.walls
         assert not self.pits & self.walls
-        return MapGen(self.radius, self.spawns, self.pits, self.walls)
+
+    def get_state(self):
+        self.validate_map()
+        return State(
+            death_radius=self.radius+2,
+            positions=self.spawns,
+            pits=self.pits,
+            walls=self.walls,
+            )
 
 
-class EmptyMap(Map):
+class EmptyMap(MapGenerator):
     spawn_count = 12
 
     def make_map(self):
@@ -60,7 +71,7 @@ class EmptyMap(Map):
             self.add_spawn(s)
 
 
-class BasicMap(Map):
+class BasicMap(MapGenerator):
     radius = 10
     pit_freq = 0.075
     wall_freq = 0.15
@@ -91,7 +102,7 @@ class GiantMap(BasicMap):
     radius = 25
 
 
-class ClassicMap(Map):
+class ClassicMap(MapGenerator):
     radius = 15
     spawn_count = 12
 
@@ -128,7 +139,7 @@ class ClassicMap(Map):
             self.add_wall(self.empty_tiles.pop(0))
 
 
-class DangerMap(Map):
+class DangerMap(MapGenerator):
     radius = 12
     random_radius = 10
 
@@ -198,14 +209,20 @@ class DangerMap(Map):
 
 
 MAPS = {
+    'danger': DangerMap,
     'classic': ClassicMap,
     'basic': BasicMap,
-    'empty': EmptyMap,
     'giant': GiantMap,
-    'danger': DangerMap,
+    'empty': EmptyMap,
 }
 logger('\n'.join([f'Available maps:', *(f'- {m}' for m in MAPS.keys())]))
 
-def get_map():
-    map = MAPS[SELECTED_MAP_NAME]()
-    return map.get()
+def get_map_state(map_name: Optional[str] = None) -> State:
+    """Returns the initial state of `map_name`.
+
+    `map_name` defaults to the name configured in settings.
+    """
+    if map_name is None:
+        map_name = DEFAULT_MAP_NAME
+    map_generator = MAPS[map_name]()
+    return map_generator.get_state()

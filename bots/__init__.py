@@ -15,7 +15,7 @@ def bot_importer():
     """
     bots = {}
     package_dir = Path(__file__).resolve().parent
-    logger('Available bots:')
+    logger('Available bots:\n(Legend: » competitive - test)')
     for (_, module_name, _) in iter_modules([str(package_dir)]):
         module = import_module(f"{__name__}.{module_name}")
         if hasattr(module, "BOT"):
@@ -29,35 +29,33 @@ def bot_importer():
             if bot.NAME in bots:
                 raise KeyError(f'Bot name: "{bot.NAME}" (from module: {module_name}) already in use.')
             bots[bot.NAME] = bot
-            logger(f'- {bot.NAME} (from module: {module_name})')
+            prefix = '-' if bot.TESTING_ONLY else '»'
+            logger(f'{prefix} {bot.NAME:<20} | from module: {module_name:<20}')
     return bots
 
 
-BOT_REQ = Settings.get("bots.bot_names", ['basebot', 'basebot'])
+BOT_REQ = Settings.get("bots.bot_names", [])
 BOTS_IGNORED = Settings.get("bots.bot_names_ignore", [])
 BOTS = bot_importer()
 
 
-def make_bots(num_of_bots: int) -> list[BaseBot]:
+def get_bot_classes(num_of_bots: int) -> list[type]:
     """
-    makes bots using bots from BOTS
-    :param num_of_bots: number of bots to make
-    :return: list of instances of bots
+    Returns a list of bot classes from BOTS as configured in settings.
+
+    :param num_of_bots:     number of bots classes to collect
+    :return:                list of bot classes
     """
     if len(BOTS) == 0:
         game_classes = [BaseBot] * num_of_bots
     else:
-        logger('Requested bots:')
-        logger('\n'.join(f'#{i:<2} {r}' for i, r in enumerate(BOT_REQ[:num_of_bots])))
-        logger('Ignoring bots:')
-        logger('\n'.join(ibn for ibn in BOTS_IGNORED))
         game_classes = [BOTS[req] for req in BOT_REQ if req in BOTS]
         non_testing_bots = [bot for bot in BOTS.values() if not bot.TESTING_ONLY and bot.NAME not in BOTS_IGNORED]
         random.shuffle(non_testing_bots)
         while len(game_classes) < num_of_bots:
             idx = (num_of_bots - len(game_classes)) % len(non_testing_bots)
             game_classes.append(non_testing_bots[idx])
+    game_classes = game_classes[:num_of_bots]
     logger('Selected bots:')
-    logger('\n'.join(f'#{i:<2} {cls.NAME}' for i, cls in enumerate(game_classes[:num_of_bots])))
-    bots_instances = [game_classes[i](i) for i in range(num_of_bots)]
-    return bots_instances
+    logger('\n'.join(f'#{i:<2} {cls.NAME}' for i, cls in enumerate(game_classes)))
+    return game_classes

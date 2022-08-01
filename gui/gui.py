@@ -3,9 +3,11 @@ from util.settings import Settings
 from util.time import RateCounter
 from gui import kex, logger
 import gui.kex.widgets as widgets
+from api.logging import logger as glogger
 from api.gui import GuiControlMenu, GuiControl, gui_control_menu_extend
 from gui.panel import Panel, MenuBar
 from gui.tilemap import TileMap
+from logic.battle_manager import BattleManager
 
 
 ICON = str(Path.cwd() / 'icon.ico')
@@ -17,7 +19,7 @@ LOG_HOTKEYS = Settings.get('logging.hotkeys', False)
 
 
 class App(widgets.App):
-    def __init__(self, logic_cls, **kwargs):
+    def __init__(self, **kwargs):
         logger('Starting app...')
         super().__init__(**kwargs)
         self.title = 'Bot Royale'
@@ -25,12 +27,10 @@ class App(widgets.App):
         kex.resize_window(WINDOW_SIZE)
         if START_MAXIMIZED:
             widgets.kvWindow.maximize()
-        self.__logic_cls = logic_cls
-        self.logic = self.__logic_cls()
         self.fps_counter = RateCounter(sample_size=FPS, starting_elapsed=1000/FPS)
         self.im = widgets.InputManager(
-            logger=print if LOG_HOTKEYS else lambda *a: None)
-        self.make_widgets()
+            logger=glogger if LOG_HOTKEYS else lambda *a: None)
+        self.reset_logic()
         self.hook_mainloop(FPS)
         logger('GUI initialized.')
 
@@ -70,12 +70,12 @@ class App(widgets.App):
         logger('Resetting logic...')
         self.root.clear_widgets()
         self.im.clear_all(app_control_defaults=True)
-        self.logic = self.__logic_cls()
+        self.logic = BattleManager(gui_mode=True)
         self.make_widgets()
 
     def update_widgets(self):
-        self.panel.set_text(self.logic.get_summary_str())
-        self.panel.make_bg(self.logic.panel_color)
+        self.panel.set_text(self.logic.get_info_panel_text())
+        self.panel.make_bg(self.logic.get_info_panel_color())
         self.map.update()
         self.bar.set_text(f'{self.fps_counter.rate:.2f} FPS')
 

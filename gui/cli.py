@@ -1,118 +1,116 @@
 from collections import Counter
-import numpy as np
-from api.logging import logger
-from logic.maps import SELECTED_MAP_NAME
-
-
-HELP_STR = """
-=== BOT ROYALE ===
-Running in terminal mode (CLI). To use the GUI, disable "gui.cli" setting, or delete your settings file.
-Please note that settings are not auto-fixed when using the CLI.
-
-  "help" : Show this message.
-  enter  : Next battle step.
-  "s"    : Show battle details.
-  "#"    : Run # number of steps.
-  "c"    : Run the battle to completion.
-  "r #"  : Run # of battles and get winrates.
-  "n"    : Start a new battle.
-  "q"    : Quit.
-"""
-nl = '─'*50
+from api.logging import Logger
+from bots import BOTS, BaseBot
+from api.time_test import timing_test
+from logic.battle_manager import BattleManager
 
 
 class CLI:
-    def __init__(self, logic_cls):
-        self.logic_cls = logic_cls
-        self.battle = self.logic_cls()
-
-    def new_battle(self, do_print=True):
-        self.battle = self.logic_cls()
-        if do_print:
-            self.print_battle()
-
-    def print_battle(self):
-        print(self.battle.get_summary_str())
-
-    def next_step(self, do_print=True):
-        self.battle.next_step()
-        if do_print:
-            self.print_battle()
-
-    def play_steps(self, steps):
-        for s in range(steps):
-            self.battle.next_step()
-        self.print_battle()
-
-    def play_complete(self):
-        self.battle.play_all()
-        self.battle.increment_state_index(1_000_000)
-        self.print_battle()
-        winner_id = self.battle.state.winner
-        if winner_id:
-            winner = self.battle.bots[winner_id].name
-            losers = [b.name for b in self.battle.bots if b.id != winner_id]
-        else:
-            losers = [b.name for b in self.battle.bots]
-            winner = 'draw'
+    @staticmethod
+    def play_complete(battle):
+        battle.play_all(print_progress=True)
+        assert battle.state.game_over
+        winner_id = battle.state.winner
+        winner = battle.bots[winner_id].name if winner_id is not None else 'draw'
+        losers = [battle.bots[loser_id].name for loser_id in battle.losers]
         return winner, losers
 
-    def run_battles(self, count):
+    @classmethod
+    def run_battles(cls):
         def print_summary():
-            print(f'\n\n          Total Winrates (played {i} / {count} games)')
-            print(f'            MAP: {SELECTED_MAP_NAME}\n')
-            if i <= 0:
+            print('\n')
+            print(f'           ----------------------------------')
+            print(f'               Winrates ({battles_played:,} battles total)')
+            print(f'           ----------------------------------')
+            if battles_played <= 0:
+                print(f'Waiting for results of the first game...')
                 return
             for bot, wins in counter.most_common():
-                print(f'{bot:>20}: {f"{wins/i*100:.2f}":>7} % ({str(wins):<4} wins)')
+                print(f'{bot:>20}: {f"{wins/battles_played*100:.2f}":>7} % ({str(wins):<4} wins)')
 
-        logging_enabled_default = logger.enable_logging
-        logger.enable_logging = False
         counter = Counter()
-        for i in range(count):
-            self.new_battle(do_print=False)
+        battles_played = 0
+        while True:
+            battle = BattleManager(enable_logging=False)
             print_summary()
-            print('\nPlaying next battle...\n')
-            winner, losers = self.play_complete()
-            last_battle_summary = self.battle.get_summary_str()
+            print(f'\nPlaying next battle (map: {battle.map_name})...\n')
+            winner, losers = cls.play_complete(battle)
+            print(battle.get_info_panel_text())
             counter[winner] += 1
             for loser in losers:
                 counter[loser] += 0
-        i += 1
+            battles_played += 1
         print_summary()
-        logger.enable_logging = logging_enabled_default
 
-    def print_help(self):
-        print(HELP_STR)
+    @classmethod
+    def timing_test(cls):
+        def print_available():
+            print('\nAvailable bots:\n'+'\n'.join([f'- {bn}' for bn in available_bots if bn not in selected_names]))
+        def print_selected():
+            print('\nSelected bots:\n'+'\n'.join(f'++ {bn}' for bn in selected_names))
+        def get_bot_name():
+            return input('\nEnter bot name to add (leave blank to finish): ')
+        available_bots = [bcls.NAME for bcls in BOTS.values() if not bcls.TESTING_ONLY]
+        selected_names = []
+        print_available()
+        bot_name = get_bot_name()
+        while bot_name != '':
+            if bot_name in BOTS:
+                selected_names.append(bot_name)
+            print_available()
+            print_selected()
+            if bot_name not in BOTS:
+                print(f'\nNo bot "{bot_name}", try again or leave blank.')
+            bot_name = get_bot_name()
+        if not selected_names:
+            selected_names = available_bots
+        print_selected()
+        bot_classes = [BOTS[bn] for bn in selected_names]
+        ucount = input('\nNumber of battles to play (leave blank for 10,000): ')
+        battle_count = int(ucount) if ucount else 10_000
+        timing_test(bot_classes, battle_count)
 
-    def get_uinput(self):
-        print(f'\n{nl}')
-        uinput = input(f'Bot Royale (try "help") >> ')
-        print(f'{nl}\n')
-        return uinput
+    @classmethod
+    def competitive_timing_test(cls):
+        bot_classes = [bcls for bcls in BOTS.values() if not bcls.TESTING_ONLY]
+        battle_sample_size = 10
+        max_threshold_ms = 10_000
+        mean_threshold_ms = 5_000
+        results = timing_test(
+            bots=bot_classes,
+            battle_count=battle_sample_size,
+            verbose_results=False,
+            shuffle_bots=True,
+            disable_logging=True,
+            )
+        fail_mean = [bn for bn, tr in results.items() if tr.mean > mean_threshold_ms]
+        fail_max = [bn for bn, tr in results.items() if tr.max > max_threshold_ms]
+        fail_names = set(fail_max) | set(fail_mean)
+        print('\n\n')
+        print(f'Fail conditions: mean > {mean_threshold_ms:,} ms ; max > {max_threshold_ms:,} ms')
+        print('')
+        if fail_names:
+            fail_str = '\n'.join(f'- {f}' for f in fail_names)
+            print(f'FAILED:\n{fail_str}')
+        else:
+            print('No fails.')
+        print('\n')
 
-    def run(self):
-        uinput = ''
-        self.print_help()
-        while uinput != 'q':
-            uinput = self.get_uinput()
-            if uinput == 'help':
-                self.print_help()
-            elif uinput == 'n':
-                self.new_battle()
-            elif uinput == 's':
-                self.print_battle()
-            elif uinput == '':
-                self.next_step()
-            elif uinput == 'c':
-                self.play_complete()
-            elif uinput.startswith('r '):
-                count = int(uinput[2:])
-                self.run_battles(count)
-            else:
-                try:
-                    steps = int(uinput)
-                except ValueError:
-                    self.print_help()
-                    continue
-                self.play_steps(steps)
+    @classmethod
+    def run(cls):
+        print('\n'.join([
+            '\n\n',
+            'Select operation:',
+            '1. Winrates',
+            '2. Bot timer tests',
+            '3. Bot timer tests for competition',
+            '',
+        ]))
+        selection = int(input('Enter selection: '))
+        assert 1 <= selection <= 3
+        if selection == 1:
+            cls.run_battles()
+        elif selection == 2:
+            cls.timing_test()
+        elif selection == 3:
+            cls.competitive_timing_test()
