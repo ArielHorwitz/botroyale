@@ -12,6 +12,7 @@ DEBUG_LEVEL = Settings.get('logging.bots.ninja.debug_level', 1)
 
 
 class NinjaBotV002(BaseBot):
+    TESTING_ONLY = True
     NAME = 'ninja.002'
     COLOR_INDEX = 10
     map_center = Hex(0, 0)

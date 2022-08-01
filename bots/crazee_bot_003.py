@@ -9,6 +9,7 @@ from util.time import pingpong
 
 
 class CrazeeBotAlpha(BaseBot):
+    TESTING_ONLY = True
     NAME = "CrazeeBot"
     COLOR_INDEX = 9
     MAX_AP = 100

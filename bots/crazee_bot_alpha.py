@@ -18,6 +18,7 @@ def debug(*lines):
 
 
 class CrazeeBotAlpha(BaseBot):
+    TESTING_ONLY = True
     NAME = "CrazeeBot-0.2"
     COLOR_INDEX = 7
     MAX_AP = 100

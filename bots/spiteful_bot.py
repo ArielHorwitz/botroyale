@@ -11,6 +11,7 @@ LethalSequence = namedtuple('LethalSequence', ['ap_cost', 'actions', 'vfx'])
 
 
 class SpitefulBot(BaseBot):
+    TESTING_ONLY = True
     NAME = 'spiteful'
     SPRITE = 'fox'
     COLOR_INDEX = 0
