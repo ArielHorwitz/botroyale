@@ -25,7 +25,7 @@ class State:
             ap=None,
             round_ap_spent=None,
             round_remaining_turns=None,
-            step_count=0, turn_count=0, round_count=0,
+            step_count=0, turn_count=0, round_count=0, unit_rounds_survived=None
             ):
         self.num_of_units = len(positions)
         # Map
@@ -44,6 +44,9 @@ class State:
         if round_ap_spent is None:
             round_ap_spent = np.zeros(self.num_of_units)
         self.round_ap_spent = round_ap_spent
+        if unit_rounds_survived is None:
+            unit_rounds_survived = np.zeros(self.num_of_units)
+        self.unit_rounds_survived = unit_rounds_survived
         if round_remaining_turns is None:
             round_remaining_turns = []
         self.round_remaining_turns = round_remaining_turns
@@ -101,6 +104,7 @@ class State:
             step_count=self.step_count,
             turn_count=self.turn_count,
             round_count=self.round_count,
+            unit_rounds_survived=self.unit_rounds_survived.copy()
             )
 
     def check_legal_action(self, unit, action):
@@ -121,6 +125,7 @@ class State:
         self.death_radius -= 1
         self.pits |= set(self.center.ring(self.death_radius))
         self._apply_mortality()
+        self.unit_rounds_survived[self.alive_mask] += 1
 
     def _next_round_order(self):
         units = np.arange(self.num_of_units)
