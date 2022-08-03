@@ -3,7 +3,6 @@ import random
 from collections import namedtuple, defaultdict
 from bots import BaseBot
 from util.hexagon import Hex, DIAGONALS, is_hex
-from util.settings import Settings
 from api.actions import Move, Push, Idle
 
 
@@ -11,6 +10,7 @@ LethalSequence = namedtuple('LethalSequence', ['ap_cost', 'actions', 'vfx'])
 
 
 class SpitefulBot(BaseBot):
+    TESTING_ONLY = True
     NAME = 'spiteful'
     SPRITE = 'fox'
     COLOR_INDEX = 0
