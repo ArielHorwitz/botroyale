@@ -52,7 +52,8 @@ class Battle:
         self.enable_logging = enable_logging
         self._map_name = 'Custom initial state'
         if initial_state is None:
-            initial_state = get_map_state()
+            with Logger.set_logging_temp(enable_logging):
+                initial_state = get_map_state()
             self._map_name = DEFAULT_MAP_NAME
         self.logger(f'Making battle on map: {self._map_name}')
         self.__current_state: State = initial_state
@@ -67,9 +68,10 @@ class Battle:
         assert len(bot_classes) == bot_count
         self.bots = tuple(bcls(i) for i, bcls in enumerate(bot_classes))
         # Allow bots to prepare
-        for uid, bot in enumerate(self.bots):
-            assert isinstance(bot, BaseBot)
-            bot.setup(initial_state)
+        with Logger.set_logging_temp(enable_logging):
+            for uid, bot in enumerate(self.bots):
+                assert isinstance(bot, BaseBot)
+                bot.setup(initial_state)
         # Skip to the first bot's turn if set to do so
         assert self.state.round_count == 0
         if only_bot_turn_states:
