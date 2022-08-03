@@ -4,15 +4,15 @@ import numpy as np
 from bots import BaseBot
 from api.logging import logger
 from api.actions import Idle, Move, Push
-from util.settings import Settings
 from util.hexagon import Hex
 
 
-DEBUG_LEVEL = Settings.get('logging.bots.ninja.debug_level', 1)
+DEBUG_LEVEL = 2
 
 
-class NinjaBotV002(BaseBot):
-    NAME = 'ninja.002'
+class NinjaBotRetro(BaseBot):
+    TESTING_ONLY = True
+    NAME = 'ninja.retro'
     COLOR_INDEX = 10
     map_center = Hex(0, 0)
 
@@ -310,4 +310,4 @@ def a_star(origin, target, cost):
     return None
 
 
-BOT = NinjaBotV002
+BOT = NinjaBotRetro
