@@ -31,7 +31,7 @@ class BattleManager(Battle):
     step_interval_ms = 1000 / STEP_RATE
     DEFAULT_CELL_BG = Settings.get('tilemap.|colors._default_tile', (0.25, 0.1, 0))
     OUT_OF_BOUNDS_CELL_BG = Settings.get('tilemap.|colors._out_of_bounds', (0.05, 0, 0.075))
-    WALL_COLOR = Settings.get('tilemap.|colors._walls', (1, 1, 1))
+    WALL_COLOR = Settings.get('tilemap.|colors._walls', (0.6, 0.6, 0.6))
     PIT_COLOR = Settings.get('tilemap.|colors._pits', (0.05, 0.05, 0.05))
     UNIT_COLORS = Settings.get('tilemap.|colors.|units', [
         (0.6, 0, 0.1),  # Red
