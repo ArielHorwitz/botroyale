@@ -881,18 +881,21 @@ class BotBoss(Bot):
 
 
 class BotMaster(Bot):
+    TESTING_ONLY = True
     NAME = f'{BOT_NAME}-hard'
     COLOR_INDEX = 1
     checkpoint_class = CheckPointL1
 
 
 class BotHard(Bot):
+    TESTING_ONLY = True
     NAME = f'{BOT_NAME}-medium'
     COLOR_INDEX = 3
     checkpoint_class = CheckPointL2
 
 
 class BotEasy(Bot):
+    TESTING_ONLY = True
     NAME = f'{BOT_NAME}-easy'
     COLOR_INDEX = 5
     checkpoint_class = CheckPointL3
