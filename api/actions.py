@@ -1,4 +1,4 @@
-from util.hexagon import is_hex
+from util.hexagon import Hexagon
 
 
 class Action:
@@ -9,7 +9,7 @@ class Move(Action):
     ap = 20
 
     def __init__(self, target_tile):
-        assert is_hex(target_tile)
+        assert isinstance(target_tile, Hexagon)
         self.target = target_tile
 
     def __repr__(self):

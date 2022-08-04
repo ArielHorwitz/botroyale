@@ -5,7 +5,7 @@ from collections import deque
 from api.gui import TileGUI, VFX, GuiControlMenu, GuiControl
 from util.time import ping, pong
 from util.settings import Settings
-from util.hexagon import Hex, Hexagon, is_hex
+from util.hexagon import Hex, Hexagon
 from logic.state import State
 
 
@@ -301,9 +301,9 @@ class BattleManager(Battle):
             ):
         """Add a single vfx to the queue used by flush_vfx()."""
         assert isinstance(name, str)
-        assert is_hex(hex)
+        assert isinstance(hex, Hexagon)
         if direction is not None:
-            assert is_hex(direction)
+            assert isinstance(direction, Hexagon)
         start_step = self.replay_state.step_count
         expire_step = start_step + steps
         self.__vfx_queue.append(VFX(
