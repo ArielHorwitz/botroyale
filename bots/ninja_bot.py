@@ -3,7 +3,7 @@ from collections import defaultdict
 from contextlib import contextmanager
 import numpy as np
 from util.time import pingpong, ping, pong
-from util.hexagon import Hex, is_hex, DIAGONALS
+from util.hexagon import DIAGONALS
 from api.bots import BaseBot, CENTER, center_distance
 from api.actions import Idle, Move, Push, Jump
 
@@ -191,7 +191,7 @@ class CheckPoint:
         return lethal_sequences
 
     def get_suicide_sequence(self):
-        if self.pos is CENTER:
+        if self.pos == CENTER:
             return ActionSequence(self.state, actions=[Idle()], logger=self.logger, description='Designated winner')
         center_path = self.get_path(CENTER, prune_ap_distance=False)
         if center_path:
@@ -420,8 +420,7 @@ class CheckPoint:
 
     # MOVEMENT
     def get_path(self, target, prune_ap_distance=True):
-        assert is_hex(target)
-        if target is self.pos:
+        if target == self.pos:
             return []
         if target in self.obstacles:
             return None
@@ -815,7 +814,7 @@ def a_star(origin, target, cost, get_neighbors):
             full_path.insert(0, node)
         return tuple(full_path[1:])
 
-    if origin is target:
+    if origin == target:
         return None
 
     open_set = {origin}
@@ -828,7 +827,7 @@ def a_star(origin, target, cost, get_neighbors):
     while open_set:
         best_nodes = sorted(open_set, key=lambda x: guess_score[x])
         current = best_nodes[0]
-        if current is target:
+        if current == target:
             return _get_full_path(current, came_from)
         open_set.remove(current)
         for neighbor in get_neighbors(current):
