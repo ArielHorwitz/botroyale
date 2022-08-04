@@ -64,7 +64,7 @@ class EmptyMap(MapGenerator):
 
     def make_map(self):
         # Spawns
-        spawn_options = self.center.ring(self.radius-1)
+        spawn_options = list(self.center.ring(self.radius-1))
         assert len(spawn_options) >= self.spawn_count
         random.shuffle(spawn_options)
         for s in spawn_options[:self.spawn_count]:
@@ -79,7 +79,7 @@ class BasicMap(MapGenerator):
 
     def make_map(self):
         # Spawns
-        spawn_options = self.center.ring(self.radius-1)
+        spawn_options = list(self.center.ring(self.radius-1))
         assert len(spawn_options) >= self.spawn_count
         random.shuffle(spawn_options)
         for s in spawn_options[:self.spawn_count]:
