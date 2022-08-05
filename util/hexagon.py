@@ -158,7 +158,7 @@ class Hexagon:
         q = (SQRT3/3 * x) + (-1/3 * y)
         r = 2/3 * y
         offset = self.round_(q, r, -q-r)
-        return offset - hex
+        return offset - self
 
     # Constructors
     @classmethod
