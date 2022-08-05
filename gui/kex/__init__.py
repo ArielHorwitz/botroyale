@@ -8,8 +8,11 @@ import enum
 import random
 import numpy as np
 
-# Prevent kivy consuming script arguments (must be done before importing kivy)
+# Kivy configuration must be done before importing kivy
+# Prevent kivy consuming script arguments
 os.environ['KIVY_NO_ARGS'] = '1'
+# Prevent kivy spamming console on startup
+os.environ['KCFG_KIVY_LOG_LEVEL'] = 'warning'
 import kivy
 from kivy.clock import Clock
 from kivy.uix.widget import Widget
