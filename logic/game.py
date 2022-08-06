@@ -5,6 +5,7 @@ from api.logging import logger as glogger
 from api.gui import GameAPI as BaseGameAPI, Control, InputWidget
 from logic.maps import MAPS, DEFAULT_MAP_NAME, get_map_state
 from logic.battle_manager import BattleManager
+from logic.map_editor import MapEditor
 from bots import BOTS, BaseBot, bot_getter, NotFairError
 
 
@@ -13,9 +14,14 @@ FILTER_PREFIX = '╠-'
 
 
 class GameAPI(BaseGameAPI):
-    """A standard implementation of api.gui.GameAPI.
+    """A standard implementation of `api.gui.GameAPI`.
 
-    Uses BattleManager as the BattleAPI. Allows to select a map and choose bots."""
+    ### Battle
+    Uses `logic.battle_manager.BattleManager` as an API for the GUI. Allows to select a map and choose bots.
+
+    ### Map editing
+    Uses `logic.map_editor.MapEditor` as an API for the GUI.
+    """
 
     def get_menu_widgets(self) -> list[InputWidget]:
         """Overrides base class method."""
@@ -29,6 +35,7 @@ class GameAPI(BaseGameAPI):
             bot_ignore_toggles.append(InputWidget(bname, 'toggle', sendto=f'{FILTER_PREFIX}{b.NAME}'))
         return [
             InputWidget('Map Selection', 'spacer'),
+            InputWidget('Map editor mode', 'toggle', sendto='mapedit'),
             InputWidget('Map:', 'select', default=DEFAULT_MAP_NAME, options=MAPS, sendto='map'),
             InputWidget('Bot Selection', 'spacer'),
             InputWidget('Keep fair (equal numbers)', 'toggle', sendto='keep_fair'),
@@ -44,6 +51,8 @@ class GameAPI(BaseGameAPI):
 
     def get_new_battle(self, menu_values: dict[str, Any]) -> BattleManager | None:
         """Overrides base class method."""
+        if menu_values['mapedit']:
+            return MapEditor()
         # Parse arguments from menu values
         state = get_map_state(menu_values['map'])
         keep_fair = menu_values['keep_fair']
