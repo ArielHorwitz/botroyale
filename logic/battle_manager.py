@@ -5,7 +5,7 @@ from collections import deque
 from api.gui import TileGUI, VFX, GuiControlMenu, GuiControl
 from util.time import ping, pong
 from util.settings import Settings
-from util.hexagon import Hex, Hexagon, is_hex
+from util.hexagon import Hex, Hexagon
 from logic.state import State
 
 
@@ -31,7 +31,7 @@ class BattleManager(Battle):
     step_interval_ms = 1000 / STEP_RATE
     DEFAULT_CELL_BG = Settings.get('tilemap.|colors._default_tile', (0.25, 0.1, 0))
     OUT_OF_BOUNDS_CELL_BG = Settings.get('tilemap.|colors._out_of_bounds', (0.05, 0, 0.075))
-    WALL_COLOR = Settings.get('tilemap.|colors._walls', (1, 1, 1))
+    WALL_COLOR = Settings.get('tilemap.|colors._walls', (0.6, 0.6, 0.6))
     PIT_COLOR = Settings.get('tilemap.|colors._pits', (0.05, 0.05, 0.05))
     UNIT_COLORS = Settings.get('tilemap.|colors.|units', [
         (0.6, 0, 0.1),  # Red
@@ -301,9 +301,9 @@ class BattleManager(Battle):
             ):
         """Add a single vfx to the queue used by flush_vfx()."""
         assert isinstance(name, str)
-        assert is_hex(hex)
+        assert isinstance(hex, Hexagon)
         if direction is not None:
-            assert is_hex(direction)
+            assert isinstance(direction, Hexagon)
         start_step = self.replay_state.step_count
         expire_step = start_step + steps
         self.__vfx_queue.append(VFX(
