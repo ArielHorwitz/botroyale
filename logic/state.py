@@ -103,8 +103,7 @@ class State:
         self.death_radius = death_radius
         if pits is None:
             pits = set()
-        # TODO remove adding pits at ring of death (after checking compatibility)
-        self.pits = pits | set(ORIGIN.ring(death_radius))
+        self.pits = pits
         if walls is None:
             walls = set()
         self.walls = walls
