@@ -1,9 +1,8 @@
 import math
 import random
 import itertools
-from pathlib import Path
 import numpy as np
-from gui import kex, center_sprite, FONT, logger
+from gui import kex, center_sprite, FONT, logger, ASSETS_DIR
 import gui.kex.widgets as widgets
 from api.gui import GuiControlMenu, GuiControl
 from util.settings import Settings
@@ -17,7 +16,6 @@ MAX_TILE_RADIUS = Settings.get('tilemap.max_tile_radius', 300)
 UNIT_SIZE = Settings.get('tilemap.unit_size', 0.7)
 FONT_SCALE = Settings.get('tilemap.font_scale', 0.7)
 REDRAW_COOLDOWN = Settings.get('tilemap.|redraw_cooldown', 0.3)
-ASSETS_DIR = Path.cwd() / 'assets'
 SPRITES_DIR = ASSETS_DIR / 'sprites'
 VFX_DIR = ASSETS_DIR / 'vfx'
 HEX_PNG = str(SPRITES_DIR / 'hex.png')

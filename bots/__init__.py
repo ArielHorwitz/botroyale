@@ -3,10 +3,13 @@ import random
 from api.logging import logger
 from api.bots import BaseBot
 from pkgutil import iter_modules
-from pathlib import Path
 from importlib import import_module
 
+from util import PROJ_DIR
 from util.settings import Settings
+
+
+BOTS_DIR = PROJ_DIR / 'bots'
 
 
 def bot_importer():
@@ -14,9 +17,8 @@ def bot_importer():
     Imports all bots from modules in package
     """
     bots = {}
-    package_dir = Path(__file__).resolve().parent
     logger('Available bots:\n(Legend: » competitive - test)')
-    for (_, module_name, _) in iter_modules([str(package_dir)]):
+    for (_, module_name, _) in iter_modules([str(BOTS_DIR)]):
         module = import_module(f"{__name__}.{module_name}")
         if hasattr(module, "BOT"):
             module_bots = [getattr(module, "BOT")]

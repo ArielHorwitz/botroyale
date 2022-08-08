@@ -1,4 +1,4 @@
-from pathlib import Path
+from util import PROJ_DIR
 from util.settings import Settings
 from util.time import RateCounter
 from gui import kex, logger
@@ -10,7 +10,7 @@ from gui.tilemap import TileMap
 from logic.battle_manager import BattleManager
 
 
-ICON = str(Path.cwd() / 'icon.ico')
+ICON = str(PROJ_DIR / 'icon.ico')
 # User-configurable settings
 FPS = Settings.get('gui._fps', 60)
 WINDOW_SIZE = Settings.get('gui._window_size', [1280, 720])
