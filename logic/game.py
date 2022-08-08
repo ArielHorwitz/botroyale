@@ -3,14 +3,14 @@ import random
 from util.settings import Settings
 from api.logging import logger as glogger
 from api.gui import GameAPI as BaseGameAPI, Control, InputWidget
-from logic.maps import MAPS, get_map_state
+from logic.maps import MAPS, DEFAULT_MAP_NAME, get_map_state
 from logic.battle_manager import BattleManager
 from bots import BOTS, BaseBot, bot_getter, NotFairError
 
 
-MAP_NAMES = list(MAPS.keys())
 ADD_PREFIX = '╠+'
 FILTER_PREFIX = '╠-'
+
 
 class GameAPI(BaseGameAPI):
     """A standard implementation of api.gui.GameAPI.
@@ -29,7 +29,7 @@ class GameAPI(BaseGameAPI):
             bot_ignore_toggles.append(InputWidget(bname, 'toggle', sendto=f'{FILTER_PREFIX}{b.NAME}'))
         return [
             InputWidget('Map Selection', 'spacer'),
-            InputWidget('Map:', 'select', default=MAP_NAMES[0], options=MAP_NAMES, sendto='map'),
+            InputWidget('Map:', 'select', default=DEFAULT_MAP_NAME, options=MAPS, sendto='map'),
             InputWidget('Bot Selection', 'spacer'),
             InputWidget('Keep fair (equal numbers)', 'toggle', sendto='keep_fair'),
             InputWidget('No dummies', 'toggle', sendto='no_dummies'),

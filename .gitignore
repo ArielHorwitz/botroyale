@@ -1,3 +1,4 @@
+logic/maps/custom*
 dev/
 venv/
 __pycache__
