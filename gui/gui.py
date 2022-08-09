@@ -69,7 +69,7 @@ class App(widgets.App):
     def reset_logic(self):
         logger('Resetting logic...')
         self.root.clear_widgets()
-        self.im.clear_all(app_control_defaults=True)
+        self.im.clear_all()
         self.logic = BattleManager(gui_mode=True)
         self.make_widgets()
 
