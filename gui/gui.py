@@ -26,7 +26,9 @@ class App(widgets.App):
         self.icon = ICON
         kex.resize_window(WINDOW_SIZE)
         if START_MAXIMIZED:
-            widgets.kvWindow.maximize()
+            # Schedule maximizing so that the resize happens first, otherwise
+            # the resize has no effect.
+            widgets.kvClock.schedule_once(lambda *a: widgets.kvWindow.maximize())
         self.fps_counter = RateCounter(sample_size=FPS, starting_elapsed=1000/FPS)
         self.im = widgets.InputManager(
             logger=glogger if LOG_HOTKEYS else lambda *a: None)
