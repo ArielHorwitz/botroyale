@@ -2,7 +2,7 @@ from typing import Optional, Union, Sequence, Set
 from logic.battle import Battle
 
 from collections import deque
-from api.gui import TileGUI, VFX, GuiControlMenu, GuiControl
+from api.gui import BattleAPI, Tile, VFX, Control, ControlMenu
 from util.time import ping, pong
 from util.settings import Settings
 from util.hexagon import Hex, Hexagon
@@ -15,16 +15,17 @@ LOGIC_DEBUG = Settings.get('logging.battle', True)
 MAP_CENTER = Hex(0, 0)
 
 
-class BattleManager(Battle):
-    """The BattleManager is a wrapper for the Battle class.
+class BattleManager(Battle, BattleAPI):
+    """The BattleManager is a wrapper for the Battle class that inherits from
+    both logic.battle.Battle and api.gui.BattleAPI.
 
     It provides methods for parsing, formatting, and displaying information
     about the battle, as well as GUI-related controls and display getters.
 
     This class can behave surprisingly different than the base class Battle.
     This is because it keeps track of a replay index, allowing to "look at"
-    and get information of past states. Therefore it is recommended to be
-    familiar with the set_replay_index() method.
+    past states. Therefore it is recommended to be familiar with the
+    set_replay_index() method.
     """
 
     show_coords = False
@@ -49,31 +50,31 @@ class BattleManager(Battle):
     ])
 
     def __init__(self,
-            *args,
             gui_mode: Optional[bool] = False,
             spoiler_mode: Optional[bool] = False,
             **kwargs,
             ):
         """
-        args            -- positional arguments for Battle.__init__
-        kwargs          -- keyword arguments for Battle.__init__
+        kwargs          -- keyword arguments for Battle.__init__()
         gui_mode        -- if True, will set arguments appropriate for the GUI.
         spoiler_mode    -- if True, will include information during replays that
                             may spoil the results.
         """
+        if gui_mode:
+            kwargs['only_bot_turn_states'] = False
+            kwargs['enable_logging'] = LOGIC_DEBUG
+        Battle.__init__(self, **kwargs)
+        BattleAPI.__init__(self)
         self.__replay_index = 0
         self.__spoiler_mode = spoiler_mode
         self.autoplay = False
         self.__last_step = ping()
-        self.__vfx_queue = deque()
-        self.__clear_vfx_flag = False
-        if gui_mode:
-            kwargs['only_bot_turn_states'] = False
-            kwargs['enable_logging'] = LOGIC_DEBUG
-            spoiler_mode = False
-        super().__init__(*args, **kwargs)
         self.unit_colors = [self.UNIT_COLORS[bot.COLOR_INDEX % len(self.UNIT_COLORS)] for bot in self.bots]
         self.unit_sprites = [bot.SPRITE for bot in self.bots]
+
+    @property
+    def map_name(self) -> str:
+        return self._map_name
 
     # Replay
     def set_replay_index(self,
@@ -157,6 +158,12 @@ class BattleManager(Battle):
             if self.replay_state.game_over and not backwards:
                 break
             self.set_replay_index(index_delta=delta)
+
+    def preplay(self):
+        """Play the entire battle, then set the replay_index to the start."""
+        self.play_all()
+        self.flush_vfx()
+        self.set_replay_index(0)
 
     # Info strings
     def get_info_str(self, state_index: Optional[int] = None) -> str:
@@ -248,7 +255,7 @@ class BattleManager(Battle):
         unit_strs.append('___________ Next turns in round __________')
         unit_strs.extend(self.get_unit_str(unit_id, state_index) for unit_id in state.round_remaining_turns[1:])
         unit_strs.append('----------- Awaiting next round ----------')
-        unit_strs.extend(self.get_unit_str(unit_id, state_index) for unit_id in state.round_done_turns)
+        unit_strs.extend(self.get_unit_str(unit_id, state_index) for unit_id in state.round_done_turns if unit_id not in state.death_order)
         unit_strs.append('================== Dead ==================')
         unit_strs.extend(self.get_unit_str(unit_id, state_index) for unit_id in reversed(state.death_order))
         return '\n'.join(unit_strs)
@@ -294,28 +301,11 @@ class BattleManager(Battle):
         self.step_interval_ms = 1000 / step_rate
         self.__last_step = ping()
 
-    def add_vfx(self, name: str, hex: Hexagon,
-            direction: Optional[Hexagon] = None,
-            steps: int = 2,
-            expire_seconds: Optional[float] = None,
-            ):
-        """Add a single vfx to the queue used by flush_vfx()."""
-        assert isinstance(name, str)
-        assert isinstance(hex, Hexagon)
-        if direction is not None:
-            assert isinstance(direction, Hexagon)
-        start_step = self.replay_state.step_count
-        expire_step = start_step + steps
-        self.__vfx_queue.append(VFX(
-            name, hex, direction,
-            start_step, expire_step, expire_seconds,
-            ))
-
     def add_state_vfx(self, state_index: int, redraw_last_steps: bool = False):
         """Add all vfx of state_index to queue.
-        Also add vfx from last steps if `redraw_last_steps`."""
+        Also clear existing vfx and add vfx from last steps if `redraw_last_steps`."""
         if redraw_last_steps:
-            self.__clear_vfx_flag = True
+            self.clear_vfx()
         start_index = max(0, state_index - 1) if redraw_last_steps else state_index
         for index in range(start_index, state_index + 1):
             for effect in self.history[index].effects:
@@ -339,7 +329,7 @@ class BattleManager(Battle):
 
     # GUI API
     def update(self):
-        """Should be called continuously by the GUI. Performs autoplay."""
+        """Called continuously by the GUI. Performs autoplay."""
         if self.replay_state.game_over:
             self.autoplay = False
         if not self.autoplay:
@@ -350,44 +340,54 @@ class BattleManager(Battle):
             leftover = time_delta - self.step_interval_ms
             self.__last_step = ping() - leftover
 
-    def next_step(self):
-        """Called when a single step (smallest unit of time) is to be played."""
-        self.set_replay_index(index_delta=1)
+    def get_time(self) -> int:
+        """Overrides base class method."""
+        return self.replay_state.step_count
 
-    def flush_vfx(self) -> Sequence[VFX]:
-        """Clears and returns the vfx from queue."""
-        r = self.__vfx_queue
-        self.__vfx_queue = deque()
-        return r
+    def get_controls(self) -> ControlMenu:
+        """Overrides base class method."""
+        return {
+            'Battle': [
+                Control('Autoplay', self.toggle_autoplay, 'spacebar'),
+                Control('Preplay <!!!>', self.preplay, '^+ p'),
+                *[Control(f'Set speed {r}', lambda r=r: self.set_step_rate(r), f'{i+1}') for i, r in enumerate(STEP_RATES[:5])],
+            ],
+            'Replay': [
+                Control('Battle start', lambda: self.set_replay_index(0), '^+ left'),
+                Control('Battle end <!!!>', lambda: self.play_all(), '^+ right'),
+                Control('Live', lambda: self.set_replay_index(), '^ l'),
+                Control('Next step', lambda: self.set_replay_index(index_delta=1), 'right'),
+                Control('Prev step', lambda: self.set_replay_index(index_delta=-1), 'left'),
+                Control('+10 steps', lambda: self.set_replay_index(index_delta=10), '+ right'),
+                Control('-10 steps', lambda: self.set_replay_index(index_delta=-10), '+ left'),
+                Control('Next round', lambda: self.set_to_next_round(), '^ right'),
+                Control('Prev round', lambda: self.set_to_next_round(backwards=True), '^ left'),
+            ],
+            'Debug': [
+                Control('Map coordinates', self.toggle_coords, '^+ d'),
+                Control('Spoiler mode', self.toggle_spoilers, '^+ o'),
+            ],
+        }
 
-    def clear_vfx_flag(self) -> bool:
-        """Returns True if the VFX that are mid-animation in the GUI should be cleared."""
-        if self.__clear_vfx_flag:
-            self.__clear_vfx_flag = False
-            return True
-        return False
-
+    # Info panel
     def get_info_panel_text(self) -> str:
-        """Returns a multiline string with a summary of the current game state."""
+        """Overrides base class method."""
         return self.get_info_str(self.replay_index)
 
-    def get_info_panel_color(self) -> Sequence[float]:
-        """Color of the info panel in GUI."""
+    def get_info_panel_color(self) -> tuple[float, float, float]:
+        """Overrides base class method."""
         if self.replay_mode:
             # Blue-ish
-            return (0.1, 0.25, 0.2)
+            return 0.1, 0.25, 0.2
         # Green-ish
-        return (0.15, 0.3, 0.05)
+        return 0.15, 0.3, 0.05
 
-    def get_gui_tile_info(self, hex: Hexagon) -> TileGUI:
-        """This method is called for every hex currently visible on the map,
-        and returns a TileGUI object."""
+    # Tile map
+    def get_gui_tile_info(self, hex: Hexagon) -> Tile:
+        """Overrides base class method."""
         state = self.replay_state
-        bg_text = ''
         # BG
-        if hex in self.highlighted_tiles:
-            bg_color = 1, 1, 1
-        elif hex.get_distance(MAP_CENTER) >= state.death_radius:
+        if hex.get_distance(MAP_CENTER) >= state.death_radius:
             bg_color = self.OUT_OF_BOUNDS_CELL_BG
         elif hex in state.pits:
             bg_color = self.PIT_COLOR
@@ -406,22 +406,32 @@ class BattleManager(Battle):
                 fg_color = self.unit_colors[unit_id]
             fg_text = f'{unit_id}'
             fg_sprite = self.unit_sprites[unit_id]
+            current = state.current_unit
+            if state.current_unit is not None:
+                if hex == state.positions[state.current_unit]:
+                    bg_color = 1, 1, 1
         else:
             fg_color = None
             fg_text = ''
             fg_sprite = None
         if self.show_coords:
             fg_text = ', '.join(str(_) for _ in hex.xy)
-        return TileGUI(
-            bg_color=bg_color,
-            bg_text=bg_text,
-            fg_color=fg_color,
-            fg_text=fg_text,
-            fg_sprite=fg_sprite,
+        return Tile(
+            bg=bg_color,
+            color=fg_color,
+            sprite=fg_sprite,
+            text=fg_text,
             )
 
+    def get_map_size_hint(self) -> int:
+        """Overrides base class method."""
+        death_radius = self.replay_state.death_radius
+        if self.replay_state.round_count == 0:
+            death_radius -= 1
+        return max(5, death_radius)
+
     def handle_hex_click(self, hex: Hexagon, button: str):
-        """Called when a tile is clicked on in the GUI."""
+        """Overrides base class method."""
         self.logger(f'Clicked {button} on: {hex}')
         if hex in self.replay_state.positions:
             unit_id = self.replay_state.positions.index(hex)
@@ -438,57 +448,3 @@ class BattleManager(Battle):
             else:
                 vfx = 'mark-blue'
             self.add_vfx(vfx, hex, steps=1)
-
-    def get_map_size_hint(self) -> int:
-        """The radius of the map size for the GUI to display."""
-        death_radius = self.replay_state.death_radius
-        if self.replay_state.round_count == 0:
-            death_radius -= 1
-        return max(5, death_radius)
-
-    @property
-    def highlighted_tiles(self) -> Set[Hexagon]:
-        """A set of hexes to be highlighted."""
-        state = self.replay_state
-        if state.round_remaining_turns:
-            return {state.positions[state.current_unit]}
-        return set()
-
-    def get_time(self) -> int:
-        """Game time for GUI purposes."""
-        return self.replay_state.step_count
-
-    def get_controls(self) -> Sequence[GuiControlMenu]:
-        """Return a list of GuiControlMenus of GuiControl objects for buttons/hotkeys in GUI."""
-        return [
-            GuiControlMenu('Battle', [
-                GuiControl('Autoplay', self.toggle_autoplay, 'spacebar'),
-                GuiControl('Next step', lambda: self.set_replay_index(index_delta=1), 'right'),
-                GuiControl('Prev step', lambda: self.set_replay_index(index_delta=-1), 'left'),
-                GuiControl('+10 steps', lambda: self.set_replay_index(index_delta=10), '+ right'),
-                GuiControl('-10 steps', lambda: self.set_replay_index(index_delta=-10), '+ left'),
-                GuiControl('Next round', lambda: self.set_to_next_round(), '^ right'),
-                GuiControl('Prev round', lambda: self.set_to_next_round(backwards=True), '^ left'),
-                GuiControl('Battle start', lambda: self.set_replay_index(0), '^+ left'),
-                GuiControl('Battle end <!!!>', lambda: self.play_all(), '^+ right'),
-                GuiControl('Live', lambda: self.set_replay_index(), '^ l'),
-                GuiControl('Preplay <!!!>', self.preplay, '^+ p'),
-                *[GuiControl(f'Set step rate {r}', lambda r=r: self.set_step_rate(r), f'{i+1}') for i, r in enumerate(STEP_RATES[:5])],
-            ]),
-            GuiControlMenu('Debug', [
-                GuiControl('Map coordinates', self.toggle_coords, '^+ d'),
-                GuiControl('Battle spoiler mode', self.toggle_spoilers, '^+ o'),
-            ]),
-        ]
-
-    def preplay(self):
-        """Play the entire battle, then set the replay_index to the start."""
-        self.logger('Playing battle to completion...')
-        self.play_all()
-        self.flush_vfx()
-        self.set_replay_index(0)
-        self.logger('Battle played to completion.')
-
-    @property
-    def map_name(self) -> str:
-        return self._map_name
