@@ -50,11 +50,12 @@ class GameAPI(BaseGameAPI):
         ]
 
     def get_new_battle(self, menu_values: dict[str, Any]) -> Union[BattleManager, MapEditor,  None]:
+        map_name = menu_values['map']
         """Overrides base class method."""
         if menu_values['mapedit']:
-            return MapEditor()
+            return MapEditor(load_map=map_name)
         # Parse arguments from menu values
-        state = get_map_state(menu_values['map'])
+        state = get_map_state(map_name)
         keep_fair = menu_values['keep_fair']
         no_dummies = menu_values['no_dummies']
         all_play = menu_values['all_play']

@@ -49,9 +49,11 @@ class MapEditor(MapCreator, BattleAPI):
         'map may be fair and symmetrical.',
         ])
 
-    def __init__(self):
+    def __init__(self, load_map: Optional[str] = None):
         BattleAPI.__init__(self)
         MapCreator.__init__(self, mirror_mode=6)
+        if load_map is not None:
+            self.load(load_map)
         self.show_coords = False
         self.brush = 'pit'
 

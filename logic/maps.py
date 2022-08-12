@@ -34,15 +34,16 @@ def get_map_state(map_name: Optional[str] = None) -> State:
     use the default map configured in settings."""
     if map_name is None:
         map_name = DEFAULT_MAP_NAME
-    return load_map(map_name)
+    return _load_map(map_name)
 
 
-def load_map(map_name: Optional[str] = None, use_default: bool = True) -> State:
+def _load_map(map_name: Optional[str] = None, use_default: bool = True) -> State:
     """Returns a state based on the map saved on disk by name.
 
-    Passing None to map_name will use the default map name configured in
-    settings. When use_default is true, the default state will be returned if
-    the map wasn't found."""
+    The default state will be returned if `map_name` is None or if `use_default`
+    is true and the map wasn't found."""
+    if map_name is None:
+        return DEFAULT_STATE.copy()
     map_file = MAP_DIR / f'{map_name}.json'
     if not map_file.is_file():
         if use_default:
@@ -58,7 +59,7 @@ def load_map(map_name: Optional[str] = None, use_default: bool = True) -> State:
     )
 
 
-def save_map(map_name: str, state: State, allow_overwrite: bool = True):
+def _save_map(map_name: str, state: State, allow_overwrite: bool = True):
     """Saves the map based on the current state to disk by name. The
     allow_overwrite argument will allow overwriting an existing file."""
     data = {
@@ -84,7 +85,7 @@ class MapCreator:
             ):
         self.set_mirror_mode(mirror_mode)
         if initial_state is None:
-            initial_state = load_map()
+            initial_state = _load_map()
         self.state = initial_state
 
     def set_mirror_mode(self, mode: int = 1):
@@ -93,13 +94,17 @@ class MapCreator:
         self.mirror_mode = mode
         self.mirror_rot = int(6 / mode)
 
-    def save(self):
+    def save(self, file_name: Optional[str] = None):
         """Save the map to file."""
-        save_map('custom', self.state)
+        if file_name is None:
+            file_name = 'custom'
+        _save_map(file_name, self.state)
 
-    def load(self):
+    def load(self, file_name: Optional[str] = None):
         """Load the map from file."""
-        self.state = load_map('custom')
+        if file_name is None:
+            file_name = 'custom'
+        self.state = _load_map(file_name)
 
     def increment_death_radius(self, delta: int):
         """Increase the death radius by a delta. Can be negative.
