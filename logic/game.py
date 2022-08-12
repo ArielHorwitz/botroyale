@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, Union
 import random
 from util.settings import Settings
 from api.logging import logger as glogger
@@ -49,7 +49,7 @@ class GameAPI(BaseGameAPI):
             *bot_ignore_toggles,
         ]
 
-    def get_new_battle(self, menu_values: dict[str, Any]) -> BattleManager | None:
+    def get_new_battle(self, menu_values: dict[str, Any]) -> Union[BattleManager, MapEditor,  None]:
         """Overrides base class method."""
         if menu_values['mapedit']:
             return MapEditor()

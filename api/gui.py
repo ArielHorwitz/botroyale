@@ -103,8 +103,8 @@ class VFX:
     name: str
     hex: Hexagon
     direction: Hexagon
-    start_step: int | float
-    expire_step: int | float
+    start_step: Union[int, float]
+    expire_step: Union[int, float]
     expire_seconds: float
 
     def asdict(self):
@@ -228,7 +228,7 @@ class GameAPI:
     Battles are created using the get_new_battle method, which return a
     BattleAPI object."""
 
-    def get_new_battle(self, menu_values: dict[str, Any]) -> BattleAPI | None:
+    def get_new_battle(self, menu_values: dict[str, Any]) -> Union[BattleAPI, None]:
         """Called by the GUI when the user requests to start a new battle.
         Returns a BattleAPI object or None if we decide not to start a new battle.
 
