@@ -14,6 +14,7 @@ TILE_PADDING = Settings.get('tilemap._tile_padding', 10)
 MAX_TILE_RADIUS = Settings.get('tilemap.max_tile_radius', 300)
 UNIT_SIZE = Settings.get('tilemap.unit_size', 0.7)
 FONT_SCALE = Settings.get('tilemap.font_scale', 0.7)
+MAX_FONT_SIZE = Settings.get('tilemap.max_font_size', 500)
 REDRAW_COOLDOWN = Settings.get('tilemap.|redraw_cooldown', 0.3)
 SPRITES_DIR = ASSETS_DIR / 'sprites'
 VFX_DIR = ASSETS_DIR / 'vfx'
@@ -437,6 +438,7 @@ class Tile(widgets.kvInstructionGroup):
     def set_text(self, bg, fg):
         if fg:
             font_size = FONT_SCALE * self._bg.size[1] / 2
+            font_size = min(font_size, MAX_FONT_SIZE)
             outline_width = font_size / 10
             self._fg_text.texture = t = widgets.text_texture(fg,
                 font=FONT, font_size=font_size, outline_width=outline_width)
@@ -445,6 +447,7 @@ class Tile(widgets.kvInstructionGroup):
             self._bg_text.size = 0, 0
         elif bg:
             font_size = FONT_SCALE * self._bg.size[1] / 2
+            font_size = min(font_size, MAX_FONT_SIZE)
             outline_width = font_size / 10
             self._bg_text.texture = t = widgets.text_texture(bg,
                 font=FONT, font_size=font_size, outline_width=outline_width)
