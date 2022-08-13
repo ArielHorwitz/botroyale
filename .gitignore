@@ -1,8 +1,20 @@
-logic/maps/custom*
-dev/
+
+# Environment and runtime
 venv/
 __pycache__
 .idea
+
+
+# Docs
+docs/botroyale
+
+
+# Custom user data
 settings.json
 .deletesettings
+logic/maps/custom*
 *.psd
+
+
+# Convenient development temp folder
+dev/

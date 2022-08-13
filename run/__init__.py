@@ -1,4 +1,8 @@
+"""
+The first package to be imported and executed.
 
+The function `run_script` will be called to parse the command line arguments and decide which submodule to import and call it's `run()` function.
+"""
 import sys
 from importlib import import_module
 from pkgutil import iter_modules
@@ -11,7 +15,7 @@ SCRIPT_DIR = PROJ_DIR / 'run'
 
 def run_script():
     """Imports the module requested from the main program arguments and calls
-    a "run()" function if exists. Searches the "run" directory for modules."""
+    a `run()` function if exists. Searches the "run" directory for modules."""
     print(f'\n>> Welcome to {FULL_TITLE} <<\n')
     args = _parse_args()
     if args.list:
