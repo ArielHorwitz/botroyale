@@ -1,4 +1,6 @@
-
+"""
+Writing, loading, and opening files.
+"""
 import os
 import subprocess
 import platform
@@ -18,7 +20,7 @@ def file_dump(file: os.PathLike, d: str, clear: bool = True):
 
 
 def popen_path(path: os.PathLike):
-    """Opens the given path using `builtins.subprocess.Popen`."""
+    """Opens the given path using `subprocess.Popen`."""
     if platform.system() == 'Windows':
         os.startfile(path)
     elif platform.system() == 'Darwin':

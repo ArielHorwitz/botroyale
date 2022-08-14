@@ -8,6 +8,8 @@ arguments (see "main.py --help"). If found, it will be imported. If it is
 imported and it has a callable attribute `run`, then it will be called without
 arguments.
 """
+
+
 from typing import Optional
 from logic.battle import Battle
 from logic.maps import get_map_state

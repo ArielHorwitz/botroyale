@@ -1,3 +1,6 @@
+"""
+Home of the `logic.battle.Battle` class.
+"""
 from typing import Union, Optional, Sequence, Callable
 import numpy as np
 from api.logging import Logger, logger as glogger

@@ -1,21 +1,54 @@
+"""
+Time utilities.
+"""
+__pdoc__ = {
+    'RateCounter': False,
+    'ratecounter': False,
+}
+
+
+from typing import Optional, Callable
 import time
 import contextlib
 import numpy as np
 
 
-def ping():
-    """Generate a time value to be later used by pong."""
+def ping() -> float:
+    """Generate a time value to be later used by `pong`."""
     return time.perf_counter() * 1000
 
 
-def pong(ping_: float):
-    """Returns the time delta in ms."""
+def pong(ping_: float) -> float:
+    """Return the time delta in ms from a value given by `ping`."""
     return (time.perf_counter() * 1000) - ping_
 
 
 @contextlib.contextmanager
-def pingpong(description='Pingpong', logger=None, return_elapsed=None):
-    """A context manager to print and record the elapsed time of execution of a code block."""
+def pingpong(
+        description: str='Pingpong',
+        logger: Optional[Callable[[str], None]] = None,
+        return_elapsed: Optional[Callable[[float], None]] = None
+        ):
+    """
+    A context manager to print and record the elapsed time of execution of a code block.
+
+    Args:
+        description: Description to add to the logging callback.
+        logger: Callback that takes a string with the pingpong result.
+        return_elapsed: Callback that takes a float of the pingpong result.
+
+    <u>__Example usage:__</u>
+    ```
+    with pingpong('Counting to a million', logger=print, return_elapsed=callback):
+        count = 0
+        for i in range(1_000_000):
+            count += 1
+    ```
+    Will result in a console output:
+    ```'Counting to a million elapsed in: 1.234 ms'```
+
+    And will call `callback` with an argument `1.234`.
+    """
     p = ping()
     yield p
     elapsed = pong(p)
@@ -23,14 +56,6 @@ def pingpong(description='Pingpong', logger=None, return_elapsed=None):
         logger(f'{description} elapsed in: {elapsed:.3f} ms')
     if callable(return_elapsed):
         return_elapsed(elapsed)
-
-
-@contextlib.contextmanager
-def ratecounter(r):
-    """A context manager to record elapsed time of execution of a code block, using a RateCounter object."""
-    p = r.ping()
-    yield p
-    r.pong()
 
 
 class RateCounter:
@@ -98,3 +123,11 @@ class RateCounter:
     @property
     def timed_block(self):
         return ratecounter(self)
+
+
+@contextlib.contextmanager
+def ratecounter(r: RateCounter):
+    """A context manager to record elapsed time of execution of a code block, using a RateCounter object."""
+    p = r.ping()
+    yield p
+    r.pong()

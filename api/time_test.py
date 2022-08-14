@@ -1,4 +1,7 @@
-from typing import Optional, Sequence, Mapping
+"""
+Home of `timing_test` - a tool for measuring calculation time of bots.
+"""
+from typing import Optional, Sequence, Mapping, NamedTuple
 import numpy as np
 from collections import namedtuple
 import random
@@ -7,7 +10,11 @@ from logic.battle_manager import BattleManager
 from bots.idle_bot import DummyBot
 
 
-TimeResult = namedtuple('TimeResult', ['mean', 'max'])
+class TimeResult(NamedTuple):
+    mean: float
+    """Mean calculation time"""
+    max: float
+    """Max calculation time"""
 
 
 def timing_test(
@@ -16,7 +23,7 @@ def timing_test(
         shuffle_bots: bool = True,
         disable_logging: bool = True,
         verbose_results: bool = True,
-        ) -> Mapping[str, TimeResult]:
+        ) -> dict[str, TimeResult]:
     """A timing test for bots.
 
     Plays a number of battles and logs bot calculation times. Returns a
@@ -25,11 +32,15 @@ def timing_test(
     Asserts each bot specified in `bots` will play in every game. If more bots
     than specified are required, dummy bots will be supplied.
 
-    bots            -- a list of bot classes
-    battle_count    -- number of battles to play
-    shuffle_bots    -- automatically shuffle the order of the bots for each battle
-    disable_logging -- disable logging during battles
-    verbose_results -- show time table of each battle
+    Args:
+        bots: List of bot classes.
+        battle_count: Number of battles to play.
+        shuffle_bots: Automatically shuffle the order of the bots for each battle.
+        disable_logging: Disable logging during battles.
+        verbose_results: Show time table of each battle.
+
+    Returns:
+        Dictionary of bot names mapped to a `TimeResult`.
     """
     bots = [b for b in bots if b.NAME != 'dummy']
     requested_bot_count = len(bots)

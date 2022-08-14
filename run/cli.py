@@ -1,3 +1,8 @@
+"""
+A command line interface for running functions that don't require the GUI.
+
+Uses `input` and `print` to interface with the user.
+"""
 from collections import Counter
 from api.time_test import timing_test
 from logic.maps import MAPS, get_map_state
@@ -171,6 +176,7 @@ def play_complete(battle: BattleManager) -> tuple[str, list[str]]:
 
 
 def run():
+    """Queries the user for a function to run."""
     while True:
         print('\n'.join([
             '\n\n',
