@@ -44,7 +44,7 @@ class SleeperBot(RandomBot):
 
 class SnoozerBot(SleeperBot):
     NAME = 'snoozer'
-    sleep_time = 1
+    sleep_time = 0.2
 
 
 BOTS = [RandomBot, SleeperBot, SnoozerBot]
