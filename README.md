@@ -26,11 +26,11 @@ For example:
 `python main.py cli`
 
 
-### Writing bots
-To write a bot it is recommended to start with the [guides](https://github.com/ArielHorwitz/bot-royale/wiki). Starting is as simple as copying an existing bot with a new name.
-
-
-### Building the docs
+### Building the docs (optional)
 To (re)build the docs from source, run:
 
 `python main.py docs`
+
+
+### Writing bots
+See the [guides](docs/guides/index.html).

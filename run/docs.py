@@ -21,6 +21,7 @@ INCLUDE_SUBPACKAGES = [
     'logic',
     'run',
     'util',
+    'docs.guides',
 ]
 DOCS_DIR = PROJ_DIR / 'docs'
 """The docs folder. Includes the html docs themselves and templates."""
