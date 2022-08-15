@@ -1,10 +1,9 @@
-from pathlib import Path
 import json
-from util import file_load, file_dump
+from util import PROJ_DIR, file_load, file_dump
 
 
-CLEAR_SETTINGS = (Path.cwd() / '.deletesettings').is_file()
-SETTINGS_FILE = Path.cwd() / 'settings.json'
+CLEAR_SETTINGS = (PROJ_DIR / '.deletesettings').is_file()
+SETTINGS_FILE = PROJ_DIR / 'settings.json'
 
 
 class Settings:

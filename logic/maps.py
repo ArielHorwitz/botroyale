@@ -1,228 +1,215 @@
 from typing import Optional
-from collections import namedtuple
-import itertools
-import random
-import numpy as np
-from logic.state import State
-from api.logging import logger
+import json
+from util import PROJ_DIR, file_load, file_dump
 from util.settings import Settings
-from util.hexagon import Hex
+from util.hexagon import Hexagon, Hex, ORIGIN
+from api.logging import logger
+from logic.state import State
 
 
-DEFAULT_MAP_NAME = Settings.get('map.selected_map', 'danger')
+def _find_maps() -> list[str]:
+    """Return list of map names found on disk."""
+    map_names = []
+    for file in MAP_DIR.iterdir():
+        if not len(file.suffixes) == 1:
+            continue
+        if not file.suffix == '.json':
+            continue
+        map_names.append(file.stem)
+    return map_names
 
 
-class MapGenerator:
-    radius = 5
-    def __init__(self):
-        self.center = Hex(0, 0)
-        self.empty_tiles = list(set(self.center.range(self.radius-1)) - {self.center, *self.center.neighbors})
-        random.shuffle(self.empty_tiles)
-        self.pits = set()
-        self.walls = set()
-        self.spawns = []
-        self.make_map()
+MAP_DIR = PROJ_DIR / 'logic' / 'maps'
+if not MAP_DIR.is_dir():
+    MAP_DIR.mkdir(parents=True, exist_ok=True)
+DEFAULT_STATE = State(death_radius=12)
+DEFAULT_MAP_NAME = Settings.get('logic.default_map', 'danger')
+MAPS = tuple(_find_maps())
+assert DEFAULT_MAP_NAME in MAPS
+print(f'Default map: {DEFAULT_MAP_NAME}')
 
-    def add_spawn(self, tile):
-        self.spawns.append(tile)
-        if tile in self.empty_tiles:
-            self.empty_tiles.remove(tile)
-        self.validate_map()
-
-    def add_pit(self, tile):
-        self.pits.add(tile)
-        if tile in self.empty_tiles:
-            self.empty_tiles.remove(tile)
-        self.validate_map()
-
-    def add_wall(self, tile):
-        self.walls.add(tile)
-        if tile in self.empty_tiles:
-            self.empty_tiles.remove(tile)
-        self.validate_map()
-
-    def make_map(self):
-        pass
-
-    def validate_map(self):
-        assert not set(self.spawns) & self.pits
-        assert not set(self.spawns) & self.walls
-        assert not self.pits & self.walls
-
-    def get_state(self):
-        self.validate_map()
-        return State(
-            death_radius=self.radius+2,
-            positions=self.spawns,
-            pits=self.pits,
-            walls=self.walls,
-            )
-
-
-class EmptyMap(MapGenerator):
-    spawn_count = 12
-
-    def make_map(self):
-        # Spawns
-        spawn_options = list(self.center.ring(self.radius-1))
-        assert len(spawn_options) >= self.spawn_count
-        random.shuffle(spawn_options)
-        for s in spawn_options[:self.spawn_count]:
-            self.add_spawn(s)
-
-
-class BasicMap(MapGenerator):
-    radius = 10
-    pit_freq = 0.075
-    wall_freq = 0.15
-    spawn_count = 12
-
-    def make_map(self):
-        # Spawns
-        spawn_options = list(self.center.ring(self.radius-1))
-        assert len(spawn_options) >= self.spawn_count
-        random.shuffle(spawn_options)
-        for s in spawn_options[:self.spawn_count]:
-            self.add_spawn(s)
-        # Pits
-        pit_count = round(len(self.empty_tiles) * self.pit_freq)
-        wall_count = round(len(self.empty_tiles) * self.wall_freq)
-        for i in range(pit_count):
-            if not self.empty_tiles:
-                break
-            self.add_pit(self.empty_tiles.pop())
-        # Walls
-        for i in range(wall_count):
-            if not self.empty_tiles:
-                break
-            self.add_wall(self.empty_tiles.pop())
-
-
-class GiantMap(BasicMap):
-    radius = 25
-
-
-class ClassicMap(MapGenerator):
-    radius = 15
-    spawn_count = 12
-
-    def make_map(self):
-        # Spawns
-        spawns = Hex(6, -14), Hex(-6, -14), Hex(3, -14), Hex(-3, -14)
-        walls = set()
-        radial_walls = list(self.center.straight_line(Hex(0, -1), max_distance=self.radius-1))
-        radial_walls = set(w for i, w in enumerate(radial_walls[1:]) if i%4 != 2)
-        walls |= radial_walls
-        jebait_corridor = {
-            Hex(-2, -12), Hex(-1, -12), Hex(0, -12), Hex(1, -12), Hex(2, -12),
-            Hex(-2, -14), Hex(-1, -14), Hex(0, -14), Hex(1, -14), Hex(2, -14),
-        }
-        walls |= jebait_corridor
-        walls.add(Hex(0, -8))
-
-        pits = set()
-        pits |= {Hex(-2, -6), Hex(-1, -6), Hex(1, -6), Hex(2, -6)}
-        pits |= {Hex(-5, -12), Hex(-4, -12), Hex(4, -12), Hex(5, -12)}
-        pits |= {Hex(-2, -9), Hex(-1, -10), Hex(0, -10), Hex(1, -10), Hex(1, -9)}
-
-        for rot in range(6):
-            for spawn in spawns:
-                self.add_spawn(spawn.rotate(rot))
-            for pit in pits:
-                self.add_pit(pit.rotate(rot))
-            for wall in walls:
-                self.add_wall(wall.rotate(rot))
-
-        for rpit in range(15):
-            self.add_pit(self.empty_tiles.pop(0))
-        for rwall in range(15):
-            self.add_wall(self.empty_tiles.pop(0))
-
-
-class DangerMap(MapGenerator):
-    radius = 12
-    random_radius = 10
-
-    pits_spiral_start_pos = Hex(0, 0)
-    pits_spiral_line_sizes = (2, 3, 5, 8)
-    pits_gap_prob = 0.075
-
-    walls_spiral_start_pos = Hex(0, 0)
-    walls_spiral_line_sizes = (2, 3, 5, 8)
-    walls_gap_prob = 0.05
-
-    def make_map(self):
-        # Spawns
-        spawns = Hex(0, -10), Hex(5, -10)
-        for rot in range(6):
-            for spawn in spawns:
-                spawn_tile = spawn.rotate(rot)
-                safe_tiles = spawn_tile.neighbors
-                self.empty_tiles = [t for t in self.empty_tiles if t not in safe_tiles]
-                self.add_spawn(spawn_tile)
-
-        center_pits = [Hex(0, -1), Hex(-1, 0), Hex(0, 1), Hex(-4, 3), Hex(-4, 1),
-                       Hex(2, 3), Hex(4, 2), Hex(1, -4), Hex(-1, -5)]
-        for pit in center_pits:
-            self.add_pit(pit)
-
-        spiral_pits = self.spiral_calc(self.pits_spiral_start_pos,
-                                       self.pits_spiral_line_sizes,
-                                       False,
-                                       self.pits_gap_prob
-                                       )
-        spiral_walls = self.spiral_calc(self.walls_spiral_start_pos,
-                                        self.walls_spiral_line_sizes,
-                                        True,
-                                        self.walls_gap_prob
-                                        )
-        for rot in range(3):
-            for pit in spiral_pits:
-                pit_pos = pit.rotate(rot * 2)
-                if pit_pos in self.empty_tiles:
-                    self.add_pit(pit_pos)
-
-            for wall in spiral_walls:
-                wall_pos = wall.rotate((rot * 2))
-                if wall_pos in self.empty_tiles:
-                    self.add_wall(wall_pos)
-
-        random_tile_options = [t for t in self.empty_tiles if t.get_distance(Hex(0, 0)) >= self.random_radius]
-        if len(random_tile_options) > 40:
-            for rpit in range(15):
-                self.add_pit(random_tile_options.pop(0))
-            for rwall in range(15):
-                self.add_wall(random_tile_options.pop(0))
-
-    def spiral_calc(self, start_pos=Hex(0, 0), line_sizes=(2, 3, 5, 8),
-                    inverse=False, gap_prob=0.2):
-        spiral = set()
-        pos = start_pos
-        for n_index in range(len(line_sizes)):
-            current_neighbor = pos.neighbors[((6 - n_index) if inverse else n_index) % 6]
-            spiral.add(current_neighbor)
-            for tile in pos.straight_line(current_neighbor, line_sizes[n_index] - 1):
-                if tile not in self.spawns and gap_prob < random.random():
-                    spiral.add(tile)
-                pos = tile
-        return spiral
-
-
-MAPS = {
-    'danger': DangerMap,
-    'classic': ClassicMap,
-    'basic': BasicMap,
-    'giant': GiantMap,
-    'empty': EmptyMap,
-}
-logger('\n'.join([f'Available maps:', *(f'- {m}' for m in MAPS.keys())]))
 
 def get_map_state(map_name: Optional[str] = None) -> State:
-    """Returns the initial state of `map_name`.
-
-    `map_name` defaults to the name configured in settings.
-    """
+    """Return the state based on the map by name. Passing None to map_name will
+    use the default map configured in settings."""
     if map_name is None:
         map_name = DEFAULT_MAP_NAME
-    map_generator = MAPS[map_name]()
-    return map_generator.get_state()
+    return _load_map(map_name)
+
+
+def _load_map(map_name: Optional[str] = None, use_default: bool = True) -> State:
+    """Returns a state based on the map saved on disk by name.
+
+    The default state will be returned if `map_name` is None or if `use_default`
+    is true and the map wasn't found."""
+    if map_name is None:
+        return DEFAULT_STATE.copy()
+    map_file = MAP_DIR / f'{map_name}.json'
+    if not map_file.is_file():
+        if use_default:
+            return DEFAULT_STATE.copy()
+        raise FileNotFoundError(f'Could not find map: {map_name} ( {map_file} )')
+    data = json.loads(file_load(map_file))
+    logger(f'Loaded Map : {map_file}')
+    return State(
+        death_radius=data['death_radius'],
+        positions=[Hex(x, y) for x, y in data['positions']],
+        pits={Hex(x, y) for x, y in data['pits']},
+        walls={Hex(x, y) for x, y in data['walls']},
+    )
+
+
+def _save_map(map_name: str, state: State, allow_overwrite: bool = True):
+    """Saves the map based on the current state to disk by name. The
+    allow_overwrite argument will allow overwriting an existing file."""
+    data = {
+        'death_radius': state.death_radius,
+        'positions': [p.xy for p in state.positions],
+        'pits': [p.xy for p in state.pits],
+        'walls': [w.xy for w in state.walls],
+    }
+    map_file = MAP_DIR / f'{map_name}.json'
+    if not allow_overwrite and map_file.is_file():
+        raise FileExistsError(f'Not allowed to overwrite saved map: {map_file}')
+    file_dump(map_file, json.dumps(data))
+    logger(f'Saved Map : {map_file}')
+
+
+class MapCreator:
+    """The MapCreator object is used to interactively create maps.
+
+    Most use cases do not require the MapCreator, see the `get_map_state` function."""
+    def __init__(self,
+            initial_state: Optional[State] = None,
+            mirror_mode: int = 1,
+            ):
+        self.set_mirror_mode(mirror_mode)
+        if initial_state is None:
+            initial_state = _load_map()
+        self.state = initial_state
+
+    def set_mirror_mode(self, mode: int = 1):
+        """Sets the mirror mode. Must be one of: 1, 2, 3, 6."""
+        assert mode in (1, 2, 3, 6)
+        self.mirror_mode = mode
+        self.mirror_rot = int(6 / mode)
+
+    def save(self, file_name: Optional[str] = None):
+        """Save the map to file."""
+        if file_name is None:
+            file_name = 'custom'
+        _save_map(file_name, self.state)
+
+    def load(self, file_name: Optional[str] = None):
+        """Load the map from file."""
+        if file_name is None:
+            file_name = 'custom'
+        self.state = _load_map(file_name)
+
+    def increment_death_radius(self, delta: int):
+        """Increase the death radius by a delta. Can be negative.
+        Will not set a value lower than 3."""
+        new_val = self.state.death_radius + delta
+        self.state.death_radius = max(3, new_val)
+
+    def add_spawn(self, hex: Hexagon):
+        """Adds a spawn at hex."""
+        for h in self._get_mirrored(hex):
+            self.clear_contents(h)
+            self.state.positions.append(h)
+        self._refresh_state()
+
+    def add_pit(self, hex: Hexagon):
+        """Adds a pit at hex."""
+        for h in self._get_mirrored(hex):
+            self.clear_contents(h)
+            self.state.pits.add(h)
+
+    def add_wall(self, hex: Hexagon):
+        """Adds a wall at hex."""
+        for h in self._get_mirrored(hex):
+            self.clear_contents(h)
+            self.state.walls.add(h)
+
+    def clear_contents(self, hex: Hexagon, mirrored: bool = False):
+        """Clear the contents of hex. Clears spawns, walls, and pits.
+
+        Passing True to the mirrored argument will clear mirrored hexes based on
+        the mirror mode."""
+        hexes = [hex]
+        if mirrored:
+            hexes = self._get_mirrored(hex)
+        for h in hexes:
+            if h in self.state.positions:
+                self.state.positions.remove(h)
+                self._refresh_state()
+            if h in self.state.pits:
+                self.state.pits.remove(h)
+            if h in self.state.walls:
+                self.state.walls.remove(h)
+
+    def clear_all(self):
+        """Resets the map to the default state."""
+        self.state = DEFAULT_STATE.copy()
+
+    def toggle_contents(self, hex: Hexagon):
+        """Toggles the contents of hex between: empty, pit, wall, and spawn."""
+        current = self.get_contents(hex)
+        self.clear_contents(hex, mirrored=True)
+        if current == 'empty':
+            self.add_pit(hex)
+        elif current == 'pit':
+            self.add_wall(hex)
+        elif current == 'wall':
+            self.add_spawn(hex)
+        elif current == 'spawn':
+            self.clear_contents(hex)
+        else:
+            raise ValueError(f'Unknown {hex} contents: {current}')
+
+    def get_contents(self, hex: Hexagon) -> str:
+        """Returns a string representation of the contents of hex."""
+        if hex in self.state.positions:
+            return 'spawn'
+        if hex in self.state.pits:
+            return 'pit'
+        if hex in self.state.walls:
+            return 'wall'
+        return 'empty'
+
+    def check_valid(self, check_spawn: bool = True, check_overlap: bool = True) -> bool:
+        """Checks that the map is valid.
+
+        check_spawn             -- assert that spawns won't instantly die
+        check_overlap           -- assert that walls and pits don't overlap
+        """
+        if self.state.death_radius < 3:
+            return False
+        if set(self.state.positions) & self.state.walls:
+            return False
+        if len(self.state.positions) == 0:
+            return False
+        if check_spawn:
+            if set(self.state.positions) & self.state.pits:
+                return False
+            for spawn in self.state.positions:
+                if spawn.get_distance(ORIGIN) >= self.state.death_radius-1:
+                    return False
+        if check_overlap:
+            if self.state.pits & self.state.walls:
+                return False
+        return True
+
+    def _get_mirrored(self, hex: Hexagon) -> list[Hexagon]:
+        """Returns a list of hexes that are mirrors of hex, based on the mirror mode."""
+        return [hex.rotate(-self.mirror_rot*rot) for rot in range(self.mirror_mode)]
+
+    def _refresh_state(self):
+        """Recreates the state. This is used to refresh the state when adding or
+        removing spawns."""
+        self.state = State(
+            death_radius=self.state.death_radius,
+            positions=self.state.positions,
+            pits=self.state.pits,
+            walls=self.state.walls,
+        )

@@ -593,6 +593,28 @@ class Slider(kvSlider, KexWidget):
         return False
 
 
+class SliderText(BoxLayout):
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        if 'on_value' in kwargs:
+            kwargs['on_value'] = self.on_value_wrapper(kwargs['on_value'])
+        else:
+            kwargs['on_value'] = self.on_value
+        self.slider = Slider(**kwargs)
+        self.label = Label(text=str(self.slider.value))
+        self.add(self.label).set_size(hx=0.2)
+        self.add(self.slider)
+
+    def on_value_wrapper(self, f):
+        def on_value(value):
+            self.on_value(value)
+            f(value)
+        return on_value
+
+    def on_value(self, value):
+        self.label.text = str(round(value * 10**3, 3) / 10**3)
+
+
 class DropDownFrame(kvDropDown, KexWidget):
     pass
 
@@ -605,7 +627,15 @@ class DropDownSelect(Button):
         self.callback = callback
         self.dropdown = DropDownFrame()
         self.dropdown.make_bg((0,0,0,0.75))
+        self.__labels = []
         self.bind(on_press=self.dropdown.open)
+
+    def invoke_label(self, label):
+        idx = self.__labels.index(label)
+        self.invoke_option(idx, label)
+
+    def invoke_index(self, index):
+        self.invoke_option(index, self.__labels[index])
 
     def invoke_option(self, index, label):
         if self.__invoke_set_label:
@@ -620,6 +650,7 @@ class DropDownSelect(Button):
             btn.set_size(y=40)
             btn.bind(on_release=lambda w, i=index, l=label: self.invoke_option(i, l))
             self.dropdown.add_widget(btn)
+            self.__labels.append(label)
 
 
 class DropDownMenu(DropDownSelect):
