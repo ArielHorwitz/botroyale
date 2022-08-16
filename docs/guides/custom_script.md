@@ -1,12 +1,12 @@
-## Running a custom script: step by step
+# Running a Custom Script
 
-In this guide, we will learn how to run a custom script in the project, allowing us to run our own battles programmatically.
-
-This is particularly useful if you need to run many battles without the GUI (e.g. you are implementing a bot that will use machine learning).
+In this guide, we will learn how to run a custom script in the project, allowing us to run our own battles programmatically. This is particularly useful if you need to run many battles without the GUI (e.g. you are implementing a bot that will use machine learning).
 
 *Updated for version 1.000*
 
-### Start
+*Categories: guides, advanced*
+
+## Start
 Make sure you have Bot Royale installed correctly and create a new file in the *run* folder, e.g. `myscript.py`.
 
 Let's begin with this simple boilerplate:
@@ -22,9 +22,9 @@ To run this script, run:
 
 `python main.py myscript`
 
-We should see "Welcome to Bot Bootcamp" printed in console.
+We should see `Welcome to Bot Bootcamp` printed in console.
 
-### Playing a battle without the GUI
+## Playing a battle without the GUI
 Let's make some bots play a couple of battles using the `logic.battle.Battle` class:
 ```python
 from logic.battle import Battle
@@ -48,7 +48,7 @@ def run():
     print('='*50)
 ```
 
-When we run this we should see a progress bar. But when the battles are over we see nothing. Let's see who's winning:
+When we run this we should see a progress bar. But when the battles are over we see nothing. Let's see who's winning using `logic.battle.Battle.winner` and `api.bots.BaseBot.gui_label`:
 ```python
 ...
 
@@ -77,7 +77,7 @@ def run():
 When running the script now, after each battle there should be printed "Battle #_ winner: ____" and either "draw" or the id and name of the bot that won.
 
 
-### Selecting bots
+## Selecting bots
 We want only our bots to play so that we can train them. To manually choose the bots, let's get familiar with `bots.bot_getter`:
 ```python
 ...
@@ -101,7 +101,7 @@ The `bots.bot_getter` function has many options, but we are only interested in t
 When we run this script (with `random` bots selected), we should only ever see draws and `random` bots winning because they are the only ones playing. The battle will run very quickly because they are extremely simple bots (<0.1 ms calculation time per step). Depending on the bots, battles may take far, far longer.
 
 
-### Selecting maps
+## Selecting maps
 Suppose we want to train our bots without walls or pits first. Let's select our map for the battle using `logic.maps.get_map_state`:
 
 ```python
@@ -125,7 +125,7 @@ def play_battle() -> Battle:
 The battles are now being played on the `empty` map.
 
 
-### Final notes
+## Final notes
 In this guide we learned how to run a custom script in the project in order to run battles without the GUI with our selected map and bots. It is highly recommended to study the `logic.battle.Battle` class for playing battles manually.
 
 > If the docs are confusing or wrong, *please* raise an issue on github.

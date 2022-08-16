@@ -315,7 +315,7 @@
     ## <h1>Index</h1>
     <br><br>
     ## Insert link to root
-    <a href="${OUTPUT_DIR}/index.html">Bot Royale Documentation</a>
+    <a href="${OUTPUT_DIR}/index.html"><b>Bot Royale Documentation</b></a>
     ${extract_toc(module.docstring) if extract_module_toc_into_sidebar else ''}
     <ul id="index">
     % if supermodule:

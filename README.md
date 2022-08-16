@@ -1,7 +1,8 @@
 # Bot Royale
 A battle royale for bots.
 
-### Requirements
+<br>
+## Requirements
 - [Python 3.9+](https://www.python.org/)
 - [Kivy](https://pypi.org/project/Kivy/) for the GUI
 - [numpy](https://pypi.org/project/numpy/) because of course
@@ -12,7 +13,7 @@ It is recommended to use a [virtual environment](https://docs.python.org/3/tutor
 `pip install -r requirements.txt`
 
 <br>
-### Run
+## Run
 The main script:
 
 `python main.py`
@@ -26,12 +27,12 @@ For example:
 `python main.py cli`
 
 <br>
-### Writing bots
-See the [guides](docs/guides/index.html).
+## Guides and resources
+Check out the [guides section](guides/index.html) for many resources from beginner to advanced.
 
 <br>
-### Making the docs from source
-To simply view the docs locally, run:
+## Documentation
+To view the docs locally, run:
 
 `python main.py docs`
 
