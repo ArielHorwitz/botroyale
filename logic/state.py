@@ -8,17 +8,13 @@ import copy
 from util.hexagon import Hexagon, ORIGIN
 from logic.prng import PRNG
 from api.logging import logger as glogger
-from api.actions import ALL_ACTIONS, Action, Idle, Move, Jump, Push
+from api.actions import MAX_AP, REGEN_AP, ALL_ACTIONS, Action, Idle, Move, Jump, Push
 
 
 # Assert AP is always an integer, this is assumed by the round order tiebreaker
 assert all(isinstance(action.ap, int) for action in ALL_ACTIONS)
 
 
-MAX_AP = 100
-"""Maximum amount of AP that a unit can accumulate."""
-REGEN_AP = 50
-"""Amount of AP that a unit will gain per round."""
 NEXT_SEED_ITERATIONS = 100  # Number of iterations on the PRNG to apply between rounds
 CHECK_LEGAL_UNIT_DEPRECATE_DATE = 'September 15, 2022'
 
@@ -132,7 +128,7 @@ class State:
         """A set of hexes that are pits."""
         if walls is None:
             walls = set()
-        self.walls = walls
+        self.walls: set[Hexagon] = walls
         """A set of hexes that are walls."""
 
         # Time-keeping
@@ -171,7 +167,11 @@ class State:
     # User methods - return new states
     # check_legal_action "unit" argument is being deprecated.
     def check_legal_action(self, unit: None = None, action: Optional[Action] = None) -> bool:
-        """If applying *action* to this state is legal."""
+        """If applying *action* to this state is legal.
+
+        .. warning:: The *unit* argument will be deprecated
+            Please only pass *action* like so: `check_legal_action(action=my_action)`
+        """
         # DEPRECATING the unit argument.
         # The action argument is non-optional, despite the typing hints.
         # We still want the method name check_legal_action and so we make unit
@@ -184,8 +184,8 @@ class State:
         assert isinstance(action, Action)
         # Check if user is still using the unit argument and warn if so.
         if unit is not None:
-            glogger(f'\nDEPRECATION WARNING: State.check_legal_action signature will change by {CHECK_LEGAL_UNIT_DEPRECATE_DATE}: positional argument "unit" will be removed.')
-            glogger('Please omit the unit argument and use keyword until deprecation like so: state.check_legal_action(action=my_action)')
+            warning_msg = f'\nDEPRECATION WARNING: State.check_legal_action signature will change by {CHECK_LEGAL_UNIT_DEPRECATE_DATE}: positional argument "unit" will be removed.\n    Please omit the unit argument and use keyword until deprecation like so: state.check_legal_action(action=my_action)'
+            glogger(warning_msg)
         if isinstance(action, Idle):
             return True
         return self._check_legal_action(action)
@@ -290,7 +290,27 @@ class State:
 
     @property
     def winner(self) -> Optional[int]:
-        """The uid of the winning unit, or None if it is a draw or it is not yet `State.game_over`."""
+        """The uid of the winning unit, or None if it is a draw or it is not yet `State.game_over`.
+
+        .. tip:: Check `State.game_over` before checking `State.winner`.
+        .. caution:: A statement in Python will equate to `False` if it is either `None` (draw in this case) or `0` (unit #0 won in this case).
+
+        Hence, do **not** use like this:
+        ```python
+        if battle.winner:
+            declare_victory(battle.winner)
+        else:
+            declare_draw()
+        ```
+
+        Instead use like this:
+        ```python
+        if battle.winner is not None:
+            declare_victory(battle.winner)
+        else:
+            declare_draw()
+        ```
+        """
         if self.alive_mask.sum() == 1:
             return np.flatnonzero(self.alive_mask)[0]
         return None

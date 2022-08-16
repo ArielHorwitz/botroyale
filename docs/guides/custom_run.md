@@ -10,7 +10,7 @@ This is particularly useful if you need to run many battles without the GUI (e.g
 Make sure you have Bot Royale installed correctly and create a new file in the *run* folder, e.g. `myscript.py`.
 
 Let's begin with this simple boilerplate:
-```
+```python
 def run():
     """This function will be called (without arguments) when the program starts."""
     print('='*50)
@@ -26,7 +26,7 @@ We should see "Welcome to Bot Bootcamp" printed in console.
 
 ### Playing a battle without the GUI
 Let's make some bots play a couple of battles using the `logic.battle.Battle` class:
-```
+```python
 from logic.battle import Battle
 
 
@@ -49,7 +49,7 @@ def run():
 ```
 
 When we run this we should see a progress bar. But when the battles are over we see nothing. Let's see who's winning:
-```
+```python
 ...
 
 def get_winner_name(battle: Battle) -> str:
@@ -79,7 +79,7 @@ When running the script now, after each battle there should be printed "Battle #
 
 ### Selecting bots
 We want only our bots to play so that we can train them. To manually choose the bots, let's get familiar with `bots.bot_getter`:
-```
+```python
 ...
 
 from bots import bot_getter
@@ -104,7 +104,7 @@ When we run this script (with `random` bots selected), we should only ever see d
 ### Selecting maps
 Suppose we want to train our bots without walls or pits first. Let's select our map for the battle using `logic.maps.get_map_state`:
 
-```
+```python
 ...
 from logic.maps import get_map_state
 
@@ -131,7 +131,7 @@ In this guide we learned how to run a custom script in the project in order to r
 > If the docs are confusing or wrong, *please* raise an issue on github.
 
 Our file `myscript.py` should look something like this:
-```
+```python
 from logic.battle import Battle
 from bots import bot_getter
 from logic.maps import get_map_state

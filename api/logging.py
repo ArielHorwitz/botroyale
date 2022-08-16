@@ -17,7 +17,7 @@ class Logger:
     Handles logging globally.
 
     All of the following lines are equivalent:
-    ```
+    ```python
     Logger.log('Print this to logs')
     Logger('Print this to logs')
     logger('Print this to logs')
@@ -44,7 +44,7 @@ class Logger:
         Context manager for temporarily enabling / disabling the logger globally.
 
         <u>__Example usage:__</u>
-        ```
+        ```python
         Logger.enable_logging = True
         logger('This will be logged')
         with Logger.set_logging_temp(False):

@@ -44,7 +44,7 @@ class PRNG:
 
 
     <u>__Example usage:__</u>
-    ```
+    ```python
     # Create a PRNG generator with a random seed
     rng = PRNG()
     # Make a copy

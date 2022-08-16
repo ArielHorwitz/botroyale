@@ -109,13 +109,13 @@ def bot_getter(**kwargs) -> Callable[[int], list[type]]:
     The statement *bot_getter()* (return value of this function) is functionally equivalent to *get_bot_classes* (the `get_bot_classes` function name).
 
     <u>__Example usage:__</u>
-    ```
+    ```python
     get_bots = bots.bot_getter(selection=['random', 'idle'], include_testing=True)
     logic.battle.Battle(bot_classes_getter=get_bots)
     ```
 
     Which is equivalent to:
-    ```
+    ```python
     def get_bots(n):
         return bots.get_bot_classes(n, selection=['random', 'idle'], include_testing=True)
     logic.battle.Battle(bot_classes_getter=get_bots)

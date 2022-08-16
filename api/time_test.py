@@ -26,11 +26,9 @@ def timing_test(
         ) -> dict[str, TimeResult]:
     """A timing test for bots.
 
-    Plays a number of battles and logs bot calculation times. Returns a
-    dictionary of bot names to a tuple of (mean, max) calc time per turn.
+    Plays a number of battles and logs bot calculation times. Returns a dictionary of bot names to a `TimeResult` of calc time per turn.
 
-    Asserts each bot specified in `bots` will play in every game. If more bots
-    than specified are required, dummy bots will be supplied.
+    Asserts each bot specified in *bots* will play in every game. If more bots than specified are required, dummy bots will be supplied.
 
     Args:
         bots: List of bot classes.

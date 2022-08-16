@@ -9,7 +9,7 @@ Make sure you have Bot Royale installed correctly and create a new file in the *
 
 
 Let's begin with this simple boilerplate:
-```
+```python
 from api.bots import BaseBot
 from api.actions import Idle
 
@@ -34,7 +34,7 @@ The `api.actions.Move` action takes a `target` parameter (of type `util.hexagon.
 
 Let's adjust the code in `poll_action` (we need to import `api.actions.Move` and python's `random` for this to work):
 
-```
+```python
 def poll_action(self, state):
     """Called by the battle as long as it is our turn. Returns an Action."""
     # Find our position
@@ -55,7 +55,7 @@ Now our bot will move to a random direction every time. However it is also showi
 Let's fix some of these issues. First we will avoid suicide by checking the ring of death and pits with a new `check_safe` function that we will write. Then we will avoid illegal moves by using the `logic.state.State.check_legal_action()` method. We will import `api.bots.center_distance` to check our distance from the center of the map.
 
 
-```
+```python
 def poll_action(self, state):
     """Called by the battle as long as it is our turn. Returns an Action."""
     # Find our position
@@ -101,7 +101,7 @@ In this guide we learned how to write a simple bot that can play and is aware of
 ### Common functions as examples
 
 ##### Find hex after push
-```
+```python
 def hex_after_push(my_pos: Hexagon, enemy_pos: Hexagon) - > Hexagon:
     """Return the tile my enemy will land on after I push them."""
     assert enemy_pos in my_pos.neighbors
@@ -110,7 +110,7 @@ def hex_after_push(my_pos: Hexagon, enemy_pos: Hexagon) - > Hexagon:
 ```
 
 ##### Find all moveable hexes on the map
-```
+```python
 def moveable_tiles(state: State) -> set[Hexagon]:
     """Return a set of all tiles that can be legally moved to without dying."""
     map_center = api.bots.CENTER
@@ -120,7 +120,7 @@ def moveable_tiles(state: State) -> set[Hexagon]:
 ```
 
 ##### Find positions of live enemies
-```
+```python
 def find_enemy_positions(state: State, my_id: int) -> list[Hexagon]:
     """Return a list of enemy positions."""
     enemy_ids = [id for id in range(state.num_of_units) if id in state.alive_mask and id != my_id]

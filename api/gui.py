@@ -59,7 +59,7 @@ class ControlMenu_:
 
     See also: `combine_control_menus`.
 
-    ```
+    ```python
     def get_control_menu() -> ControlMenu:
         return {
             'Actions': [

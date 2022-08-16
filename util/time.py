@@ -38,14 +38,13 @@ def pingpong(
         return_elapsed: Callback that takes a float of the pingpong result.
 
     <u>__Example usage:__</u>
-    ```
+    ```python
     with pingpong('Counting to a million', logger=print, return_elapsed=callback):
         count = 0
         for i in range(1_000_000):
             count += 1
     ```
-    Will result in a console output:
-    ```'Counting to a million elapsed in: 1.234 ms'```
+    Will result in a console output: `'Counting to a million elapsed in: 1.234 ms'`
 
     And will call `callback` with an argument `1.234`.
     """
