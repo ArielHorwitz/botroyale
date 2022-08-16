@@ -90,7 +90,7 @@ def _rebuild_guides():
             continue
         title, categories = _find_guide_title_categories(child)
         guide_fname = child.stem
-        new_docstring = f'""".. include:: {child}"""'
+        new_docstring = f'""".. include:: {_windows_compat(str(child))}"""'
         gmod_path = GUIDES_PY_DIR / f'{guide_fname}.py'
         print(f'Writing guide module: {gmod_path}')
         file_dump(gmod_path, new_docstring, clear=True)
@@ -101,7 +101,7 @@ def _rebuild_guides():
     # Organize by category
     categories = {c: [] for c in GUIDE_CATEGORIES}
     for g in guides:
-        entry_str = f'- [{g.title}]({g.path})'
+        entry_str = _windows_compat(f'- [{g.title}]({g.path})')
         for c in g.categories:
             categories[c].append(entry_str)
     # Format the main module
@@ -121,6 +121,12 @@ def _rebuild_guides():
     main_doc = '\n'.join(main_doc_strs)
     file_dump(GUIDES_PY_DIR / '__init__.py', main_doc, clear=True)
 
+
+def _windows_compat(s):
+    """Add backslashes for windows path compatibility for `file_dump`."""
+    return s.replace('\\', '\\\\')
+
+
 def _find_guide_title_categories(guide_md_file):
     markdown = file_load(guide_md_file)
     title = None
@@ -137,6 +143,7 @@ def _find_guide_title_categories(guide_md_file):
         title = guide_md_file.stem
     return title, categories
 
+
 def _module_path(mod):
     html = mod.html()
     full_module_name = mod.name
@@ -152,10 +159,12 @@ def _module_path(mod):
         file_path /= f'{module_name}.html'
     return file_path
 
+
 def _write_html(file_path, html):
     print(f'Writing: {file_path} {len(html)=}')
     file_path.parent.mkdir(parents=True, exist_ok=True)
     file_dump(file_path, html)
+
 
 def _recursive_mods(mod):
     yield mod

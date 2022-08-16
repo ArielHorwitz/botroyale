@@ -15,7 +15,7 @@ def file_load(file: os.PathLike):
 
 def file_dump(file: os.PathLike, d: str, clear: bool = True):
     """Saves the string *d* to *file*. If *clear* is True, will overwrite the file, otherwise will append to it."""
-    with open(file, 'w' if clear else 'a') as f:
+    with open(file, 'w' if clear else 'a', encoding='utf-8') as f:
         f.write(d)
 
 
