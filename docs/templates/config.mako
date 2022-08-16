@@ -1,4 +1,3 @@
-## Based on: https://github.com/pdoc3/pdoc/pull/341
 <%!
     # Template configuration. Copy over in your template directory
     # (used with `--template-dir`) and adapt as necessary.
@@ -16,38 +15,44 @@
 
     # Show collapsed source code block next to each item.
     # Disabling this can improve rendering speed of large modules.
+
     show_source_code = True
 
     # If set, format links to objects in online source code repository
     # according to this template. Supported keywords for interpolation
     # are: commit, path, start_line, end_line.
-    git_link_template = 'https://github.com/ArielHorwitz/bot-royale/blob/{commit}/{path}#L{start_line}-L{end_line}'
+
+    #git_link_template = 'https://github.com/USER/PROJECT/blob/{commit}/{path}#L{start_line}-L{end_line}'
     #git_link_template = 'https://gitlab.com/USER/PROJECT/blob/{commit}/{path}#L{start_line}-L{end_line}'
     #git_link_template = 'https://bitbucket.org/USER/PROJECT/src/{commit}/{path}#lines-{start_line}:{end_line}'
     #git_link_template = 'https://CGIT_HOSTNAME/PROJECT/tree/{path}?id={commit}#n{start-line}'
     #git_link_template = None
+    git_link_template = 'https://github.com/ArielHorwitz/bot-royale/blob/{commit}/{path}#L{start_line}-L{end_line}'
 
     # A prefix to use for every HTML hyperlink in the generated documentation.
     # No prefix results in all links being relative.
+
     link_prefix = ''
 
     # Enable syntax highlighting for code/source blocks by including Highlight.js
+
     syntax_highlighting = True
 
-    # Set the style keywords such as 'atom-one-light' or 'github-gist'
+    # Set the style keyword such as 'atom-one-light' or 'github-gist'
     #     Options: https://github.com/highlightjs/highlight.js/tree/master/src/styles
     #     Demo: https://highlightjs.org/static/demo/
-    #
-    # The first one is for "light mode" the second is for "dark mode".
-    hljs_style_tuple = ('github', 'atom-one-dark')
+
+    hljs_style = 'atom-one-dark'
 
     # If set, insert Google Analytics tracking code. Value is GA
     # tracking id (UA-XXXXXX-Y).
+
     google_analytics = ''
 
     # If set, insert Google Custom Search search bar widget above the sidebar index.
     # The whitespace-separated tokens represent arbitrary extra queries (at least one
     # must match) passed to regular Google search. Example:
+
     #google_search_query = 'inurl:github.com/USER/PROJECT  site:PROJECT.github.io  site:PROJECT.website'
     google_search_query = ''
 
@@ -55,6 +60,7 @@
     # added to every query word, see: https://lunrjs.com/guides/searching.html#fuzzy-matches
     # If 'index_docstrings' is False, a shorter index is built, indexing only
     # the full object reference names.
+
     #lunr_search = {'fuzziness': 1, 'index_docstrings': True}
     lunr_search = None
 
@@ -63,12 +69,6 @@
     # as nicely-formatted math formulas using MathJax.
     # Note: in Python docstrings, either all backslashes need to be escaped (\\)
     # or you need to use raw r-strings.
-    latex_math = False
 
-    # CSS Theming is done via templates and the full selection of base themes can
-    # be located in the default template directory - ../site-packages/pdoc/templates/themes/
-    # This way you can simply enter the name of the theme you wish to be used for your
-    # docs. You can also include a custom theme by filling out the `custom.mako` file and
-    # entering `custom` in the below setting.
-    css_theme = 'default'
+    latex_math = False
 %>
