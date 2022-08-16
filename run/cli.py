@@ -2,7 +2,7 @@ from collections import Counter
 from api.time_test import timing_test
 from logic.maps import MAPS, get_map_state
 from logic.battle_manager import BattleManager
-from bots import BOTS, BaseBot, bot_getter
+from bots import BOTS, bot_getter
 
 
 # Thresholds of bot calculation times for the competitive timing test
@@ -84,7 +84,7 @@ def run_winrates():
 
 def query_map_name() -> str:
     """Queries the user in console for a map name."""
-    maps = tuple(MAPS.keys())
+    maps = MAPS
     print('\n'.join([
         f'Available maps:',
         *(f'- {i}. {m}' for i, m in enumerate(maps)),

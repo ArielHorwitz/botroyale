@@ -4,17 +4,18 @@ from api.actions import Move, Push, Idle, Action, Jump
 from bots import BaseBot
 from logic.state import State
 from util.hexagon import Hexagon
-from api.bots import CENTER
+from api.bots import CENTER, center_distance
 from util.time import pingpong
 
 
 class CrazeeBotAlpha(BaseBot):
-    NAME = "CrazeeBot"
+    NAME = "CrazeeBot_Boss"
     COLOR_INDEX = 9
     MAX_AP = 100
     AP_REGEN = 50
     CENTER_TILE = CENTER
-    logging_enabled = False
+    max_depth = 15
+    tile_view_distance = 5
     SPRITE = 'flower'
 
     def __init__(self, id):
@@ -54,7 +55,7 @@ class CrazeeBotAlpha(BaseBot):
             possible_actions.extend(Push(t) for t in push_neighbors)
         legal_actions = []
         for action in possible_actions:
-            if state.check_legal_action(state.current_unit, action):
+            if state.check_legal_action(action=action):
                 legal_actions.append(action)
         return legal_actions
 
@@ -68,8 +69,7 @@ class CrazeeBotAlpha(BaseBot):
             return float('inf')
 
         my_pos: Hexagon = _state.positions[bot_id]
-        edge_of_map: set[Hexagon] = set(self.CENTER_TILE.ring(_state.death_radius - 1))
-        if my_pos in edge_of_map:
+        if center_distance(my_pos) >= _state.death_radius - 1:
             return float('-inf')
 
         enemy_dead_score = -enemys_alive * 1.5
@@ -77,14 +77,13 @@ class CrazeeBotAlpha(BaseBot):
         enemy_mask[bot_id] = False
         enemy_ids = np.flatnonzero(enemy_mask)
         alive_enemy_pos = set(_state.positions[uid] for uid in enemy_ids)
-        tile_view_distance = 5
         terrain_score = 0
         enemy_score = 0
-        d_pits = [my_pos.get_distance(pit) for pit in _state.pits if my_pos.get_distance(pit) < tile_view_distance]
+        d_pits = [my_pos.get_distance(pit) for pit in _state.pits if my_pos.get_distance(pit) < self.tile_view_distance]
         d_walls = [my_pos.get_distance(wall) for wall in _state.walls if
-                   my_pos.get_distance(wall) < tile_view_distance]
+                   my_pos.get_distance(wall) < self.tile_view_distance]
         d_enemys = [my_pos.get_distance(enemy) for enemy in alive_enemy_pos
-                    if my_pos.get_distance(enemy) < tile_view_distance]
+                    if my_pos.get_distance(enemy) < self.tile_view_distance]
         d_center = my_pos.get_distance(self.CENTER_TILE)
         terrain_score -= d_center / 4
         my_ap = _state.ap[bot_id]
@@ -105,7 +104,7 @@ class CrazeeBotAlpha(BaseBot):
         return score
 
     def calc_turn(self, start_state: State, return_fx=0):
-        MAX_DEPTH = 6
+        MAX_DEPTH = self.max_depth
         explored_worlds = set()
         call_counter = {'possible_find_chain_iter': 0}
         vfx = []
@@ -227,4 +226,18 @@ def hash_state(state):
         ])
 
 
-BOT = CrazeeBotAlpha
+class CrazeeEasy(CrazeeBotAlpha):
+    NAME = "CrazeeBot_Easy"
+    COLOR_INDEX = 7
+    max_depth = 3
+    tile_view_distance = 2
+
+
+class CrazeeHard(CrazeeBotAlpha):
+    NAME = "CrazeeBot_Hard"
+    COLOR_INDEX = 8
+    max_depth = 6
+    tile_view_distance = 10
+
+
+BOTS = [CrazeeBotAlpha, CrazeeEasy, CrazeeHard]
