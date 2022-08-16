@@ -298,7 +298,7 @@
     </div>
     ## Insert logo (link to root)
     <%! from util import PROJ_DIR %>
-    <%! from run.docs import OUTPUT_DIR %>
+    <%! from run.makedocs import OUTPUT_DIR %>
     <a href="${OUTPUT_DIR}/index.html"><img src="${PROJ_DIR}/icon.png"/></a>
 
     % if google_search_query:
@@ -312,7 +312,8 @@
       <%include file="_lunr_search.inc.mako"/>
     % endif
 
-    <h1>Index</h1>
+    ## <h1>Index</h1>
+    <br><br>
     ## Insert link to root
     <a href="${OUTPUT_DIR}/index.html">Bot Royale Documentation</a>
     ${extract_toc(module.docstring) if extract_module_toc_into_sidebar else ''}

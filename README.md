@@ -11,7 +11,7 @@ It is recommended to use a [virtual environment](https://docs.python.org/3/tutor
 
 `pip install -r requirements.txt`
 
-
+<br>
 ### Run
 The main script:
 
@@ -25,12 +25,16 @@ For example:
 
 `python main.py cli`
 
+<br>
+### Writing bots
+See the [guides](docs/guides/index.html).
 
-### Building the docs (optional)
-To (re)build the docs from source, run:
+<br>
+### Making the docs from source
+To simply view the docs locally, run:
 
 `python main.py docs`
 
+This will create the docs from source if missing, and then open them in the default browser. If you wish to force recreating the docs, run:
 
-### Writing bots
-See the [guides](docs/guides/index.html).
+`python main.py makedocs`
