@@ -30,13 +30,8 @@ For example:
 
 <br>
 
-## Guides and resources
-Check out `botroyale.guides` (link available in the docs) for many resources from beginner to advanced.
-
-<br>
-
-## Documentation
-To view the docs locally, run:
+## Guides and Documentation
+To view the docs locally (which include guides), run:
 
 `python main.py docs`
 
