@@ -25,6 +25,7 @@ class Battle:
     def __init__(self,
             initial_state: Optional[State] = None,
             bot_classes_getter: Callable[[int], Sequence[type]] = get_bot_classes,
+            description: str = 'Custom battle',
             enable_logging: bool = True,
             only_bot_turn_states: bool = True,
             threshold_bot_block_seconds: float = 20.0,
@@ -35,6 +36,8 @@ class Battle:
 
             bot_classes_getter: A function that takes an integer and returns that many bots classes. If bot_classes_getter is not provided, the default `bots.get_bot_classes` will be used that is based on configured settings.
 
+            description: A description of the battle.
+
             enable_logging: Passing False will disable the logger for the battle. It also disables logging while calling the bot_classes_getter.
 
             only_bot_turn_states: Determines whether to skip `State.end_of_round` states and other states that are not expecting an action from a unit. This is useful for bot developers who may not care about states out of turn and only care to see when a bot needs to take action. This essentially determines whether actions are applied to states with `State.apply_action` or `State.apply_action_no_round_increment`.
@@ -42,12 +45,12 @@ class Battle:
             threshold_bot_block_seconds: Threshold of calculation time for bots to trigger a warning in the log.
         """
         self.enable_logging = enable_logging
-        self._map_name = 'Custom initial state'
+        self.description = description
+        """A description of the battle"""
+        self.logger(f'Making battle: {self.description}')
         if initial_state is None:
             with Logger.set_logging_temp(enable_logging):
                 initial_state = get_map_state()
-            self._map_name = DEFAULT_MAP_NAME
-        self.logger(f'Making battle on map: {self._map_name}')
         self.__current_state: State = initial_state
         self.history: list[State] = [initial_state]
         self.__only_bot_turn_states: bool = only_bot_turn_states

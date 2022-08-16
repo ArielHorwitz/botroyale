@@ -7,6 +7,7 @@ from collections import namedtuple
 import random
 from api.logging import Logger, logger as glogger
 from logic.battle_manager import BattleManager
+from bots import NotFairError
 from bots.idle_bot import DummyBot
 
 
@@ -49,7 +50,10 @@ def timing_test(
     glogger('Selected:\n'+'\n'.join(f'{i:>2} {b.NAME}' for i, b in enumerate(bots)))
 
     def get_bots(num_of_units):
-        assert requested_bot_count <= num_of_units
+        try:
+            assert requested_bot_count <= num_of_units
+        except AssertionError:
+            raise NotFairError(f'Requested for {requested_bot_count} bots to play, but only {num_of_units} slots available.')
         selected_bot_classes = [*bots]
         missing_units = num_of_units - requested_bot_count
         selected_bot_classes.extend([DummyBot] * missing_units)
@@ -82,7 +86,7 @@ def timing_test(
     for battle_index in range(battle_count):
         battle = BattleManager(bot_classes_getter=get_bots, enable_logging=not disable_logging)
 
-        glogger(f'\nPlaying battle {battle_index+1} / {battle_count} (map: {battle.map_name})...')
+        glogger(f'\nPlaying battle {battle_index+1} / {battle_count} : {battle.description}')
         battle.play_all(print_progress=disable_logging)
         if verbose_results:
             glogger(f'Battle time results:\n{battle.get_timer_str()}')

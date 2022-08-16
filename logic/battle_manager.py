@@ -78,10 +78,6 @@ class BattleManager(Battle, BattleAPI):
         self.unit_colors = [self.UNIT_COLORS[bot.COLOR_INDEX % len(self.UNIT_COLORS)] for bot in self.bots]
         self.unit_sprites = [bot.SPRITE for bot in self.bots]
 
-    @property
-    def map_name(self) -> str:
-        return self._map_name
-
     # Replay
     def set_replay_index(self,
             index: Optional[int] = None,
