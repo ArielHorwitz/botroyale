@@ -2,6 +2,7 @@
 A battle royale for bots.
 
 <br>
+
 ## Requirements
 - [Python 3.9+](https://www.python.org/)
 - [Kivy](https://pypi.org/project/Kivy/) for the GUI
@@ -13,6 +14,7 @@ It is recommended to use a [virtual environment](https://docs.python.org/3/tutor
 `pip install -r requirements.txt`
 
 <br>
+
 ## Run
 The main script:
 
@@ -27,10 +29,12 @@ For example:
 `python main.py cli`
 
 <br>
+
 ## Guides and resources
-Check out the [guides section](guides/index.html) for many resources from beginner to advanced.
+Check out `botroyale.guides` (link available in the docs) for many resources from beginner to advanced.
 
 <br>
+
 ## Documentation
 To view the docs locally, run:
 
