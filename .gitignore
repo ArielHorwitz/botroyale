@@ -6,8 +6,9 @@ __pycache__
 
 
 # Docs
-docs/botroyale
-docs/README.md
+/docs/*
+!/docs/templates
+!/docs/guides
 /guides/
 
 
