@@ -20,7 +20,7 @@ def file_dump(file: os.PathLike, d: str, clear: bool = True):
 
 
 def popen_path(path: os.PathLike):
-    """Opens the given path using `subprocess.Popen`."""
+    """Opens the given path. Method used is platform-dependent."""
     if platform.system() == 'Windows':
         os.startfile(path)
     elif platform.system() == 'Darwin':
