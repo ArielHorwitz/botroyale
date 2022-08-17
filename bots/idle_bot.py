@@ -7,7 +7,7 @@ class IdleBot(BaseBot):
     NAME = 'idle'
     TESTING_ONLY = True
 
-    def get_action(self, state):
+    def poll_action(self, state):
         return Idle()
 
 

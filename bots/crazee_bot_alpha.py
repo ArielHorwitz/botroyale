@@ -25,6 +25,7 @@ class CrazeeBotAlpha(BaseBot):
     CENTER_TILE = Hex(0, 0)
     LETHAL_PUSH_SCORE = 1000
     SPRITE = 'flower'
+    TESTING_ONLY = True
 
     def __init__(self, id):
         super().__init__(id)
