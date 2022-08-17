@@ -15,7 +15,6 @@ from util.file import popen_path, file_dump, file_load
 __all__ = []  # for pdoc
 
 ROOT_PACKAGE_NAME = PROJ_DIR.name
-print(f'{ROOT_PACKAGE_NAME=}')
 if '-' in ROOT_PACKAGE_NAME or '.' in ROOT_PACKAGE_NAME:
     raise NameError(f'Project directory "{ROOT_PACKAGE_NAME}" must be a valid python package name, cannot have dashes "-" or periods "."')
 
@@ -54,29 +53,29 @@ def run():
 
 def make_docs():
     """Clear and create the docs."""
-    print(f'TEMPLATE_DIR={tpl_lookup.directories}')
+    print(f'{ROOT_PACKAGE_NAME=}')
     print(f'{DOCS_DIR=}')
-    print(f'{OUTPUT_DIR=}')
     print(f'{INCLUDE_SUBPACKAGES=}')
-    print('Clearing docs...')
-    if OUTPUT_DIR.is_dir():
-        shutil.rmtree(OUTPUT_DIR)
+    print(f'TEMPLATE_DIR={tpl_lookup.directories}')
+    print('Preparing guides...')
+    _rebuild_guides()
     print('Building docs...')
     subpackages = []
-    _rebuild_guides()
     context = Context()
     root_package = Module('.', context=context)
     for subpkg in INCLUDE_SUBPACKAGES:
         mod = Module(subpkg, context=context)
         subpackages.append(mod)
-    print('Building guides...')
     link_inheritance(context)
-    print('Writing docs...')
-    _write_html(OUTPUT_DIR / 'index.html', root_package.html())
+    print('Clearing existing docs...')
+    if OUTPUT_DIR.is_dir():
+        shutil.rmtree(OUTPUT_DIR)
+    print('Writing new docs...')
     for subpkg in subpackages:
         for mod in _recursive_mods(subpkg):
             file_path = _module_path(mod)
             _write_html(file_path, mod.html())
+    _write_html(OUTPUT_DIR / 'index.html', root_package.html())
     print('Make docs done.')
 
 
