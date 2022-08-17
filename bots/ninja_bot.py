@@ -761,7 +761,7 @@ def hash_state(state):
         hash(state.death_radius),
         hash(state.alive_mask.tostring()),
         hash(state.ap.tostring()),
-        hash(state.round_ap_spent.tostring()),
+        hash(str(state.round_ap_spent)),
         hash(str(state.round_remaining_turns)),
         hash(state.step_count),
         hash(state.turn_count),
