@@ -28,6 +28,8 @@ INCLUDE_SUBPACKAGES = [
 ]
 DOCS_DIR = PROJ_DIR / 'docs'
 """The docs folder. Includes the html docs themselves, templates, guides, and more."""
+TEMPLATE_DIR = DOCS_DIR / 'templates'
+tpl_lookup.directories.insert(0, str(TEMPLATE_DIR))
 OUTPUT_DIR = DOCS_DIR / ROOT_PACKAGE_NAME
 """The html documentation folder."""
 INDEX_FILE = OUTPUT_DIR / 'index.html'
@@ -40,9 +42,12 @@ GUIDES_PY_DIR = PROJ_DIR / 'guides'
 """The guides package. Generated with the docs and should be ignored by git."""
 GUIDE_CATEGORIES = ('beginner', 'guides', 'rules', 'advanced')
 """Category names for guides."""
-TEMPLATE_DIR = DOCS_DIR / 'templates'
-tpl_lookup.directories.insert(0, str(TEMPLATE_DIR))
-
+CATEGORY_IDENT_PREFIX = '*Categories: '
+"""Prefix of line to parse categories of a guide. See: `_find_guide_title_categories`."""
+CATEGORY_IDENT_SUFFIX = '*'
+"""Suffix of line to parse categories of a guide. See: `_find_guide_title_categories`."""
+CATEGORY_IDENT_SPLIT = ', '
+"""Seperator between category names of a guide. See: `_find_guide_title_categories`."""
 
 Guide = namedtuple('Guide', ['path', 'title', 'categories'])
 
@@ -132,19 +137,31 @@ def _windows_compat(s):
 
 
 def _find_guide_title_categories(guide_md_file):
+    """Finds the title and categories of a markdown file guide for the docs.
+
+    To find the title, we return the contents of the first *Header 1* in the file (a line starting with "# "). Default to the file name if no title found.
+
+    To find categories, we look for a line with a specific format and parse the category names. This line must be prepended by `CATEGORY_IDENT_PREFIX` and appended by `CATEGORY_IDENT_SUFFIX`. The text in between these affixes will be split using the `CATEGORY_IDENT_SPLIT` to find a list of categories.
+
+    For example, if the prefix is "*Categories", the suffix is "*" and the split is ", ", then the line "*Categories: beginner, guides*" in a guide markdown file will indicate that the guide belongs to the categories "beginner" and "guides".
+    """
     markdown = file_load(guide_md_file)
     title = None
     categories = []
     for line in markdown.split('\n'):
-        if not title and line.startswith('# '):
+        if not title and line.startswith('# '):  # A markdown header
             title = line[2:]
         if not categories:
-            if line.startswith('*Categories: ') and line.endswith('*'):
-                categories = line[13:-1].split(', ')
+            if line.startswith(CATEGORY_IDENT_PREFIX) and line.endswith(CATEGORY_IDENT_SUFFIX):
+                parse_this = line[len(CATEGORY_IDENT_PREFIX):-len(CATEGORY_IDENT_SUFFIX)]
+                categories = set(parse_this.split(CATEGORY_IDENT_SPLIT))
         if title and categories:
             break
     if title is None:
         title = guide_md_file.stem
+    for c in categories:
+        if c not in GUIDE_CATEGORIES:
+            raise KeyError(f'Unknown category "{c}" in guide: {guide_md_file.name} ; {GUIDE_CATEGORIES=}')
     return title, categories
 
 
