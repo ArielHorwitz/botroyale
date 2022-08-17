@@ -30,6 +30,7 @@ class CheckPoint:
     def __init__(self, state, logger, friendly_uids):
         self.logger = logger
         self.uid = state.current_unit
+        assert self.uid is not None
         self.state = state
         self.friendly_uids = friendly_uids
         done_mask = [self.is_done_turn(uid) for uid in range(state.num_of_units)]
@@ -366,52 +367,37 @@ class CheckPoint:
 
     def __find_enemy_threat(self, enemy_id):
         """Returns the weighted number of options enemy_id has to lethally push us from this state."""
-        # An equal amount of AP spent will result in a shuffled turn order
-        # (essentially a coinflip who goes first). We must consider both
-        # the enemy and us moving first.
-        # State variants represent all the equal-chance states the game may be at.
-        my_ap_spent = self.state.round_ap_spent[self.uid]
-        enemy_ap_spent = self.state.round_ap_spent[enemy_id]
-        if my_ap_spent == enemy_ap_spent:
-            state_variants = [self.state.copy(), self.state.copy()]
-            state_variants[0].round_ap_spent[self.uid] += 0.00001
-            state_variants[1].round_ap_spent[enemy_id] += 0.00001
-        else:
-            state_variants = [self.state.copy()]
-
+        state = self.state.copy()
         total_threat = 0
         d = []
         extra_ap_cost_max = BaseBot.max_ap - MIN_AP_PER_PUSH
-        for state_variant in state_variants:
-            # Find all the states that is the enemy's turn before ours
-            enemy_turns = []
-            enemy_turn_state = iter_state_to_turn(state_variant, enemy_id, self.uid)
-            while True:
-                if enemy_turn_state is None:
-                    break
-                enemy_turns.append(enemy_turn_state)
-                enemy_turn_state = iter_state_to_turn(enemy_turn_state, enemy_id, self.uid)
-            # For each state, check push sequences against us
-            for sidx, enemy_turn in enumerate(enemy_turns):
-                cp = self.get_new(enemy_turn, self.logger, self.friendly_uids)
-                enemy_push_sequences = cp.get_lethal_sequences_uid(self.uid)
-                if not enemy_push_sequences:
-                    continue
-                for pseq in enemy_push_sequences:
-                    extra_ap_cost = pseq.ap - MIN_AP_PER_PUSH
-                    assert extra_ap_cost >= 0
-                    ap_cost_ratio = extra_ap_cost / extra_ap_cost_max
-                    ap_cost = ap_cost_ratio * self.THREAT_AP_COST_FACTOR
-                    idle_cost = sidx * self.THREAT_IDLE_COST_FACTOR
-                    pthreat = 1 - ap_cost - idle_cost
-                    # Consider that each state variant has an equal chance of happening
-                    pthreat /= len(state_variants)
-                    total_threat += pthreat
-                    origin = pseq.last_state.positions[enemy_id].xy
-                    pit = pseq.last_state.positions[self.uid].xy
-                    d.append(f'{enemy_id}[{sidx+1},{extra_ap_cost}]{origin}->{pit}={pthreat:.2f}/{len(state_variants)}')
-                # Don't count the next turn, we assume a threat on this turn is stronger than the next turn
+        # Find the(<=2) states that is the enemy's turn before ours
+        enemy_turns = []
+        enemy_turn_state = iter_state_to_turn(state, enemy_id, self.uid)
+        while True:
+            if enemy_turn_state is None:
                 break
+            enemy_turns.append(enemy_turn_state)
+            enemy_turn_state = iter_state_to_turn(enemy_turn_state, enemy_id, self.uid)
+        # For each state, check push sequences against us
+        for sidx, enemy_turn in enumerate(enemy_turns):
+            cp = self.get_new(enemy_turn, self.logger, self.friendly_uids)
+            enemy_push_sequences = cp.get_lethal_sequences_uid(self.uid)
+            if not enemy_push_sequences:
+                continue
+            for pseq in enemy_push_sequences:
+                extra_ap_cost = pseq.ap - MIN_AP_PER_PUSH
+                assert extra_ap_cost >= 0
+                ap_cost_ratio = extra_ap_cost / extra_ap_cost_max
+                ap_cost = ap_cost_ratio * self.THREAT_AP_COST_FACTOR
+                idle_cost = sidx * self.THREAT_IDLE_COST_FACTOR
+                pthreat = 1 - ap_cost - idle_cost
+                total_threat += pthreat
+                origin = pseq.last_state.positions[enemy_id].xy
+                pit = pseq.last_state.positions[self.uid].xy
+                d.append(f'{enemy_id}[{sidx+1},{extra_ap_cost}]{origin}->{pit}={pthreat:.2f}')
+            # Don't count the next turn, we assume a threat on this turn is stronger than the next turn
+            break
         return total_threat, ' ; '.join(d)
 
     @staticmethod
@@ -514,9 +500,8 @@ class CheckPoint:
         if aseq is None:
             return None
         # Add push sequence
-        aseq.allow_illegal = True
-        aseq.append(Push(enemy))
-        if not aseq.is_legal:
+        legal = aseq.append(Push(enemy))
+        if not legal:
             return None
         return aseq
 
@@ -537,9 +522,8 @@ class CheckPoint:
         aseq = self.get_path_sequence(start_pos, description=f'Push {enemy} -> {pit}')
         if aseq is None:
             return None
-        aseq.allow_illegal = True
-        aseq.extend([Push(enemy), Move(enemy), Push(mid_point)])
-        if not aseq.is_legal:
+        legal = aseq.extend([Push(enemy), Move(enemy), Push(mid_point)])
+        if not legal:
             return None
         return aseq
 
@@ -557,9 +541,8 @@ class CheckPoint:
         aseq = self.get_path_sequence(start_pos, description=f'Push {enemy} -> {pit}')
         if aseq is None:
             return None
-        aseq.allow_illegal = True
-        aseq.extend([Push(enemy), Move(enemy), Move(mid_pos), Push(neighbor)])
-        if not aseq.is_legal:
+        legal = aseq.extend([Push(enemy), Move(enemy), Move(mid_pos), Push(neighbor)])
+        if not legal:
             return None
         return aseq
 
@@ -576,11 +559,9 @@ class CheckPoint:
 class ActionSequence:
     def __init__(self, state, logger,
             actions=None, description='No description',
-            allow_illegal=False,
             ):
         self.description = description
         self.logger = logger
-        self.allow_illegal = allow_illegal
         self.states = [state]
         self.__actions = []
         if actions:
@@ -590,9 +571,8 @@ class ActionSequence:
         return len(self.__actions)
 
     def __repr__(self):
-        l = '' if self.is_legal else ' ILLEGAL'
         end = ' ends turn' if self.turn_end else ''
-        return f'<ActionSequence{l}: -{str(self.ap):<3} AP{end} ({len(self)} actions) | {self.description}>'
+        return f'<ActionSequence: -{str(self.ap):<3} AP{end} ({len(self)} actions) | {self.description}>'
 
     def __add__(self, other_seq):
         return ActionSequence(
@@ -601,12 +581,6 @@ class ActionSequence:
             description=f'{self.description} + {other_seq.description}',
             logger=self.logger,
             )
-
-    @property
-    def is_legal(self):
-        if len(self) == 0:
-            return True
-        return self.last_state.is_last_action_legal
 
     @property
     def initial_state(self):
@@ -629,34 +603,24 @@ class ActionSequence:
     def ap(self):
         if len(self.__actions) == 0:
             return 0
-        actions = (s.last_action for s in self.states[1:] if s.is_last_action_legal)
+        actions = (s.last_action for s in self.states[1:])
         return sum(a.ap for a in actions)
 
     def append(self, action):
         if self.turn_end or self.last_state.game_over:
-            # self.logger(f'Cannot append action {action} after turn end in: {self}')
             return
+        if not self.last_state.check_legal_action(action=action):
+            return False
         new_state = self.last_state.apply_action(action)
-        if not new_state.is_last_action_legal and not self.allow_illegal:
-            current_unit = self.last_state.current_unit
-            m = '\n'.join([
-                f'WARNING ILLEGAL ACTION APPEND',
-                f'Cannot append action {action} (from state: {self.last_state.last_action}) to:',
-                f'Action sequence: {self}',
-                f'Last action: {self.last_state.last_action}',
-                f'Pos: {self.last_state.positions[current_unit]}   AP: {self.last_state.ap[current_unit]}',
-                f'Alive mask: {new_state.alive_mask}',
-                f'Round: {new_state.round_count}',
-                f'Remaining turns: {new_state.round_remaining_turns}',
-            ])
-            self.logger(m)
-            return
         self.__actions.append(action)
         self.states.append(new_state)
+        return True
 
     def extend(self, actions):
         for a in actions:
-            self.append(a)
+            if not self.append(a):
+                return False
+        return True
 
     def unlock(self):
         self.__locked = False
@@ -733,7 +697,6 @@ class Bot(BaseBot):
         assert seqs
         best_seq = seqs[0]
         best_seq.append(Idle())
-        assert best_seq.is_legal
         return best_seq
 
     def get_new_checkpoint(self, *args, **kwargs):
