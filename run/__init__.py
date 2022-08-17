@@ -19,7 +19,7 @@ def run_script():
     print(f'\n>> Welcome to {FULL_TITLE} <<\n')
     args = _parse_args()
     if args.list:
-        _print_run_modules()
+        _print_run_modules(verbose=True)
         quit()
     print(f'Parsed args: {args}')
     requested_module_name = args.module
@@ -63,10 +63,23 @@ def _find_run_modules() -> list[str]:
     return [minfo.name for minfo in iter_modules([str(SCRIPT_DIR)])]
 
 
-def _print_run_modules():
-    """Prints the module names found in the run directory."""
+def _print_run_modules(verbose: bool = False):
+    """Prints the module names found in the run directory.
+
+    Args:
+        verbose: If true, will import each module to retrieve its docstring and print it along with the module name.
+    """
     run_modules = _find_run_modules()
-    module_names = '\n'.join(f'- {s}' for s in run_modules)
-    print(f'Available modules in the "run" directory:\n{module_names}')
-    example_module = run_modules[0]
+    module_names = []
+    for mod_name in run_modules:
+        s = f'» {mod_name}'
+        if verbose:
+            mod = import_module(f'run.{mod_name}')
+            doc = [l for l in mod.__doc__.split('\n') if l][0]
+            if len(doc) > 100:
+                doc = f'{doc[:100]}...'
+            s = f'{s:<20}: {doc}'
+        module_names.append(s)
+    module_output = '\n'.join(module_names)
+    print(f'Available modules in the "run" directory:\n{module_output}')
     print(f'\nSee: {sys.argv[0]} --help\n')

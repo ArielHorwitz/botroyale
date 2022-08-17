@@ -1,7 +1,8 @@
 """
-Runs the GUI and uses the base class `api.gui.GameAPI`.
+A debugging GUI option.
 
-Should have extremely limited functionality and is used for debugging by the GUI.
+
+Runs the GUI and uses the base class `api.gui.GameAPI`. Expected to have extremely limited functionality and is used for debugging by the GUI.
 """
 __all__ = []  # for pdoc
 

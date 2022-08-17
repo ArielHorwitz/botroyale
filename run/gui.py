@@ -1,5 +1,7 @@
 """
-Runs the GUI and uses `logic.game.StandardGameAPI`.
+The default GUI option.
+
+Uses `logic.game.StandardGameAPI`.
 """
 __all__ = []  # for pdoc
 
