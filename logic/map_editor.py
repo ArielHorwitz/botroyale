@@ -1,7 +1,7 @@
 """
 Home of `logic.map_editor.MapEditor`.
 """
-from typing import Optional, Any
+from typing import Optional, Any, Literal
 from collections import deque
 from util.settings import Settings
 from util.hexagon import Hexagon, ORIGIN
