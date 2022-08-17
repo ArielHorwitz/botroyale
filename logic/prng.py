@@ -1,12 +1,13 @@
 """
 LCG (linear congruential generator)
+
 https://en.wikipedia.org/wiki/Linear_congruential_generator
 
 We implement a very transparent and simple pseudo-rng, so that other
 implementations may easily mimic it. It is designed for state logic and
 should not be used directly.
 """
-from typing import Optional
+from typing import Optional, Generator
 import random
 
 
@@ -40,6 +41,25 @@ class PRNG:
     This is why we expect an integer for the seed when initializing the object,
     but return floats when iterating. Passing None as a seed argument will
     generate a random seed value.
+
+
+    <u>__Example usage:__</u>
+    ```python
+    # Create a PRNG generator with a random seed
+    rng = PRNG()
+    # Make a copy
+    rng_copy = rng.copy()  # equivalent to: rng_copy = PRNG(rng.seed)
+    # Make an unrelated generator (new random seed)
+    rng_other = PRNG()
+    # Generate a list of values and save them
+    a, b = rng.generate_list(2)
+    # Iterate values and save the last one
+    b_ = rng_copy.iterate(2)
+    # The following two assersions will pass
+    assert b == b_
+    assert rng_other.iterate(2) != rng.value
+    assert next(rng) == next(rng_copy)
+    ```
     """
     def __init__(self, seed: Optional[int] = None):
         if seed is None:
@@ -62,19 +82,21 @@ class PRNG:
 
     @property
     def seed(self) -> int:
-        """Returns the current seed."""
+        """The current seed."""
         return self.__current_seed
 
     @property
     def value(self) -> float:
-        """Returns the last value that was generated."""
+        """The last value that was generated."""
         return self.__current_value
 
     @staticmethod
     def get_random_seed() -> int:
+        """A random seed that is valid as `PRNG.seed`."""
         return random.randint(0, MOD-1)
 
     def copy(self) -> 'PRNG':
+        """A copy of *self* with the same `PRNG.seed`."""
         return self._do_copy(self)
 
     @classmethod

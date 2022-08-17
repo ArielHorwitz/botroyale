@@ -1,8 +1,11 @@
-from typing import Any, Union
+"""
+Home of `logic.game.StandardGameAPI` - the standard implementation of `api.gui.GameAPI`.
+"""
+from typing import Any, Union, Optional
 import random
 from util.settings import Settings
 from api.logging import logger as glogger
-from api.gui import GameAPI as BaseGameAPI, Control, InputWidget
+from api.gui import GameAPI as GameAPI, Control, InputWidget
 from logic.maps import MAPS, DEFAULT_MAP_NAME, get_map_state
 from logic.battle_manager import BattleManager
 from logic.map_editor import MapEditor
@@ -13,18 +16,20 @@ ADD_PREFIX = '╠+'
 FILTER_PREFIX = '╠-'
 
 
-class GameAPI(BaseGameAPI):
+class StandardGameAPI(GameAPI):
     """A standard implementation of `api.gui.GameAPI`.
 
-    ### Battle
-    Uses `logic.battle_manager.BattleManager` as an API for the GUI. Allows to select a map and choose bots.
-
-    ### Map editing
-    Uses `logic.map_editor.MapEditor` as an API for the GUI.
+    See `StandardGameAPI.get_new_battle` on starting battles and the map editor.
     """
 
     def get_menu_widgets(self) -> list[InputWidget]:
-        """Overrides base class method."""
+        """
+        Returns a list of widgets for controlling how to start the next battle.
+
+        Includes "Map editor mode" toggle, map selection, bot selection options.
+
+        See: `api.gui.GameAPI.get_menu_widgets`.
+        """
         sorted_bot_names = sorted(BOTS.values(), key=lambda b: b.TESTING_ONLY)
         bot_toggles = []
         bot_ignore_toggles = []
@@ -49,9 +54,13 @@ class GameAPI(BaseGameAPI):
             *bot_ignore_toggles,
         ]
 
-    def get_new_battle(self, menu_values: dict[str, Any]) -> Union[BattleManager, MapEditor,  None]:
+    def get_new_battle(self, menu_values: dict[str, Any]) -> Optional[Union[BattleManager, MapEditor]]:
+        """
+        Returns a `logic.battle_manager.BattleManager` or None if it fails to create the battle, or a `logic.map_editor.MapEditor` if "Map editor mode" was set in the main menu.
+
+        See: `api.gui.GameAPI.get_new_battle`.
+        """
         map_name = menu_values['map']
-        """Overrides base class method."""
         if menu_values['mapedit']:
             return MapEditor(load_map=map_name)
         # Parse arguments from menu values

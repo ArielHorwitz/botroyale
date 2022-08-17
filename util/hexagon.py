@@ -1,3 +1,6 @@
+"""
+Home of the `util.hexagon.Hexagon` class and related constants.
+"""
 from typing import Sequence, Generator
 import math
 import functools
@@ -9,13 +12,12 @@ GRID_OFFSET = -1
 
 
 class Hexagon:
-    """The Hexagon object represents a whole-number point in hex-space,
-    or a whole-number vector from the origin (0, 0, 0) in hex-space."""
+    """Represents a whole-number point in hex-space, or a whole-number vector from the origin (0, 0, 0) in hex-space."""
 
     def __init__(self, q: int, r: int, s: int):
-        self.__cube: tuple[int] = (q, r, s)
+        self.__cube: tuple[int, int, int] = (q, r, s)
         assert all(isinstance(c, int) for c in self.__cube)
-        self.__offset: tuple[int] = convert_cube2offset(q, r, s)
+        self.__offset: tuple[int, int] = convert_cube2offset(q, r, s)
 
     @functools.cache
     def get_distance(self, hex: 'Hexagon') -> int:
@@ -38,7 +40,7 @@ class Hexagon:
             yield neighbor
 
     @functools.cache
-    def ring(self, radius: int) -> tuple['Hexagon']:
+    def ring(self, radius: int) -> tuple['Hexagon', ...]:
         """Returns a tuple of hexes that are `radius` distance from self.
 
         The resulting hexes are always in the same order, with regards to their
@@ -60,7 +62,7 @@ class Hexagon:
         return tuple(ring)
 
     @functools.cache
-    def range(self, distance: int, include_center: bool = True) -> tuple['Hexagon']:
+    def range(self, distance: int, include_center: bool = True) -> tuple['Hexagon', ...]:
         """Returns a tuple of all the hexes within a distance from self.
 
         The resulting hexes are always in the same order, with regards to their
@@ -79,8 +81,7 @@ class Hexagon:
 
     @functools.cache
     def rotate(self, rotations: int = 1) -> 'Hexagon':
-        """Return the hex given by rotating self about the origin (0, 0)
-        by 60° per rotation."""
+        """Return the hex given by rotating self about `ORIGIN` by 60° per rotation."""
         assert isinstance(rotations, int)
         hex = self
         if rotations > 0:
@@ -95,16 +96,37 @@ class Hexagon:
 
     # Nearby hexes
     @property
-    def neighbors(self) -> tuple['Hexagon']:
-        return get_neighbors(self)
+    def neighbors(self) -> tuple['Hexagon', ...]:
+        """The 6 adjascent hexes.
+
+        The resulting hexes are always in the same order, with regards to their
+        relative position from *self*.
+        """
+        return _get_neighbors(self)
 
     @property
-    def doubles(self) -> tuple['Hexagon']:
-        return get_doubles(self)
+    def doubles(self) -> tuple['Hexagon', ...]:
+        """The 6 hexes that are 2 distance away and can be found on
+        a straight line originating from *self*.
+
+        The resulting hexes are always in the same order, with regards to their
+        relative position from *self*.
+
+        Doubles and diagonals are complementary parts of `Hexagon.ring` with `radius=2`.
+        """
+        return _get_doubles(self)
 
     @property
-    def diagonals(self) -> tuple['Hexagon']:
-        return get_diagonals(self)
+    def diagonals(self) -> tuple['Hexagon', ...]:
+        """The 6 hexes that are 2 distance away and cannot be found on
+        a straight line originating from *self*.
+
+        The resulting hexes are always in the same order, with regards to their
+        relative position from *self*.
+
+        Doubles and diagonals are complementary parts of `Hexagon.ring` with `radius=2`.
+        """
+        return _get_diagonals(self)
 
     # Operations
     def __add__(self, other: 'Hexagon') -> 'Hexagon':
@@ -143,7 +165,7 @@ class Hexagon:
 
     # Position in 2D space
     @functools.cache
-    def pixel_position(self, radius: int) -> tuple[int]:
+    def pixel_position(self, radius: int) -> tuple[int, int]:
         """Position in pixels of self, given the radius of a hexagon in pixels."""
         offset_r = (self.y % 2 == 1) / 2
         x = radius * SQRT3 * (self.x + offset_r)
@@ -163,51 +185,59 @@ class Hexagon:
     # Constructors
     @classmethod
     def from_xy(cls, x: int, y: int) -> 'Hexagon':
-        """Return the hex given the offset coordinates (x, y)."""
+        """Return the `Hexagon` given the offset (x, y) coordinates."""
         return cls(*convert_offset2cube(x, y))
 
     @classmethod
     def from_qr(cls, q: int, r: int) -> 'Hexagon':
-        """Return the hex given the partial cube coordinates (q, r)."""
+        """Return the `Hexagon` given the partial cube coordinates (q, r)."""
         s = -q - r
         return cls(q, r, s)
 
     @classmethod
     def from_floats(cls, q: float, r: float, s: float) -> 'Hexagon':
-        """Return the hex nearest to the floating point cube coordinates (q, r, s)."""
+        """Return the `Hexagon` nearest to the floating point cube coordinates (q, r, s)."""
         return cls.round_(q, r, s)
 
     # Representations
     @property
     def x(self) -> int:
+        """X component of the offset (x, y) coordiantes."""
         return self.__offset[0]
 
     @property
     def y(self) -> int:
+        """Y component of the offset (x, y) coordiantes."""
         return self.__offset[1]
 
     @property
-    def xy(self) -> tuple[int]:
+    def xy(self) -> tuple[int, int]:
+        """Offset coordiantes."""
         return self.__offset
 
     @property
     def q(self) -> int:
+        """Q component of the cube (q, r, s) coordiantes."""
         return self.__cube[0]
 
     @property
     def r(self) -> int:
+        """R component of the cube (q, r, s) coordiantes."""
         return self.__cube[1]
 
     @property
     def s(self) -> int:
+        """S component of the cube (q, r, s) coordiantes."""
         return self.__cube[2]
 
     @property
-    def qr(self) -> tuple[int]:
+    def qr(self) -> tuple[int, int]:
+        """Q and R components of the cube (q, r, s) coordiantes."""
         return self.__cube[:2]
 
     @property
-    def cube(self) -> tuple[int]:
+    def cube(self) -> tuple[int, int, int]:
+        """Cube (q, r, s) coordiantes."""
         return self.__cube
 
     def __repr__(self):
@@ -219,38 +249,17 @@ class Hexagon:
 
 # Common Hexagon getters
 @functools.cache
-def get_neighbors(hex: Hexagon) -> tuple[Hexagon]:
-    """Returns the 6 adjascent hexes.
-
-    The resulting hexes are always in the same order, with regards to their
-    relative position from hex.
-    """
+def _get_neighbors(hex: Hexagon) -> tuple[Hexagon, ...]:
     return tuple(hex + dir for dir in DIRECTIONS)
 
 
 @functools.cache
-def get_doubles(hex: Hexagon) -> tuple[Hexagon]:
-    """Returns the 6 hexes that are 2 distance away and can be found on
-    a straight line originating from hex.
-
-    The resulting hexes are always in the same order, with regards to their
-    relative position from hex.
-
-    Doubles and diagonals are complementary parts of hex.ring(2).
-    """
+def _get_doubles(hex: Hexagon) -> tuple[Hexagon, ...]:
     return tuple(hex + doub for doub in DOUBLES)
 
 
 @functools.cache
-def get_diagonals(hex: Hexagon) -> tuple[Hexagon]:
-    """Returns the 6 hexes that are 2 distance away and cannot be found on
-    a straight line originating from hex.
-
-    The resulting hexes are always in the same order, with regards to their
-    relative position from hex.
-
-    Doubles and diagonals are complementary parts of hex.ring(2).
-    """
+def _get_diagonals(hex: Hexagon) -> tuple[Hexagon, ...]:
     return tuple(hex + diag for diag in DIAGONALS)
 
 
@@ -265,7 +274,7 @@ def convert_offset2cube(x: int, y: int) -> Hexagon:
 
 
 @functools.cache
-def convert_cube2offset(q: int, r: int, s: int) -> tuple[int]:
+def convert_cube2offset(q: int, r: int, s: int) -> tuple[int, int]:
     """Convert cube coordinates (q, r, s) to offset coordinates (x, y)."""
     col = q + (r + GRID_OFFSET * (r & 1)) // 2
     row = r
@@ -273,8 +282,9 @@ def convert_cube2offset(q: int, r: int, s: int) -> tuple[int]:
 
 
 # Order of directions, doubles, and diagonals are expected to be constant
-ORIGIN = Hexagon(0, 0, 0)
-DIRECTIONS = (
+ORIGIN: Hexagon = Hexagon(0, 0, 0)
+"""The origin of the coordiante system. (0, 0, 0) in cube and (0, 0) in offset coordinates."""
+DIRECTIONS: tuple[Hexagon, ...] = (
     Hexagon(1, 0, -1),
     Hexagon(1, -1, 0),
     Hexagon(0, -1, 1),
@@ -282,7 +292,8 @@ DIRECTIONS = (
     Hexagon(-1, 1, 0),
     Hexagon(0, 1, -1),
     )
-DOUBLES = (
+"""The 6 adjascent hexes to `ORIGIN`. Can be considered the 6 directional normal vectors in hex-space."""
+DOUBLES: tuple[Hexagon, ...] = (
     Hexagon(2, 0, -2),
     Hexagon(2, -2, 0),
     Hexagon(0, -2, 2),
@@ -290,7 +301,8 @@ DOUBLES = (
     Hexagon(-2, 2, 0),
     Hexagon(0, 2, -2),
     )
-DIAGONALS = (
+"""The 6 hexes that are 2 distance away and can be found on a straight line originating from `ORIGIN`."""
+DIAGONALS: tuple[Hexagon, ...] = (
     Hexagon(2, -1, -1),
     Hexagon(1, -2, 1),
     Hexagon(-1, -1, 2),
@@ -298,6 +310,7 @@ DIAGONALS = (
     Hexagon(-1, 2, -1),
     Hexagon(1, 1, -2),
     )
+"""The 6 hexes that are 2 distance away and cannot be found on a straight line originating from `ORIGIN`."""
 
 
 # Alias for xy constructor
@@ -312,13 +325,13 @@ def test():
     neighbor = Hex(1, 0)
 
     # Test the cache
-    get_neighbors.cache_clear()
+    _get_neighbors.cache_clear()
     assert neighbor in origin.neighbors
-    assert get_neighbors.cache_info().misses == 1
-    assert get_neighbors.cache_info().hits == 0
+    assert _get_neighbors.cache_info().misses == 1
+    assert _get_neighbors.cache_info().hits == 0
     assert neighbor in set(origin_copy.neighbors)
-    assert get_neighbors.cache_info().misses == 1
-    assert get_neighbors.cache_info().hits == 1
+    assert _get_neighbors.cache_info().misses == 1
+    assert _get_neighbors.cache_info().hits == 1
 
     # Test the cache for instance methods
     Hexagon.ring.cache_clear()
@@ -362,7 +375,18 @@ def test():
     assert ring_set - diag_set == dbl_set
     assert dbl_set | diag_set == ring_set
 
-    print('Hexagon module tests passed.')
+
+try:
+    test()
+except Exception as e:
+    raise Exception(f'{e}\nHexagon module tests FAILED. See previous traceback (above "During handling of the above exception...")')
 
 
-test()
+__all__ = [
+    'Hexagon',
+    'Hex',
+    'ORIGIN',
+    'DIRECTIONS',
+    'DOUBLES',
+    'DIAGONALS',
+]

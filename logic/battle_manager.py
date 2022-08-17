@@ -1,3 +1,6 @@
+"""
+Home of `logic.battle_manager.BattleManager`.
+"""
 from typing import Optional, Union, Sequence, Set
 from logic.battle import Battle
 
@@ -16,24 +19,24 @@ MAP_CENTER = Hex(0, 0)
 
 
 class BattleManager(Battle, BattleAPI):
-    """The BattleManager is a wrapper for the Battle class that inherits from
-    both logic.battle.Battle and api.gui.BattleAPI.
+    """An interface between `logic.battle.Battle` and `api.gui.BattleAPI`.
 
-    It provides methods for parsing, formatting, and displaying information
-    about the battle, as well as GUI-related controls and display getters.
+    Provides methods for parsing, formatting, and displaying information about the battle, as well as GUI-related controls and display getters.
 
-    This class can behave surprisingly different than the base class Battle.
-    This is because it keeps track of a replay index, allowing to "look at"
-    past states. Therefore it is recommended to be familiar with the
-    set_replay_index() method.
+    While it can be used as an extension of `logic.battle.Battle`, this class can behave surprisingly different than the base class. This is because it keeps track of a replay index, allowing to "look at" past states. Therefore it is recommended to be familiar with `BattleManager.set_replay_index`.
     """
-
     show_coords = False
+    """Whether to show coordinates on the tilemap."""
     step_interval_ms = 1000 / STEP_RATE
+    """Time between steps for `BattleManager.autoplay` in ms."""
     DEFAULT_CELL_BG = Settings.get('tilemap.|colors._default_tile', (0.25, 0.1, 0))
+    """Color of an empty tile."""
     OUT_OF_BOUNDS_CELL_BG = Settings.get('tilemap.|colors._out_of_bounds', (0.05, 0, 0.075))
+    """Color of a tile outside the death radius."""
     WALL_COLOR = Settings.get('tilemap.|colors._walls', (0.6, 0.6, 0.6))
+    """Color of a wall."""
     PIT_COLOR = Settings.get('tilemap.|colors._pits', (0.05, 0.05, 0.05))
+    """Color of a pit."""
     UNIT_COLORS = Settings.get('tilemap.|colors.|units', [
         (0.6, 0, 0.1),  # Red
         (0.9, 0.3, 0.4),  # Pink
@@ -48,6 +51,7 @@ class BattleManager(Battle, BattleAPI):
         (0.4, 0, 0.7),  # Violet
         (0.7, 0, 0.5),  # Magenta
     ])
+    """All available colors for unit sprites. 12 colors from red to purple on the rainbow."""
 
     def __init__(self,
             gui_mode: Optional[bool] = False,
@@ -55,9 +59,10 @@ class BattleManager(Battle, BattleAPI):
             **kwargs,
             ):
         """
-        kwargs          -- keyword arguments for Battle.__init__()
-        gui_mode        -- if True, will set arguments appropriate for the GUI.
-        spoiler_mode    -- if True, will include information during replays that
+        Args:
+            kwargs: Keyword arguments for `logic.battle.Battle.__init__`
+            gui_mode: If True, will set arguments appropriate for the GUI.
+            spoiler_mode: If True, will include information during replays that
                             may spoil the results.
         """
         if gui_mode:
@@ -67,14 +72,11 @@ class BattleManager(Battle, BattleAPI):
         BattleAPI.__init__(self)
         self.__replay_index = 0
         self.__spoiler_mode = spoiler_mode
-        self.autoplay = False
+        self.autoplay: bool = False
+        """Determines whether to automatically play the game while the `BattleManager.update` method is called."""
         self.__last_step = ping()
         self.unit_colors = [self.UNIT_COLORS[bot.COLOR_INDEX % len(self.UNIT_COLORS)] for bot in self.bots]
         self.unit_sprites = [bot.SPRITE for bot in self.bots]
-
-    @property
-    def map_name(self) -> str:
-        return self._map_name
 
     # Replay
     def set_replay_index(self,
@@ -85,16 +87,17 @@ class BattleManager(Battle, BattleAPI):
             ):
         """Set the state index of the replay.
 
-        Will play missing states until the index is reached or the game is over.
+        Will play missing states until *index* is reached or the game is over.
 
-        `index` defaults to the index of the last state in history, unless
-        index_delta is provided in which case it defaults to the current
+        *index* defaults to the index of the last state in history, unless
+        *index_delta* is provided in which case it defaults to the current
         replay index.
 
-        index               -- index of state to go to
-        index_delta         -- number to add to index
-        apply_vfx           -- queue vfx of the state we are going to
-        disable_autoplay    -- disables autoplay
+        Args:
+            index: Index of state to go to.
+            index_delta: Number to add to index.
+            apply_vfx: Queue vfx of the state we are going to.
+            disable_autoplay: Disables autoplay.
         """
         if index is None:
             if index_delta is None:
@@ -120,20 +123,19 @@ class BattleManager(Battle, BattleAPI):
 
     @property
     def replay_mode(self) -> bool:
-        """Returns whether we are looking at a past state."""
+        """Is `BattleManager.replay_index` set to a past state."""
         return self.replay_index != self.history_size - 1
 
     @property
     def replay_index(self) -> int:
-        """Returns which state in history we are looking at.
+        """The state in history we are looking at.
 
-        Methods that use state information will look at the state in
-        replay_index rather than the last state."""
+        Methods that use state information will look at the state in `BattleManager.replay_index` rather than the last state."""
         return self.__replay_index
 
     @property
     def replay_state(self) -> State:
-        """The current state we are looking at."""
+        """The state at index of `BattleManager.replay_index`."""
         return self.history[self.replay_index]
 
     def _is_spoiler_mode(self, state_index: Optional[int] = None) -> bool:
@@ -143,14 +145,17 @@ class BattleManager(Battle, BattleAPI):
         return self.__spoiler_mode or nothing_to_spoil
 
     def play_all(self, *args, **kwargs):
-        """Overrides the base class method in order to set the replay index to
-        the current state index."""
+        """Overrides the `logic.battle.Battle.play_all` in order to set the `BattleManager.replay_index` to the last state."""
         super().play_all(*args, **kwargs)
         self.set_replay_index()
 
     def set_to_next_round(self, backwards: bool = False):
         """Set the replay to the next "end of round" state (or game over).
-        If backwards is set, it will search for a previous state."""
+
+        If backwards is set, it will search for a previous state.
+
+        See: `logic.state.State.end_of_round`.
+        """
         delta = 1 if not backwards else -1
         if self.replay_state.end_of_round:
             self.set_replay_index(index_delta=1 if not backwards else -1)
@@ -160,7 +165,7 @@ class BattleManager(Battle, BattleAPI):
             self.set_replay_index(index_delta=delta)
 
     def preplay(self):
-        """Play the entire battle, then set the replay_index to the start."""
+        """Play the entire battle, then set the `BattleManager.replay_index` to the start."""
         self.play_all()
         self.flush_vfx()
         self.set_replay_index(0)
@@ -180,8 +185,7 @@ class BattleManager(Battle, BattleAPI):
             ])
 
     def get_timer_str(self) -> str:
-        """Returns a multiline string of bot calculation times. Does not work in
-        replay mode."""
+        """Multiline string of bot calculation times. Confusing when in replay mode (see: `BattleManager.replay_mode`)."""
         strs = ['___ Bot ______________ ms/t ___ max ___ total ___']
         for bot in self.bots:
             total_block_time = self.bot_timer.total(bot.id)
@@ -281,8 +285,7 @@ class BattleManager(Battle, BattleAPI):
 
     # Other
     def toggle_autoplay(self, set_to: Optional[bool] = None):
-        """Autoplay determines whether to automatically play the game while
-        the BattleManager.update() method is called."""
+        """Toggles `BattleManager.autoplay`."""
         if self.replay_state.game_over:
             self.autoplay = False
             return
@@ -303,7 +306,9 @@ class BattleManager(Battle, BattleAPI):
 
     def add_state_vfx(self, state_index: int, redraw_last_steps: bool = False):
         """Add all vfx of state_index to queue.
-        Also clear existing vfx and add vfx from last steps if `redraw_last_steps`."""
+
+        Also clear existing vfx and add vfx from last steps if `redraw_last_steps`.
+        """
         if redraw_last_steps:
             self.clear_vfx()
         start_index = max(0, state_index - 1) if redraw_last_steps else state_index
@@ -322,14 +327,17 @@ class BattleManager(Battle, BattleAPI):
         self.__spoiler_mode = set_to
 
     def toggle_coords(self, set_to: Optional[bool] = None):
-        """Toggle whether to show coordinates on tiles (for GUI get_gui_tile_info)."""
+        """Toggle whether to show coordinates on tiles (for `BattleManager.get_gui_tile_info`)."""
         if set_to is None:
             set_to = not self.show_coords
         self.show_coords = set_to
 
     # GUI API
     def update(self):
-        """Called continuously by the GUI. Performs autoplay."""
+        """Performs autoplay.
+
+        Overrides: `api.gui.BattleAPI.update`.
+        """
         if self.replay_state.game_over:
             self.autoplay = False
         if not self.autoplay:
@@ -341,11 +349,17 @@ class BattleManager(Battle, BattleAPI):
             self.__last_step = ping() - leftover
 
     def get_time(self) -> int:
-        """Overrides base class method."""
+        """Step count.
+
+        Overrides: `api.gui.BattleAPI.get_time`.
+        """
         return self.replay_state.step_count
 
     def get_controls(self) -> ControlMenu:
-        """Overrides base class method."""
+        """Returns `api.gui.Control`s for playing, autoplaying, setting replay index, and more.
+
+        Overrides: `api.gui.BattleAPI.get_controls`.
+        """
         return {
             'Battle': [
                 Control('Autoplay', self.toggle_autoplay, 'spacebar'),
@@ -371,11 +385,17 @@ class BattleManager(Battle, BattleAPI):
 
     # Info panel
     def get_info_panel_text(self) -> str:
-        """Overrides base class method."""
+        """Multiline summary of the game at the current `BattleManager.replay_index`.
+
+        Overrides: `api.gui.BattleAPI.get_info_panel_text`.
+        """
         return self.get_info_str(self.replay_index)
 
     def get_info_panel_color(self) -> tuple[float, float, float]:
-        """Overrides base class method."""
+        """Green-ish color when live, blue-ish color when in `BattleManager.replay_mode`.
+
+        Overrides: `api.gui.BattleAPI.get_info_panel_color`.
+        """
         if self.replay_mode:
             # Blue-ish
             return 0.1, 0.25, 0.2
@@ -384,7 +404,10 @@ class BattleManager(Battle, BattleAPI):
 
     # Tile map
     def get_gui_tile_info(self, hex: Hexagon) -> Tile:
-        """Overrides base class method."""
+        """Returns a `api.gui.Tile` for *hex* at the current `BattleManager.replay_state`.
+
+        Overrides: `api.gui.BattleAPI.get_gui_tile_info`.
+        """
         state = self.replay_state
         # BG
         if hex.get_distance(MAP_CENTER) >= state.death_radius:
@@ -424,14 +447,22 @@ class BattleManager(Battle, BattleAPI):
             )
 
     def get_map_size_hint(self) -> int:
-        """Overrides base class method."""
+        """Tracks the `logic.state.State.death_radius` at `BattleManager.replay_index`.
+
+        Overrides: `api.gui.BattleAPI.get_map_size_hint`.
+        """
         death_radius = self.replay_state.death_radius
         if self.replay_state.round_count == 0:
             death_radius -= 1
         return max(5, death_radius)
 
     def handle_hex_click(self, hex: Hexagon, button: str):
-        """Overrides base class method."""
+        """Handles a tile being clicked on in the tilemap.
+
+        If a unit is positioned at *hex*, will call its `api.bots.BaseBot.gui_click` method with *hex* and *button*. Otherwise will mark *hex* with a color determined by *button* using `api.gui.BattleAPI.add_vfx`.
+
+        Overrides: `api.gui.BattleAPI.handle_hex_click`.
+        """
         self.logger(f'Clicked {button} on: {hex}')
         if hex in self.replay_state.positions:
             unit_id = self.replay_state.positions.index(hex)

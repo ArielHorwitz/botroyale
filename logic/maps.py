@@ -1,5 +1,11 @@
+"""
+Maps (initial states for battle).
+
+It is recommended to use `logic.maps.get_map_state` in order to "initialize" a `logic.state.State` object.
+"""
 from typing import Optional
 import json
+from pathlib import Path
 from util import PROJ_DIR, file_load, file_dump
 from util.settings import Settings
 from util.hexagon import Hexagon, Hex, ORIGIN
@@ -19,19 +25,23 @@ def _find_maps() -> list[str]:
     return map_names
 
 
-MAP_DIR = PROJ_DIR / 'logic' / 'maps'
+MAP_DIR: Path = PROJ_DIR / 'logic' / 'maps'
+"""Directory where maps are stored on disk. ( `util.PROJ_DIR`/logic/maps )"""
 if not MAP_DIR.is_dir():
     MAP_DIR.mkdir(parents=True, exist_ok=True)
-DEFAULT_STATE = State(death_radius=12)
-DEFAULT_MAP_NAME = Settings.get('logic.default_map', 'danger')
-MAPS = tuple(_find_maps())
+DEFAULT_STATE: State = State(death_radius=12)
+"""A `logic.state.State` object representing a default, "empty" map. Should be copied (`logic.state.State.copy`) before use."""
+DEFAULT_MAP_NAME: str = Settings.get('logic.default_map', 'danger')
+"""Default map name as configured in settings."""
+MAPS: tuple[str, ...] = tuple(_find_maps())
+"""Tuple of available map names as found in `MAP_DIR`."""
 assert DEFAULT_MAP_NAME in MAPS
-print(f'Default map: {DEFAULT_MAP_NAME}')
 
 
 def get_map_state(map_name: Optional[str] = None) -> State:
-    """Return the state based on the map by name. Passing None to map_name will
-    use the default map configured in settings."""
+    """Return the state based on the map by name.
+
+    Passing None to *map_name* will use `DEFAULT_MAP_NAME`."""
     if map_name is None:
         map_name = DEFAULT_MAP_NAME
     return _load_map(map_name)
@@ -40,8 +50,7 @@ def get_map_state(map_name: Optional[str] = None) -> State:
 def _load_map(map_name: Optional[str] = None, use_default: bool = True) -> State:
     """Returns a state based on the map saved on disk by name.
 
-    The default state will be returned if `map_name` is None or if `use_default`
-    is true and the map wasn't found."""
+    The default state will be returned if `map_name` is None or if `use_default` is true and the map wasn't found."""
     if map_name is None:
         return DEFAULT_STATE.copy()
     map_file = MAP_DIR / f'{map_name}.json'
@@ -60,8 +69,9 @@ def _load_map(map_name: Optional[str] = None, use_default: bool = True) -> State
 
 
 def _save_map(map_name: str, state: State, allow_overwrite: bool = True):
-    """Saves the map based on the current state to disk by name. The
-    allow_overwrite argument will allow overwriting an existing file."""
+    """Saves the map based on the current state to disk by name.
+
+    The *allow_overwrite* argument will allow overwriting an existing file."""
     data = {
         'death_radius': state.death_radius,
         'positions': [p.xy for p in state.positions],
@@ -108,34 +118,35 @@ class MapCreator:
 
     def increment_death_radius(self, delta: int):
         """Increase the death radius by a delta. Can be negative.
-        Will not set a value lower than 3."""
+
+        Will not set a value lower than 3.
+        """
         new_val = self.state.death_radius + delta
         self.state.death_radius = max(3, new_val)
 
     def add_spawn(self, hex: Hexagon):
-        """Adds a spawn at hex."""
+        """Clear contents and add a spawn at hex."""
         for h in self._get_mirrored(hex):
             self.clear_contents(h)
             self.state.positions.append(h)
         self._refresh_state()
 
     def add_pit(self, hex: Hexagon):
-        """Adds a pit at hex."""
+        """Clear contents and add a pit at hex."""
         for h in self._get_mirrored(hex):
             self.clear_contents(h)
             self.state.pits.add(h)
 
     def add_wall(self, hex: Hexagon):
-        """Adds a wall at hex."""
+        """Clear contents and add a wall at hex."""
         for h in self._get_mirrored(hex):
             self.clear_contents(h)
             self.state.walls.add(h)
 
     def clear_contents(self, hex: Hexagon, mirrored: bool = False):
-        """Clear the contents of hex. Clears spawns, walls, and pits.
+        """Clear the contents of hex: clears spawns, walls, and pits.
 
-        Passing True to the mirrored argument will clear mirrored hexes based on
-        the mirror mode."""
+        Passing True to the *mirrored* argument will clear mirrored hexes based on the mirror mode."""
         hexes = [hex]
         if mirrored:
             hexes = self._get_mirrored(hex)
@@ -180,8 +191,9 @@ class MapCreator:
     def check_valid(self, check_spawn: bool = True, check_overlap: bool = True) -> bool:
         """Checks that the map is valid.
 
-        check_spawn             -- assert that spawns won't instantly die
-        check_overlap           -- assert that walls and pits don't overlap
+        Args:
+            check_spawn: Assert that spawns won't instantly die.
+            check_overlap: Assert that walls and pits don't overlap.
         """
         if self.state.death_radius < 3:
             return False
@@ -205,8 +217,7 @@ class MapCreator:
         return [hex.rotate(-self.mirror_rot*rot) for rot in range(self.mirror_mode)]
 
     def _refresh_state(self):
-        """Recreates the state. This is used to refresh the state when adding or
-        removing spawns."""
+        """Recreates the state. This is used to refresh the state when adding or removing spawns."""
         self.state = State(
             death_radius=self.state.death_radius,
             positions=self.state.positions,

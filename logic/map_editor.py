@@ -1,4 +1,7 @@
-from typing import Optional, Any
+"""
+Home of `logic.map_editor.MapEditor`.
+"""
+from typing import Optional, Any, Literal
 from collections import deque
 from util.settings import Settings
 from util.hexagon import Hexagon, ORIGIN
@@ -10,15 +13,19 @@ from api.gui import (
 
 
 class MapEditor(MapCreator, BattleAPI):
-    """The MapEditor is a wrapper for the MapCreator class that inherits from
-    both logic.maps.MapCreator and api.gui.BattleAPI.
+    """An interface between `logic.maps.MapCreator` and `api.gui.BattleAPI`.
 
-    It enables interactive map editing in the GUI."""
+    Enables interactive map editing in the GUI.
+    """
 
     DEFAULT_CELL_BG = Settings.get('tilemap.|colors._default_tile', (0.25, 0.1, 0))
+    """See: `logic.battle_manager.BattleManager.DEFAULT_CELL_BG`"""
     OUT_OF_BOUNDS_CELL_BG = Settings.get('tilemap.|colors._out_of_bounds', (0.05, 0, 0.075))
+    """See: `logic.battle_manager.BattleManager.OUT_OF_BOUNDS_CELL_BG`."""
     WALL_COLOR = Settings.get('tilemap.|colors._walls', (0.6, 0.6, 0.6))
+    """See: `logic.battle_manager.BattleManager.WALL_COLOR`"""
     PIT_COLOR = Settings.get('tilemap.|colors._pits', (0.05, 0.05, 0.05))
+    """See: `logic.battle_manager.BattleManager.PIT_COLOR`"""
     UNIT_COLORS = Settings.get('tilemap.|colors.|units', [
         (0.6, 0, 0.1),  # Red
         (0.9, 0.3, 0.4),  # Pink
@@ -33,6 +40,7 @@ class MapEditor(MapCreator, BattleAPI):
         (0.4, 0, 0.7),  # Violet
         (0.7, 0, 0.5),  # Magenta
     ])
+    """See: `logic.battle_manager.BattleManager.UNIT_COLORS`"""
     BRUSH_COLORS = {
         'eraser': (0.25, 0.05, 0.1),
         'pit': (0.1, 0.1, 0.1),
@@ -55,7 +63,8 @@ class MapEditor(MapCreator, BattleAPI):
         if load_map is not None:
             self.load(load_map)
         self.show_coords = False
-        self.brush = 'pit'
+        self.brush: Literal['pit', 'wall', 'spawn', 'eraser'] = 'pit'
+        """The current brush, allowing the user to click and create whatever is specified by the brush."""
 
     def apply_brush(self, hex: Hexagon):
         """Sets the contents of a tile based on the brush."""
@@ -71,10 +80,12 @@ class MapEditor(MapCreator, BattleAPI):
             raise ValueError(f'Unknown brush type: {self.brush}')
 
     def set_brush(self, set_as):
+        """Sets `MapCreator.brush` as one of options: eraser, pit, wall, spawn."""
         assert set_as in ('eraser', 'pit', 'wall', 'spawn')
         self.brush = set_as
 
     def toggle_brush(self):
+        """Toggles `MapCreator.brush` between the options: pit, wall, spawn."""
         brushes = ['pit', 'wall', 'spawn']
         if self.brush not in brushes:
             self.set_brush(brushes[0])
@@ -87,8 +98,42 @@ class MapEditor(MapCreator, BattleAPI):
         self.show_coords = not self.show_coords
 
     # GUI API
+    def get_controls(self) -> ControlMenu:
+        """Returns `api.gui.Control`s for map editing tools.
+
+        Overrides: `api.gui.BattleAPI.get_controls`.
+        """
+        return {
+            'Editor': [
+                Control('Increase death radius', lambda: self.increment_death_radius(1), '+ ='),
+                Control('Decrease death radius', lambda: self.increment_death_radius(-1), '+ -'),
+                # Clear all shares hotkey with clear vfx to refresh the selected hex vfx
+                Control('Clear all', self.clear_all, '^+ c'),
+                Control('Save', self.save, '^+ s'),
+                Control('Load', self.load, '^+ l'),
+                ],
+            'Brush': [
+                Control('Pit', lambda: self.set_brush('pit'), 'z'),
+                Control('Wall', lambda: self.set_brush('wall'), 'x'),
+                Control('Spawn', lambda: self.set_brush('spawn'), 'c'),
+                Control('Eraser', lambda: self.set_brush('eraser'), 'v'),
+                ],
+            'Mirror Mode': [
+                Control('Mirror off', lambda: self.set_mirror_mode(1), '1'),
+                Control('Mirror 2', lambda: self.set_mirror_mode(2), '2'),
+                Control('Mirror 3', lambda: self.set_mirror_mode(3), '3'),
+                Control('Mirror 6', lambda: self.set_mirror_mode(6), '4'),
+                ],
+            'Debug': [
+                Control('Map coordinates', self.toggle_coords, '^+ d'),
+                ],
+            }
+
     def get_info_panel_text(self) -> str:
-        """Overrides base class method."""
+        """Multiline summary of the map at the current state.
+
+        Overrides: `api.gui.BattleAPI.get_info_panel_text`.
+        """
         valid_str = 'Valid map'
         if not self.check_valid():
             valid_str = 'INVALID MAP'
@@ -114,11 +159,17 @@ class MapEditor(MapCreator, BattleAPI):
             ])
 
     def get_info_panel_color(self) -> tuple[float, float, float]:
-        """Overrides base class method."""
+        """Color based on the current `MapCreator.brush`.
+
+        Overrides: `api.gui.BattleAPI.get_info_panel_color`.
+        """
         return self.BRUSH_COLORS[self.brush]
 
     def get_gui_tile_info(self, hex: Hexagon) -> Tile:
-        """Overrides base class method."""
+        """Returns a `api.gui.Tile` for *hex*.
+
+        Overrides: `api.gui.BattleAPI.get_gui_tile_info`.
+        """
         state = self.state
         out_of_bounds = hex.get_distance(ORIGIN) >= state.death_radius-1
         # Tile color
@@ -154,43 +205,27 @@ class MapEditor(MapCreator, BattleAPI):
             text=text,
             )
 
+    def get_map_size_hint(self) -> float:
+        """Tracks the `logic.state.State.death_radius`.
+
+        The death radius is subtracted by one (and a bit) to "skip" the 0th round and show it as it is in round 1.
+
+        Overrides: `api.gui.BattleAPI.get_map_size_hint`.
+        """
+        return self.state.death_radius-1.5
+
     def handle_hex_click(self, hex: Hexagon, button: str):
-        """Overrides base class method."""
+        """Handles a tile being clicked on in the tilemap.
+
+        `Left click`: Applies the `MapCreator.brush`.
+        `Right click`: Clears the tile.
+        `Middle click`: Toggles the `MapCreator.brush`.
+
+        Overrides: `api.gui.BattleAPI.handle_hex_click`.
+        """
         if button == 'left':
             self.apply_brush(hex)
         elif button == 'right':
             self.clear_contents(hex, mirrored=True)
         elif button == 'middle':
             self.toggle_brush()
-
-    def get_map_size_hint(self) -> float:
-        """Overrides base class method."""
-        return self.state.death_radius-1.5
-
-    def get_controls(self) -> ControlMenu:
-        """Overrides base class method."""
-        return {
-            'Editor': [
-                Control('Increase death radius', lambda: self.increment_death_radius(1), '+ ='),
-                Control('Decrease death radius', lambda: self.increment_death_radius(-1), '+ -'),
-                # Clear all shares hotkey with clear vfx to refresh the selected hex vfx
-                Control('Clear all', self.clear_all, '^+ c'),
-                Control('Save', self.save, '^+ s'),
-                Control('Load', self.load, '^+ l'),
-                ],
-            'Brush': [
-                Control('Pit', lambda: self.set_brush('pit'), 'z'),
-                Control('Wall', lambda: self.set_brush('wall'), 'x'),
-                Control('Spawn', lambda: self.set_brush('spawn'), 'c'),
-                Control('Eraser', lambda: self.set_brush('eraser'), 'v'),
-                ],
-            'Mirror Mode': [
-                Control('Mirror off', lambda: self.set_mirror_mode(1), '1'),
-                Control('Mirror 2', lambda: self.set_mirror_mode(2), '2'),
-                Control('Mirror 3', lambda: self.set_mirror_mode(3), '3'),
-                Control('Mirror 6', lambda: self.set_mirror_mode(6), '4'),
-                ],
-            'Debug': [
-                Control('Map coordinates', self.toggle_coords, '^+ d'),
-                ],
-            }

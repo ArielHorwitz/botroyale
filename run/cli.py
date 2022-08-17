@@ -1,3 +1,8 @@
+"""
+A command line interface for running functions that don't require the GUI.
+
+Uses `input` and `print` to interface with the user.
+"""
 from collections import Counter
 from api.time_test import timing_test
 from logic.maps import MAPS, get_map_state
@@ -40,6 +45,7 @@ def run_regular_timing_test():
     calculation time) of each bot."""
     ucount = input('\nNumber of battles to play (leave blank for 10,000): ')
     battle_count = int(ucount) if ucount else 10_000
+    assert battle_count > 0
     bot_classes = query_bot_classes()
     timing_test(bot_classes, battle_count)
 
@@ -72,7 +78,7 @@ def run_winrates():
             bot_classes_getter=get_bots,
             enable_logging=False)
         print_summary()
-        print(f'\nPlaying next battle (map: {battle.map_name})...\n')
+        print(f'\nPlaying next battle : {battle.description}\n')
         winner, losers = play_complete(battle)
         print(battle.get_info_panel_text())
         counter[winner] += 1
@@ -84,22 +90,19 @@ def run_winrates():
 
 def query_map_name() -> str:
     """Queries the user in console for a map name."""
-    maps = tuple(MAPS.keys())
     print('\n'.join([
         f'Available maps:',
-        *(f'- {i}. {m}' for i, m in enumerate(maps)),
+        *(f'- {i}. {m}' for i, m in enumerate(MAPS)),
         ]))
-    map = input('Select map: ')
     while True:
-        if map in MAPS:
-            break
+        idx = input('Select map number: ')
         try:
-            idx = int(map)
+            idx = int(idx)
             assert 0 <= idx < len(MAPS)
-        except ValueError:
-            print(f'"{map}" is not an option.')
-            continue
-        map = maps[idx]
+            break
+        except (ValueError, AssertionError):
+            print(f'"{idx}" is not an option.')
+    map = MAPS[idx]
     print(f'Selected: {map}')
     return map
 
@@ -116,7 +119,7 @@ def query_bot_classes() -> list[type]:
         print(names_str)
         # print('Enter one of the following:')
         print('\nBot selection:')
-        print('>  leave blank to finish')
+        print('>  leave blank to finish (if none selected, will select all non-testing bots)')
         print('>  number to add/remove a bot by number')
         print('>  "a" to add all bots')
         print('>  "r" to remove all bots')
@@ -127,6 +130,7 @@ def query_bot_classes() -> list[type]:
     bot_cls_list = [bot_cls for bot_cls in BOTS.values()]
     sorted_bots = sorted(bot_cls_list, key=lambda botcls: botcls.TESTING_ONLY)
     available_bots = [bot_cls.NAME for bot_cls in sorted_bots]
+    available_bots_non_testing = [bot_cls.NAME for bot_cls in sorted_bots if not bot_cls.TESTING_ONLY]
     selected_names = []
 
     # Collect bots
@@ -154,7 +158,7 @@ def query_bot_classes() -> list[type]:
 
     # Fill with all bots if none selected
     if not selected_names:
-        selected_names = available_bots
+        selected_names = available_bots_non_testing
     bot_classes = [BOTS[bn] for bn in selected_names]
     return bot_classes
 
@@ -171,6 +175,7 @@ def play_complete(battle: BattleManager) -> tuple[str, list[str]]:
 
 
 def run():
+    """Queries the user for a function to run."""
     while True:
         print('\n'.join([
             '\n\n',

@@ -8,6 +8,8 @@ arguments (see "main.py --help"). If found, it will be imported. If it is
 imported and it has a callable attribute `run`, then it will be called without
 arguments.
 """
+
+
 from typing import Optional
 from logic.battle import Battle
 from logic.maps import get_map_state
@@ -30,7 +32,7 @@ def play_many(battle_count: int = 1):
     SleeperBot.sleep_time = 0.1  # For demo purposes, not important
     for i in range(battle_count):
         game_over = play_battle('empty')
-        if game_over.winner:
+        if game_over.winner is not None:
             winner_name = game_over.bots[game_over.winner].gui_label
         else:
             winner_name = 'Draw!'

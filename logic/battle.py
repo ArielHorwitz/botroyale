@@ -1,3 +1,6 @@
+"""
+Home of the `logic.battle.Battle` class.
+"""
 from typing import Union, Optional, Sequence, Callable
 import numpy as np
 from api.logging import Logger, logger as glogger
@@ -14,48 +17,40 @@ LINEBR = '='*75
 
 
 class Battle:
-    """The Battle manages the states and bots of a single battle.
+    """Manages the states and bots of a single battle.
 
-    It remembers a history of states as well as the current state.
-    It also creates the bots and polls them for an action on their turn.
+    It creates the bots and polls them for an action on their turn, and remembers a history of states as well as the current state.
     """
 
     def __init__(self,
             initial_state: Optional[State] = None,
             bot_classes_getter: Callable[[int], Sequence[type]] = get_bot_classes,
+            description: str = 'Custom battle',
             enable_logging: bool = True,
             only_bot_turn_states: bool = True,
             threshold_bot_block_seconds: float = 20.0,
             ):
         """
-        initial_state -- The first state of the battle. If initial_state is not
-        provided, it will be generated using the map generator based on
-        configured settings.
+        Args:
+            initial_state: The first state of the battle. If initial_state is not provided, it will be generated using the map generator based on configured settings.
 
-        bot_classes_getter -- A function that takes an integer and returns that
-        many bots classes. If bot_classes_getter is not provided, the default
-        `get_bot_classes` will be used that is based on configured settings.
+            bot_classes_getter: A function that takes an integer and returns that many bots classes. If bot_classes_getter is not provided, the default `bots.get_bot_classes` will be used that is based on configured settings.
 
-        enable_logging -- Passing False will disable the logger for the battle.
-        It also disables logging while calling the bot_classes_getter.
+            description: A description of the battle.
 
-        only_bot_turn_states -- Determines whether to skip "end_of_round" states
-        and other states that are not expecting an action from a unit. This is
-        useful for bot developers who may not care about "mid-states" and only
-        care to see when a bot needs to take action. This essentially determines
-        whether actions are applied to states with `apply_action` or
-        `apply_action_no_round_increment`.
+            enable_logging: Passing False will disable the logger for the battle. It also disables logging while calling the bot_classes_getter.
 
-        threshold_bot_block_seconds -- Threshold of calculation time for bots to
-        trigger a warning in the log.
+            only_bot_turn_states: Determines whether to skip `State.end_of_round` states and other states that are not expecting an action from a unit. This is useful for bot developers who may not care about states out of turn and only care to see when a bot needs to take action. This essentially determines whether actions are applied to states with `State.apply_action` or `State.apply_action_no_round_increment`.
+
+            threshold_bot_block_seconds: Threshold of calculation time for bots to trigger a warning in the log.
         """
         self.enable_logging = enable_logging
-        self._map_name = 'Custom initial state'
+        self.description = description
+        """A description of the battle"""
+        self.logger(f'Making battle: {self.description}')
         if initial_state is None:
             with Logger.set_logging_temp(enable_logging):
                 initial_state = get_map_state()
-            self._map_name = DEFAULT_MAP_NAME
-        self.logger(f'Making battle on map: {self._map_name}')
         self.__current_state: State = initial_state
         self.history: list[State] = [initial_state]
         self.__only_bot_turn_states: bool = only_bot_turn_states
@@ -127,9 +122,9 @@ class Battle:
     def play_all(self, disable_logging: bool = False, print_progress: bool = False):
         """Plays the battle to completion.
 
-        disable_logging     -- disable logging globally while playing
-        print_progress      -- disable logging globally while playing and print
-                                    a progress bar to console
+        Args:
+            disable_logging: Disable logging globally while playing.
+            print_progress: Disable logging globally while playing and print a progress bar to console.
         """
         def print_progress_bar():
             rc = self.state.round_count
@@ -200,7 +195,7 @@ class Battle:
     # Miscallaneous
     @property
     def winner(self) -> Union[int, None]:
-        """Returns the unit id that won, or None if draw or game isn't over."""
+        """Returns `logic.state.State.winner` of the current state of battle."""
         return self.state.winner
 
     @property
@@ -212,8 +207,7 @@ class Battle:
 
 
 class TurnTimer:
-    """A class for keeping track of calculation times for multiple bots over
-    the course of multiple turns."""
+    """Keeps track of calculation times for multiple bots over the course of multiple turns."""
 
     def __init__(self, num_of_units: int):
         self.num_of_units: int = num_of_units
@@ -223,8 +217,7 @@ class TurnTimer:
     def all_times(self) -> np.ndarray:
         """Return the full table of times (numpy array). Not a copy.
 
-        The ndarray shape will be (num_of_rounds, num_of_units), such that every
-        element in the array represents the time that unit has in that round.
+        The ndarray shape will be (num_of_rounds, num_of_units), such that every element in the array represents the time that unit has in that round.
         """
         return self.round_timers
 
@@ -270,11 +263,7 @@ class TurnTimer:
         self.round_timers[round, unit_id] += time
 
     def get_time(self, unit_id: int, round: Optional[int] = None) -> float:
-        """Get the time recorded for a unit at a given round.
-
-        Will use the last round if none is provided.
-        See also: TurnTimer.all_times
-        """
+        """Get the time recorded for a unit at a given round (default: last round)."""
         if round is None:
             round = self.round_count - 1
         return float(self.round_timers[round, unit_id])
