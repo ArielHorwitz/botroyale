@@ -15,8 +15,8 @@ from util.file import popen_path, file_dump, file_load
 __all__ = []  # for pdoc
 
 ROOT_PACKAGE_NAME = PROJ_DIR.name
-if '-' in ROOT_PACKAGE_NAME or '.' in ROOT_PACKAGE_NAME:
-    raise NameError(f'Project directory "{ROOT_PACKAGE_NAME}" must be a valid python package name, cannot have dashes "-" or periods "."')
+if not ROOT_PACKAGE_NAME.isidentifier():
+    raise NameError(f'Project directory "{ROOT_PACKAGE_NAME}" must be a valid python package name. Try renaming your project folder with *only* letters, (e.g. "botroyale").')
 
 INCLUDE_SUBPACKAGES = [
     'api',
