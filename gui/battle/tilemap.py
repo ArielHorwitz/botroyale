@@ -372,46 +372,36 @@ class Tile(widgets.kvInstructionGroup):
 
         self._bg_color = widgets.kvColor(0,0,0,1)
         self._bg = widgets.kvRectangle(source=bg, size=size)
-        self._bg_text_color = widgets.kvColor(0,0,0,0)
-        self._bg_text = widgets.kvRectangle(size=size)
-
         fg_size = size[0] * UNIT_SIZE, size[1] * UNIT_SIZE
         self._fg_color = widgets.kvColor(0,0,0,1)
         self._fg = widgets.kvRectangle(source=fg, size=fg_size)
-        self._fg_text_color = widgets.kvColor(0,0,0,0)
-        self._fg_text = widgets.kvRectangle(size=fg_size)
+        self._text_color = widgets.kvColor(0,0,0,0)
+        self._text = widgets.kvRectangle(size=fg_size)
 
         self.add(self._bg_color)
         self.add(self._bg)
         self.add(self._fg_color)
         self.add(self._fg)
-        self.add(self._bg_text_color)
-        self.add(self._bg_text)
-        self.add(self._fg_text_color)
-        self.add(self._fg_text)
+        self.add(self._text_color)
+        self.add(self._text)
 
     def update(self, tile_info):
         # Always set the bg color
         self._bg_color.rgba = (*tile_info.bg, 1)
-        bg_text = None
-
-        # Hide the fg rect if no color is set
+        # Set/hide the fg
         if tile_info.color is None:
             self._fg_color.rgba = 0,0,0,0
         else:
             self._fg_color.rgba = (*tile_info.color, 1)
             self._fg.source = str(SPRITES_DIR / f'{tile_info.sprite}.png')
-
-        # Hide the fg text rect if no text is set
+        # Set/hide text
         if not tile_info.text:
-            self._fg_text_color.rgba = 0,0,0,0
+            self._text_color.rgba = 0,0,0,0
             fg_text = None
         else:
-            self._fg_text_color.rgba = 1,1,1,1
+            self._text_color.rgba = 1,1,1,1
             fg_text = tile_info.text
-
-        # Apply text
-        self.set_text(bg_text, fg_text)
+        self.set_text(fg_text)
 
     def reset(self, pos, size):
         self.__pos = pos
@@ -421,30 +411,19 @@ class Tile(widgets.kvInstructionGroup):
         self._fg.size = fg_size
         self._fg.pos = center_sprite(pos, fg_size)
         # Hide the text as its size and position will be updated when set text
-        self._bg_text.size = self._fg_text.size = 0, 0
+        self._text.size = 0, 0
 
-    def set_text(self, bg, fg):
-        if fg:
-            font_size = FONT_SCALE * self._bg.size[1] / 2
-            font_size = min(font_size, MAX_FONT_SIZE)
-            outline_width = font_size / 10
-            self._fg_text.texture = t = widgets.text_texture(fg,
-                font_name=FONT, font_size=font_size, outline_width=outline_width)
-            self._fg_text.size = t.size
-            self._fg_text.pos = center_sprite(self.__pos, t.size)
-            self._bg_text.size = 0, 0
-        elif bg:
-            font_size = FONT_SCALE * self._bg.size[1] / 2
-            font_size = min(font_size, MAX_FONT_SIZE)
-            outline_width = font_size / 10
-            self._bg_text.texture = t = widgets.text_texture(bg,
-                font_name=FONT, font_size=font_size, outline_width=outline_width)
-            self._bg_text.size = t.size
-            self._bg_text.pos = center_sprite(self.__pos, t.size)
-            self._fg_text.size = 0, 0
-        else:
-            self._bg_text.size = 0, 0
-            self._fg_text.size = 0, 0
+    def set_text(self, text):
+        if text is None:
+            self._text.size = 0, 0
+            return
+        font_size = FONT_SCALE * self._bg.size[1] / 2
+        font_size = min(font_size, MAX_FONT_SIZE)
+        outline_width = font_size / 10
+        self._text.texture = t = widgets.text_texture(text,
+            font_name=FONT, font_size=font_size, outline_width=outline_width)
+        self._text.size = t.size
+        self._text.pos = center_sprite(self.__pos, t.size)
 
 
 class VFX(widgets.kvInstructionGroup):
