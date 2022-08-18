@@ -56,12 +56,15 @@ class CheckPoint:
         # Enemy stats
         enemy_mask = np.ones(state.num_of_units, dtype=np.bool)
         enemy_mask[self.uid] = False
-        enemy_mask[~state.alive_mask] = False
         enemy_mask[friendly_uids] = False
+        self.all_enemy_ids = set(np.flatnonzero(enemy_mask))
+        enemy_mask[~state.alive_mask] = False
         doomed_mask = [self.is_doomed(uid) for uid in range(state.num_of_units)]
         enemy_mask[doomed_mask] = False
         self.doomed_ids = set(np.flatnonzero(doomed_mask))
         self.enemy_ids = set(np.flatnonzero(enemy_mask))
+        self.doomed_enemy_ids = self.all_enemy_ids & self.doomed_ids
+        self.dead_enemy_ids = self.all_enemy_ids & self.dead_ids
         self.enemy_pos = set(state.positions[uid] for uid in self.enemy_ids)
         tombstone_ids = set(np.flatnonzero(~state.alive_mask))
         tombstone_ids |= self.doomed_ids
@@ -98,7 +101,7 @@ class CheckPoint:
         vals_seqs.extend(repos_vals_seqs)
         return vals_seqs
 
-    def get_sequences(self, calculation_time_ms, debug_verbose=DEBUG_VERBOSE):
+    def get_sequences(self, calculation_time_ms):
         """Returns a list of action sequences from this checkpoint sorted by evaluation."""
         start_time_ms = ping()
         self.logger(f'Searching sequences from {self} (allotted: {calculation_time_ms:.1f} ms)...')
@@ -119,7 +122,7 @@ class CheckPoint:
         self.logger(f'Found {len(gvals_seqs)} total sequences')
         sorted_gvals_seqs = sorted(gvals_seqs, key=lambda x: x[0], reverse=True)
         gsorted_seqs = [(gval, seq) for gval, seq, debug_str in sorted_gvals_seqs]
-        if debug_verbose:
+        if DEBUG_VERBOSE:
             for gval, seq, debug_str in reversed(sorted_gvals_seqs):
                 self.logger(f'Guess: [{self.__format_eval_value(gval)}] {seq}\t{debug_str}')
 
@@ -143,11 +146,15 @@ class CheckPoint:
         # Sort and log the sequences with evaluations
         sorted_vals_seqs = sorted(vals_seqs, key=lambda x: x[0], reverse=True)
         final_sorted_seqs = [seq for v, g, seq, d in sorted_vals_seqs]
-        didx = len(sorted_vals_seqs) if debug_verbose else 5
+        didx = len(sorted_vals_seqs) if DEBUG_VERBOSE else 5
         for val, gval, seq, debug_strs in reversed(sorted_vals_seqs[:didx]):
             val_str = self.__format_eval_value(val)
             gval_str = self.__format_eval_value(gval)
-            self.logger(f'[{val_str} <- {gval_str}] {str(seq)[:60]:<60}\t{debug_strs}')
+            if DEBUG_VERBOSE:
+                seq_dstr = f'{seq}\n\t'
+            else:
+                seq_dstr = f'{str(seq)[:60]:<60}\t'
+            self.logger(f'[{val_str} <- {gval_str}] {seq_dstr}{debug_strs}')
         self.logger(f'Finished get_sequences with time remaining: {remaining_time_ms():.1f} ms')
         return final_sorted_seqs
 
@@ -226,8 +233,6 @@ class CheckPoint:
     # EVALUATION
     def evaluate(self):
         """Evaluate ending our turn in this state."""
-        if self.uid in self.doomed_ids:
-            return float('-inf'), 'doomed'
         kill_value, d_kill = self.evaluate_kills(self.EVAL_KILL_FACTOR)
         ap_value, d_ap = self.evaluate_ap(self.EVAL_AP_FACTOR)
         position_value, d_pos = self.evaluate_position(self.EVAL_POS_FACTOR)
@@ -273,15 +278,14 @@ class CheckPoint:
         return total_ap_value, d
 
     def evaluate_kills(self, weight=1):
-        if not self.uid in self.alive_ids:
-            return float('-inf'), f'LOSING STATE'
-        doomed = len(self.doomed_ids)
-        alive = len(self.enemy_ids) - doomed
-        if alive == 0:
+        if len(self.enemy_ids) == 0:
+            if self.pos in self.doomed_tiles:
+                return 1_000, f'DRAW STATE'
             return float('inf'), f'WINNING STATE'
-        dead = len(self.dead_ids)
-        kill_value = dead * weight
-        d = f'kills: {self.__format_eval_value(kill_value)} ({str(dead):>2} dead /{str(doomed):>2} doom)'
+        kill_value = -len(self.enemy_ids) * weight
+        dead = len(self.dead_enemy_ids)
+        doomed = len(self.doomed_enemy_ids)
+        d = f'kills: {self.__format_eval_value(kill_value)} ({str(dead):>2} dead /{str(doomed):>2} doom / {len(self.all_enemy_ids)} total)'
         return kill_value, d
 
     PIT1_THREAT = 1
@@ -357,7 +361,7 @@ class CheckPoint:
 
     def evaluate_tile_radius(self, tile):
         if tile in self.doomed_tiles:
-            return float('-inf')
+            return -1_000
         center_distance_ratio = center_distance(tile) / self.state.death_radius
         rod_distance_ratio = 1 - center_distance_ratio
         return (rod_distance_ratio - center_distance_ratio)
@@ -368,6 +372,7 @@ class CheckPoint:
     def __find_enemy_threat(self, enemy_id):
         """Returns the weighted number of options enemy_id has to lethally push us from this state."""
         state = self.state.copy()
+        start_step = state.step_count
         total_threat = 0
         d = []
         extra_ap_cost_max = BaseBot.max_ap - MIN_AP_PER_PUSH
@@ -380,7 +385,12 @@ class CheckPoint:
             enemy_turns.append(enemy_turn_state)
             enemy_turn_state = iter_state_to_turn(enemy_turn_state, enemy_id, self.uid)
         # For each state, check push sequences against us
-        for sidx, enemy_turn in enumerate(enemy_turns):
+        for enemy_turn in enemy_turns:
+            steps_to_turn_start = enemy_turn.step_count - start_step
+            assert steps_to_turn_start > 0
+            idle_cost_ratio = 1 - 1 / ((steps_to_turn_start + 1) / 2)
+            assert 0 <= idle_cost_ratio <= 1
+            idle_cost = idle_cost_ratio * self.THREAT_IDLE_COST_FACTOR
             cp = self.get_new(enemy_turn, self.logger, self.friendly_uids)
             enemy_push_sequences = cp.get_lethal_sequences_uid(self.uid)
             if not enemy_push_sequences:
@@ -390,12 +400,14 @@ class CheckPoint:
                 assert extra_ap_cost >= 0
                 ap_cost_ratio = extra_ap_cost / extra_ap_cost_max
                 ap_cost = ap_cost_ratio * self.THREAT_AP_COST_FACTOR
-                idle_cost = sidx * self.THREAT_IDLE_COST_FACTOR
-                pthreat = 1 - ap_cost - idle_cost
+                pthreat = 1 - idle_cost - ap_cost
                 total_threat += pthreat
                 origin = pseq.last_state.positions[enemy_id].xy
                 pit = pseq.last_state.positions[self.uid].xy
-                d.append(f'{enemy_id}[{sidx+1},{extra_ap_cost}]{origin}->{pit}={pthreat:.2f}')
+                debug_str = f'{enemy_id}[{steps_to_turn_start}s+{extra_ap_cost}ap]{origin}->{pit} = {pthreat:.2f}'
+                if DEBUG_VERBOSE:
+                    debug_str = f'{debug_str} {{s:{idle_cost:.2f}|ap:{ap_cost:.2f}}}'
+                d.append(debug_str)
             # Don't count the next turn, we assume a threat on this turn is stronger than the next turn
             break
         return total_threat, ' ; '.join(d)
