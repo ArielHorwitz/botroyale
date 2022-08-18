@@ -9,6 +9,7 @@ from api.gui import BattleAPI, Tile, VFX, Control, ControlMenu
 from util.time import ping, pong
 from util.settings import Settings
 from util.hexagon import Hex, Hexagon
+from api.actions import MAX_AP
 from logic.state import State
 
 
@@ -425,9 +426,11 @@ class BattleManager(Battle, BattleAPI):
             fg_text = f'{unit_id}'
             fg_sprite = self.unit_sprites[unit_id]
             current = state.current_unit
-            if state.current_unit is not None:
-                if hex == state.positions[state.current_unit]:
-                    bg_color = 1, 1, 1
+            uid = state.current_unit
+            if uid is not None:
+                if hex == state.positions[uid]:
+                    ap_ratio = state.ap[uid] / MAX_AP
+                    bg_color = tuple(0.1 + (0.9 * ap_ratio) for _ in range(3))
         else:
             fg_color = None
             fg_text = ''
