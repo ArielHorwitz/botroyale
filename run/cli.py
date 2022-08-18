@@ -20,10 +20,12 @@ COMP_FAIL_CONDITIONS = f'Fail conditions: mean > {COMP_MEAN_MS:,} ms ; max > {CO
 def run_competitive_timing_test():
     """Runs the competitive timing test. Prints the names of the bots that fail
     the test."""
+    map_name = query_map_name()
     bot_classes = query_bot_classes()
     results = timing_test(
         bots=bot_classes,
         battle_count=COMP_SAMPLE_SIZE,
+        map_name=map_name,
         verbose_results=False,
         shuffle_bots=True,
         disable_logging=True,
@@ -46,8 +48,9 @@ def run_regular_timing_test():
     ucount = input('\nNumber of battles to play (leave blank for 10,000): ')
     battle_count = int(ucount) if ucount else 10_000
     assert battle_count > 0
+    map_name = query_map_name()
     bot_classes = query_bot_classes()
-    timing_test(bot_classes, battle_count)
+    timing_test(bot_classes, battle_count, map_name=map_name)
 
 
 def run_winrates():
@@ -65,7 +68,8 @@ def run_winrates():
 
     counter = Counter()
     battles_played = 0
-    initial_state = get_map_state(query_map_name())
+    map_name = query_map_name()
+    initial_state = get_map_state(map_name)
     bot_selection = [b.NAME for b in query_bot_classes()]
     get_bots = bot_getter(
         selection=bot_selection,
@@ -76,9 +80,10 @@ def run_winrates():
         battle = BattleManager(
             initial_state=initial_state,
             bot_classes_getter=get_bots,
+            description=f'winrates #{battles_played+1} @ {map_name}',
             enable_logging=False)
         print_summary()
-        print(f'\nPlaying next battle : {battle.description}\n')
+        print(f'\nPlaying battle : {battle.description}\n')
         winner, losers = play_complete(battle)
         print(battle.get_info_panel_text())
         counter[winner] += 1

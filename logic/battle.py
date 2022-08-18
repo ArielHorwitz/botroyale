@@ -25,7 +25,7 @@ class Battle:
     def __init__(self,
             initial_state: Optional[State] = None,
             bot_classes_getter: Callable[[int], Sequence[type]] = get_bot_classes,
-            description: str = 'Custom battle',
+            description: str = 'No description set',
             enable_logging: bool = True,
             only_bot_turn_states: bool = True,
             threshold_bot_block_seconds: float = 20.0,
@@ -47,7 +47,6 @@ class Battle:
         self.enable_logging = enable_logging
         self.description = description
         """A description of the battle"""
-        self.logger(f'Making battle: {self.description}')
         if initial_state is None:
             with Logger.set_logging_temp(enable_logging):
                 initial_state = get_map_state()

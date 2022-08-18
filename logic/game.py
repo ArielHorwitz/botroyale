@@ -103,6 +103,7 @@ class StandardGameAPI(GameAPI):
             return BattleManager(
                 initial_state=state,
                 bot_classes_getter=bots,
+                description=f'GUI battle @ {map_name}',
                 gui_mode=True,
                 )
         except NotFairError as e:
