@@ -7,8 +7,9 @@ from api.actions import Move, Push, Jump
 
 class RandomBot(BaseBot):
     NAME = 'random'
-    SPRITE = 'ellipse'
     TESTING_ONLY = True
+    COLOR_INDEX = 5
+    SPRITE = 'ellipse'
 
     def poll_action(self, state):
         pos = state.positions[self.id]
