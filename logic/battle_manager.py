@@ -1,7 +1,7 @@
 """
 Home of `logic.battle_manager.BattleManager`.
 """
-from typing import Optional, Union, Sequence, Set
+from typing import Optional, Literal
 from logic.battle import Battle
 
 from collections import deque
@@ -16,6 +16,9 @@ STEP_RATE = Settings.get('logic._step_rate_cap', 2)
 STEP_RATES = Settings.get('logic.|step_rates', [1, 2, 3, 5, 60])
 LOGIC_DEBUG = Settings.get('logging.battle', True)
 MAP_CENTER = Hex(0, 0)
+
+
+PanelMode = Literal['turns', 'timers']
 
 
 class BattleManager(Battle, BattleAPI):
@@ -53,17 +56,11 @@ class BattleManager(Battle, BattleAPI):
     ])
     """All available colors for unit sprites. 12 colors from red to purple on the rainbow."""
 
-    def __init__(self,
-            gui_mode: Optional[bool] = False,
-            spoiler_mode: Optional[bool] = False,
-            **kwargs,
-            ):
+    def __init__(self, gui_mode: Optional[bool] = False, **kwargs):
         """
         Args:
             kwargs: Keyword arguments for `logic.battle.Battle.__init__`
             gui_mode: If True, will set arguments appropriate for the GUI.
-            spoiler_mode: If True, will include information during replays that
-                            may spoil the results.
         """
         if gui_mode:
             kwargs['only_bot_turn_states'] = False
@@ -71,12 +68,12 @@ class BattleManager(Battle, BattleAPI):
         Battle.__init__(self, **kwargs)
         BattleAPI.__init__(self)
         self.__replay_index = 0
-        self.__spoiler_mode = spoiler_mode
         self.autoplay: bool = False
         """Determines whether to automatically play the game while the `BattleManager.update` method is called."""
         self.__last_step = ping()
         self.unit_colors = [self.UNIT_COLORS[bot.COLOR_INDEX % len(self.UNIT_COLORS)] for bot in self.bots]
         self.unit_sprites = [bot.SPRITE for bot in self.bots]
+        self.__panel_mode: PanelMode = 'turns'
 
     # Replay
     def set_replay_index(self,
@@ -138,12 +135,6 @@ class BattleManager(Battle, BattleAPI):
         """The state at index of `BattleManager.replay_index`."""
         return self.history[self.replay_index]
 
-    def _is_spoiler_mode(self, state_index: Optional[int] = None) -> bool:
-        if state_index is None:
-            state_index = self.replay_index
-        nothing_to_spoil = state_index == self.history_size - 1
-        return self.__spoiler_mode or nothing_to_spoil
-
     def play_all(self, *args, **kwargs):
         """Overrides the `logic.battle.Battle.play_all` in order to set the `BattleManager.replay_index` to the last state."""
         super().play_all(*args, **kwargs)
@@ -175,113 +166,116 @@ class BattleManager(Battle, BattleAPI):
         """A multiline summary string of the current game state."""
         if state_index is None:
             state_index = self.replay_index
-        timers = ''
-        if self._is_spoiler_mode(state_index):
-            timers = f'================= TIMERS =================\n{self.get_timer_str()}'
-        return '\n'.join([
+
+        strs = [
             f'{self._get_status_str(state_index)}',
-            f'{self._get_units_str(state_index)}',
-            timers,
+            '',
+            ]
+        if self.__panel_mode == 'turns':
+            strs.extend([
+                f'{self._get_turn_order_str(state_index)}',
+                '',
+                f'{self._get_last_action_str(state_index)}',
             ])
+        elif self.__panel_mode == 'timers':
+            strs.append(f'{self.get_timer_str()}')
+        else:
+            raise ValueError(f'Unknown panel mode: {self.__panel_mode}')
+        return '\n'.join(strs)
 
     def get_timer_str(self) -> str:
-        """Multiline string of bot calculation times. Confusing when in replay mode (see: `BattleManager.replay_mode`)."""
-        strs = ['___ Bot ______________ ms/t ___ max ___ total ___']
+        """Multiline string of bot calculation times.
+
+        Unlike other methods in this class, the result of this method does not
+        consider `BattleManager.replay_mode`. The times shown are updated to the
+        latest state in the battle. This is because `logic.battle.Battle.bot_timer`
+        is updated in place on each new state.
+        """
+        strs = [
+            '      Bot Calculation Times (ms)',
+            '--------------------------------------',
+            '       Bot             Mean      Max',
+            '',
+        ]
+        if self.replay_mode:
+            strs.insert(0, 'Times are not live!\n\n')
         for bot in self.bots:
-            total_block_time = self.bot_timer.total(bot.id)
             mean_block_time = self.bot_timer.mean(bot.id)
             max_block_time = self.bot_timer.max(bot.id)
             strs.append(''.join([
                 f'{bot.gui_label:<20}',
-                f'{f"{mean_block_time:.1f}":>8}',
-                f'{f"{max_block_time:.1f}":>8}',
-                f'{f"{total_block_time:.1f}":>10}',
+                f'{f"{mean_block_time:,.1f}":>8} ',
+                f'{f"{max_block_time:,.1f}":>8}',
                 ]))
         return '\n'.join(strs)
 
     def _get_status_str(self, state_index: int) -> str:
         state = self.history[state_index]
-        spoilers = self._is_spoiler_mode(state_index)
-        # Game over results
+        autoplay = 'Playing' if self.autoplay else 'Paused'
+        status = f'{autoplay} <= {1000 / self.step_interval_ms:.2f} steps/s'
+        win_str = ''
         if state.game_over:
             winner_str = 'draw!'
             winner_id = state.winner
             if winner_id is not None:
                 winner = self.bots[winner_id]
                 winner_str = f'{winner.gui_label} won!'
-            win_str = f'GAME OVER : {winner_str}'
-        else:
-            win_str = ''
+            status = f'GAME OVER : {winner_str}'
+        return '\n'.join([
+            status,
+            '',
+            f'Step:{state.step_count:^5}Turn:{state.turn_count:^4}Round:{state.round_count:^3}RoD: {state.death_radius:>2}',
+        ])
 
-        # State history
-        autoplay = 'Playing' if self.autoplay else 'Paused'
-        autoplay_str = f'{autoplay} <= {1000 / self.step_interval_ms:.2f} steps/s'
-        end_state_index_str = f' / {self.history_size-1:>4}' if spoilers else ''
-        replay_str = f'State #{state_index:>4}{end_state_index_str} : {autoplay_str}'
-
-        # Current turn
-        turn_str = self.get_state_str(state)
-
-        # Last action
+    def _get_last_action_str(self, state_index: int) -> str:
+        state = self.history[state_index]
         if state.step_count == 0:
-            last_step_str = '[i]new game[/i]'
-            last_action_str = f'[i]started new game[/i]'
+            last_step_str = '[i]New game[/i]'
+            last_action_str = f'[i]Started new game[/i]'
         else:
             last_state = self.history[state_index-1]
-            last_step_str = f'[i]{self.get_state_str(last_state)}[/i]'
+            last_step_str = f'[i]{self.get_state_str(last_state).capitalize()}[/i]'
             if last_state.end_of_round:
-                last_action_str = f'[i]started new round[/i]'
+                last_action_str = f'[i]Started round {state.round_count}[/i]'
             else:
                 last_bot = self.bots[self.history[state_index-1].current_unit]
                 last_action_str = f'{state.last_action}'
                 if not state.is_last_action_legal:
                     last_action_str = f'[i]ILLEGAL[/i] {last_action_str}'
-
         return '\n'.join([
-            replay_str,
-            win_str,
-            '',
-            f'Last step: {last_step_str}',
+            f'Last step:   {last_step_str}',
             f'Last action: {last_action_str}',
-            '',
-            f'Step:  {state.step_count:<5} Turn:  {state.turn_count:<4} Round: {state.round_count:<3}',
-            f'Ring of death radius:  {state.death_radius}',
-            '',
         ])
 
-    def _get_units_str(self, state_index: int) -> str:
+    def _get_turn_order_str(self, state_index: int) -> str:
         state = self.history[state_index]
-        unit_strs = []
+        unit_strs = [
+            '____________ Current turn ____________',
+        ]
         if state.current_unit is None:
-            unit_strs.append(self.get_state_str(state).capitalize())
+            r = f'{state.round_count:>2} -> {state.round_count+1:>2}'
+            unit_strs.append(f'            NEW ROUND {r}')
         else:
-            unit_strs.append(self.get_unit_str(state.current_unit, state_index))
-        unit_strs.append('___________ Next turns in round __________')
+            unit_strs.append(f'{self.get_unit_str(state.current_unit, state_index)}')
+            unit_strs.append('\n________ Next turns in round _________')
         unit_strs.extend(self.get_unit_str(unit_id, state_index) for unit_id in state.round_remaining_turns[1:])
-        unit_strs.append('----------- Awaiting next round ----------')
-        unit_strs.extend(self.get_unit_str(unit_id, state_index) for unit_id in state.round_done_turns if unit_id not in state.death_order)
-        unit_strs.append('================== Dead ==================')
+        unit_strs.append('\n________ Awaiting next round _________')
+        unit_strs.extend(self.get_unit_str(unit_id, state_index) for unit_id in state.next_round_order if unit_id in state.round_done_turns)
+        unit_strs.append('\n______________ Dead __________________')
         unit_strs.extend(self.get_unit_str(unit_id, state_index) for unit_id in reversed(state.death_order))
         return '\n'.join(unit_strs)
 
-    def get_unit_str(self,
-            unit_id: int,
-            state_index: Optional[int] = None,
-            ) -> str:
+    def get_unit_str(self, unit_id: int, state_index: Optional[int] = None) -> str:
         """A single line string with info on a unit."""
         state = self.replay_state if state_index is None else self.history[state_index]
         bot = self.bots[unit_id]
+        name_label = f'{bot.gui_label[:20]:<20}'
         alive = state.alive_mask[unit_id]
+        if not alive:
+            return f'[s]{name_label}[/s] died @ step #{state.casualties[unit_id]:^4}'
         ap = round(state.ap[unit_id])
         ap_spent = round(state.round_ap_spent[unit_id])
-        pos = state.positions[unit_id]
-        name_label = f'{bot.gui_label[:20]:<20}'
-        if not alive:
-            name_label = f'[s]{name_label}[/s]'
-        unit_str = f'{name_label} {ap:>3} (-{ap_spent:^3}) AP <{pos.x:>3},{pos.y:>3}>'
-        if not alive:
-            unit_str = f'{unit_str} ; died: {state.casualties[unit_id]:>4}'
-        return unit_str
+        return f'{name_label}  {ap:>3} AP {ap_spent:>3} used'
 
     # Other
     def toggle_autoplay(self, set_to: Optional[bool] = None):
@@ -316,21 +310,18 @@ class BattleManager(Battle, BattleAPI):
             for effect in self.history[index].effects:
                 self.add_vfx(effect.name, effect.origin, effect.target)
 
-    def toggle_spoilers(self, set_to: Optional[bool] = None):
-        """Spoiler mode enables showing information that may be spoiler (e.g.
-        total step count and calculation times).
-
-        This can happen in case the battle has been played ahead and the
-        replay_index is pointing at a past state."""
-        if set_to is None:
-            set_to = not self.__spoiler_mode
-        self.__spoiler_mode = set_to
-
     def toggle_coords(self, set_to: Optional[bool] = None):
         """Toggle whether to show coordinates on tiles (for `BattleManager.get_gui_tile_info`)."""
         if set_to is None:
             set_to = not self.show_coords
         self.show_coords = set_to
+
+    def set_panel_mode(self, set_to: Optional[PanelMode] = None):
+        """Sets the info panel mode. One of: 'turns', 'timers'. Default: 'turns'."""
+        if set_to is None:
+            set_to = 'turns'
+        assert set_to in ['turns', 'timers']
+        self.__panel_mode = set_to
 
     # GUI API
     def update(self):
@@ -377,9 +368,10 @@ class BattleManager(Battle, BattleAPI):
                 Control('Next round', lambda: self.set_to_next_round(), '^ right'),
                 Control('Prev round', lambda: self.set_to_next_round(backwards=True), '^ left'),
             ],
-            'Debug': [
+            'Display': [
+                Control('Turn order', lambda: self.set_panel_mode('turns'), '^ o'),
+                Control('Calculation timers', lambda: self.set_panel_mode('timers'), '^ p'),
                 Control('Map coordinates', self.toggle_coords, '^+ d'),
-                Control('Spoiler mode', self.toggle_spoilers, '^+ o'),
             ],
         }
 
@@ -388,6 +380,9 @@ class BattleManager(Battle, BattleAPI):
         """Multiline summary of the game at the current `BattleManager.replay_index`.
 
         Overrides: `api.gui.BattleAPI.get_info_panel_text`.
+
+        Returns:
+            Return value of `BattleManager.get_info_str`.
         """
         return self.get_info_str(self.replay_index)
 
@@ -438,7 +433,7 @@ class BattleManager(Battle, BattleAPI):
             fg_text = ''
             fg_sprite = None
         if self.show_coords:
-            fg_text = ', '.join(str(_) for _ in hex.xy)
+            fg_text = f'{hex.x},{hex.y}'
         return Tile(
             bg=bg_color,
             color=fg_color,
