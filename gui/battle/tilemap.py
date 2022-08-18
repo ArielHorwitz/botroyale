@@ -1,7 +1,7 @@
 import math
 import itertools
 import numpy as np
-from gui import kex, center_sprite, FONT, logger, ASSETS_DIR
+from gui import kex, center_sprite, logger, ASSETS_DIR
 from gui.kex import widgets
 from api.gui import Control
 from util.settings import Settings
@@ -13,6 +13,8 @@ MAX_MAP_TILES = Settings.get('tilemap.max_draw_tiles', 2500)
 TILE_PADDING = Settings.get('tilemap._tile_padding', 10)
 MAX_TILE_RADIUS = Settings.get('tilemap.max_tile_radius', 300)
 UNIT_SIZE = Settings.get('tilemap.unit_size', 0.7)
+font = Settings.get('gui.font_tilemap', 'liberation-mono')
+FONT = str(ASSETS_DIR / 'fonts' / f'{font}.ttf')
 FONT_SCALE = Settings.get('tilemap.font_scale', 0.7)
 MAX_FONT_SIZE = Settings.get('tilemap.max_font_size', 50)
 REDRAW_COOLDOWN = Settings.get('tilemap.|redraw_cooldown', 0.3)
@@ -441,7 +443,7 @@ class Tile(widgets.kvInstructionGroup):
             font_size = min(font_size, MAX_FONT_SIZE)
             outline_width = font_size / 10
             self._fg_text.texture = t = widgets.text_texture(fg,
-                font=FONT, font_size=font_size, outline_width=outline_width)
+                font_name=FONT, font_size=font_size, outline_width=outline_width)
             self._fg_text.size = t.size
             self._fg_text.pos = center_sprite(self.__pos, t.size)
             self._bg_text.size = 0, 0
@@ -450,7 +452,7 @@ class Tile(widgets.kvInstructionGroup):
             font_size = min(font_size, MAX_FONT_SIZE)
             outline_width = font_size / 10
             self._bg_text.texture = t = widgets.text_texture(bg,
-                font=FONT, font_size=font_size, outline_width=outline_width)
+                font_name=FONT, font_size=font_size, outline_width=outline_width)
             self._bg_text.size = t.size
             self._bg_text.pos = center_sprite(self.__pos, t.size)
             self._fg_text.size = 0, 0
