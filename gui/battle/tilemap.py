@@ -8,6 +8,7 @@ from util.settings import Settings
 from util.hexagon import Hex, ORIGIN, WIDTH_HEIGHT_RATIO, SQRT3
 
 
+ZOOM_RATIO = 3/2
 AUTO_ZOOM = Settings.get('tilemap.autozoom', True)
 MAX_MAP_TILES = Settings.get('tilemap.max_draw_tiles', 2500)
 TILE_PADDING = Settings.get('tilemap._tile_padding', 10)
@@ -63,6 +64,7 @@ class TileMap(widgets.RelativeLayout):
                 Control('Page down', lambda: self.pan(y=-1, zoom_scale=True), '+ s'),
                 Control('Page right', lambda: self.pan(x=1, zoom_scale=True), '+ d'),
                 Control('Page left', lambda: self.pan(x=-1, zoom_scale=True), '+ a'),
+                Control('Debug', self.debug),
                 ],
             }
 
@@ -101,12 +103,13 @@ class TileMap(widgets.RelativeLayout):
     def reset_view(self, *a):
         self.real_center = ORIGIN
         self._adjust_zoom()
+        self.__reposition_vfx()
 
     def zoom_in(self, *a):
-        self._adjust_zoom(3/2)
+        self._adjust_zoom(ZOOM_RATIO)
 
     def zoom_out(self, *a):
-        self._adjust_zoom(2/3)
+        self._adjust_zoom(1/ZOOM_RATIO)
 
     def _resize(self, w, size):
         """
@@ -210,13 +213,6 @@ class TileMap(widgets.RelativeLayout):
             ) / t
         final_radius = radius / self.__tile_padding
         resulting_size = self.__get_axis_sizes_flat(radius)
-        logger('\n'.join([
-            f'__get_minimum_radius',
-            f'canvas: {pix_size}',
-            f'radius: {radius:.2f}',
-            f'-pad:   {final_radius:.2f}',
-            f'result: {resulting_size} = {resulting_size[0] * resulting_size[1]}',
-        ]))
         return final_radius
 
     def __tile_radius_from_sizehint(self, size_hint):
@@ -238,16 +234,6 @@ class TileMap(widgets.RelativeLayout):
         radius = min((width_max_radius, height_max_radius))
         final_radius = radius / self.__tile_padding
         resulting_size = self.__get_axis_sizes_flat(radius)
-        logger('\n'.join([
-            f'__get_tile_radius_from_sizehint',
-            f'canvas: {pix_size}',
-            f'hint:   {size_hint:.3f} (diameter tiles: {diameter_tiles})',
-            f'width:  {width_max_radius:.3f}',
-            f'height: {height_max_radius:.3f}',
-            f'radius: {radius:.3f}',
-            f'-pad:   {final_radius:.3f}',
-            f'result: {resulting_size}',
-        ]))
         return final_radius
 
     @staticmethod
@@ -287,7 +273,7 @@ class TileMap(widgets.RelativeLayout):
         new_size_hint = self.get_map_size_hint()
         if self.__size_hint != new_size_hint:
             self.__size_hint = new_size_hint
-            self._adjust_zoom()
+            self.reset_view()
         center = self.real_center
         get_tile_info = self.get_tile_info
         for hex in self.tiles:
