@@ -20,7 +20,7 @@ The main script:
 
 `python main.py`
 
-will choose which module to import and run based on the first command line argument. The default is `gui`. To see other options:
+Will choose which module to import and run based on the first command line argument. The default is `gui`. To see other options:
 
 `python main.py --list`
 
@@ -38,3 +38,5 @@ To view the docs locally (which include guides), run:
 This will create the docs from source if missing, and then open them in the default browser. If you wish to force recreating the docs, run:
 
 `python main.py makedocs`
+
+The docs expect the project folder to be a valid python package name (if you are unsure, name your project folder "botroyale")

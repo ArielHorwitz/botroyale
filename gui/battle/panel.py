@@ -1,8 +1,11 @@
 from gui.kex import widgets
 from util.settings import Settings
+from gui import ASSETS_DIR
 
 
-FONT_SIZE = Settings.get('gui.panel_font_size', 16)
+font = Settings.get('gui.font_panel', 'firacode-mono-bold')
+FONT = str(ASSETS_DIR / 'fonts' / f'{font}.ttf')
+FONT_SIZE = Settings.get('gui.font_panel_size', 16)
 
 
 class Panel(widgets.BoxLayout):
@@ -13,8 +16,8 @@ class Panel(widgets.BoxLayout):
         text_frame = self.add(widgets.AnchorLayout(
             anchor_x='left', anchor_y='top', padding=(15, 15)))
         self.main_text = text_frame.add(widgets.Label(
-            markup=True, font_size=FONT_SIZE,
-            valign='top', halign='left',
+            markup=True, valign='top', halign='left',
+            font_name=FONT, font_size=FONT_SIZE,
             ))
 
     def update(self):

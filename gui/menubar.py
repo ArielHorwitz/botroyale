@@ -1,8 +1,11 @@
 from gui.kex import widgets
 from util.settings import Settings
+from gui import ASSETS_DIR, FONT
 
 
-FONT_SIZE = Settings.get('gui.menu_font_size', 16)
+font = Settings.get('gui.font_menu', 'liberation-bold')
+FONT_MENU = str(ASSETS_DIR / 'fonts' / f'{font}.ttf')
+FONT_SIZE = Settings.get('gui.font_menu_size', 16)
 
 
 class MenuBar(widgets.BoxLayout):
@@ -12,7 +15,7 @@ class MenuBar(widgets.BoxLayout):
         self.make_bg((0,0,0))
         for menu_label, menu in control_menu.items():
             btn = self.add(widgets.DropDownMenu(
-                text=menu_label, markup=True, font_size=FONT_SIZE,
+                text=menu_label, markup=True, font_size=FONT_SIZE, font_name=FONT_MENU,
                 callback=lambda i, l, s=menu_label: self.handle_button(f'{s}.{l}')))
             options = []
             for label, callback, hotkey in menu:
@@ -21,10 +24,10 @@ class MenuBar(widgets.BoxLayout):
                     label = f'{label} ([i]{hotkey_label}[/i])'
                 options.append(label)
                 self.callbacks[f'{menu_label}.{label}'] = callback
-            btn.set_options(options, markup=True, font_size=FONT_SIZE)
-            btn.set_size(x=250)
+            btn.set_options(options, markup=True, font_size=FONT_SIZE, font_name=FONT)
         self.set_size(y=30)
         self.label = self.add(widgets.MLabel())
+        self.label.set_size(x=125)
 
     def handle_button(self, label):
         assert label in self.callbacks

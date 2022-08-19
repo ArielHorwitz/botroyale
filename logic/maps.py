@@ -59,7 +59,6 @@ def _load_map(map_name: Optional[str] = None, use_default: bool = True) -> State
             return DEFAULT_STATE.copy()
         raise FileNotFoundError(f'Could not find map: {map_name} ( {map_file} )')
     data = json.loads(file_load(map_file))
-    logger(f'Loaded Map : {map_file}')
     return State(
         death_radius=data['death_radius'],
         positions=[Hex(x, y) for x, y in data['positions']],
@@ -82,7 +81,6 @@ def _save_map(map_name: str, state: State, allow_overwrite: bool = True):
     if not allow_overwrite and map_file.is_file():
         raise FileExistsError(f'Not allowed to overwrite saved map: {map_file}')
     file_dump(map_file, json.dumps(data))
-    logger(f'Saved Map : {map_file}')
 
 
 class MapCreator:

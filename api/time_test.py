@@ -6,6 +6,7 @@ import numpy as np
 from collections import namedtuple
 import random
 from api.logging import Logger, logger as glogger
+from logic.maps import get_map_state
 from logic.battle_manager import BattleManager
 from bots import NotFairError
 from bots.idle_bot import DummyBot
@@ -21,6 +22,7 @@ class TimeResult(NamedTuple):
 def timing_test(
         bots: Sequence[type],
         battle_count: int,
+        map_name: Optional[str] = None,
         shuffle_bots: bool = True,
         disable_logging: bool = True,
         verbose_results: bool = True,
@@ -34,6 +36,7 @@ def timing_test(
     Args:
         bots: List of bot classes.
         battle_count: Number of battles to play.
+        map_name: Name of map to play on.
         shuffle_bots: Automatically shuffle the order of the bots for each battle.
         disable_logging: Disable logging during battles.
         verbose_results: Show time table of each battle.
@@ -84,9 +87,14 @@ def timing_test(
         glogger('\n_________________________________________')
 
     for battle_index in range(battle_count):
-        battle = BattleManager(bot_classes_getter=get_bots, enable_logging=not disable_logging)
+        initial_state = get_map_state(map_name)
+        battle = BattleManager(
+            bot_classes_getter=get_bots,
+            initial_state=initial_state,
+            description=f'time test {battle_index+1} / {battle_count} @ {map_name}',
+            enable_logging=not disable_logging)
 
-        glogger(f'\nPlaying battle {battle_index+1} / {battle_count} : {battle.description}')
+        glogger(f'\nPlaying battle : {battle.description}')
         battle.play_all(print_progress=disable_logging)
         if verbose_results:
             glogger(f'Battle time results:\n{battle.get_timer_str()}')

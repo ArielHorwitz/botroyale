@@ -1,5 +1,5 @@
 """
-An example custom script.
+An example custom script (see source code).
 
 Copy this file to: "run/my_script.py"
 

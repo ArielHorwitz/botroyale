@@ -6,7 +6,8 @@ from util.settings import Settings
 
 GUI_DEBUG = Settings.get('logging.gui', False)
 ASSETS_DIR = PROJ_DIR / 'assets'
-FONT = str(ASSETS_DIR / 'FiraCode-SemiBold.ttf')
+DEFAULT_FONT_NAME = Settings.get('gui.font', 'liberation')
+FONT = str(ASSETS_DIR / 'fonts' / f'{DEFAULT_FONT_NAME}.ttf')
 
 
 def center_sprite(pos, size):

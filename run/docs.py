@@ -1,5 +1,5 @@
 """
-Opens the documentation index in the default browser. Creates the docs if they are missing.
+Opens the documentation in the default browser. Creates the docs if they are missing.
 """
 from util.file import popen_path
 from run.makedocs import INDEX_FILE, make_docs

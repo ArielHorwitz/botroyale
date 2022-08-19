@@ -478,10 +478,7 @@ class FlipZIndex(GridLayout):
 # BASIC WIDGETS
 class Label(kvLabel, KexWidget):
     def __init__(self, *a, halign='center', valign='center', **k):
-        super().__init__(*a,
-            halign=halign, valign=valign,
-            font_name=str(Path.cwd() / 'assets' / 'FiraCode-SemiBold.ttf'),
-            **k)
+        super().__init__(*a, halign=halign, valign=valign, **k)
         self.bind(size=self._on_resize)
 
     def _on_resize(self, *a):

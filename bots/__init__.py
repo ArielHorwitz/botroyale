@@ -63,7 +63,7 @@ def get_bot_classes(
     # Count slots
     total_bots = len(available_bots)
     if total_bots == 0:
-        raise NotFairError(f'Found <2 bots to fill {total_slots} slots. Selection: {selection} - {ignore} (minus testing: {not include_testing})')
+        raise NotFairError(f'Found 0 bots to fill {total_slots} slots. Selection: {selection} - {ignore} (minus testing: {not include_testing})')
     slots_per_bot = int(total_slots / total_bots)
 
 
