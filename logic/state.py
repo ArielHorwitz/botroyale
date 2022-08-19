@@ -170,8 +170,10 @@ class State:
     def check_legal_action(self, unit: None = None, action: Optional[Action] = None) -> bool:
         """If applying *action* to this state is legal.
 
-        .. warning:: The *unit* argument will be deprecated
+        .. warning:: Signature Change
+            The *unit* argument is deprecated since v1.0 and will be removed in v2.0.
             Please only pass *action* like so: `check_legal_action(action=my_action)`
+            until v2.0.
         """
         # DEPRECATING the unit argument.
         # The action argument is non-optional, despite the typing hints.
@@ -278,7 +280,22 @@ class State:
     # Properties
     @property
     def current_unit(self) -> Optional[int]:
-        """The uid of the current unit in turn, or None if the current state is `State.end_of_round` (and there is no unit in turn)."""
+        """The uid of the current unit in turn, or None if the current state is `State.end_of_round` (and there is no unit in turn).
+
+        .. caution:: A statement in Python will equate to `False` if it is either `None` (no unit in turn in this case) or `0` (unit #0 in turn in this case).
+
+        Hence, do **not** use like this:
+        ```python
+        if state.winner:
+            winner_uid = state.winner
+        ```
+
+        Instead use like this:
+        ```python
+        if state.winner is not None:
+            winner_uid = state.winner
+        ```
+        """
         if not self.end_of_round:
             return self.round_remaining_turns[0]
         return None
@@ -297,16 +314,16 @@ class State:
 
         Hence, do **not** use like this:
         ```python
-        if battle.winner:
-            declare_victory(battle.winner)
+        if state.winner:
+            declare_victory(state.winner)
         else:
             declare_draw()
         ```
 
         Instead use like this:
         ```python
-        if battle.winner is not None:
-            declare_victory(battle.winner)
+        if state.winner is not None:
+            declare_victory(state.winner)
         else:
             declare_draw()
         ```

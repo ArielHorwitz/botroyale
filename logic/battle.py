@@ -57,6 +57,7 @@ class Battle:
         # Bots
         bot_count = initial_state.num_of_units
         self.bot_timer: TurnTimer = TurnTimer(bot_count)
+        """A `TurnTimer` object for keeping track of bot calculation times."""
         with Logger.set_logging_temp(enable_logging):
             bot_classes = bot_classes_getter(bot_count)
         assert len(bot_classes) == bot_count

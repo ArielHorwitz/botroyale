@@ -2,7 +2,7 @@
 
 In this document we describe how battles work from start to finish.
 
-*Updated for version 1.000*
+*Updated for v1.0*
 
 *Categories: beginner, rules*
 

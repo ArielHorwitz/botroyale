@@ -24,7 +24,8 @@ assert (PROJ_DIR / 'main.py').is_file()
 def file_load(file: PathLike):
     """Use `util.file.file_load` instead.
 
-    .. deprecated:: 1.000
+    .. deprecated:: v1.0
+        `util.file_load` will be removed in v2.0. Please use `util.file.file_load`.
     """
     with open(file, 'r') as f:
         d = f.read()
@@ -34,7 +35,8 @@ def file_load(file: PathLike):
 def file_dump(file: PathLike, d: str, clear: bool = True):
     """Use `util.file.file_dump` instead.
 
-    .. deprecated:: 1.000
+    .. deprecated:: v1.0
+        `util.file_dump` will be removed in v2.0. Please use `util.file.file_dump`.
     """
     with open(file, 'w' if clear else 'a') as f:
         f.write(d)

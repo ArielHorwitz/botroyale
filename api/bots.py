@@ -71,7 +71,8 @@ class BaseBot:
 
     def get_action(self, world_info):
         """
-        .. deprecated:: use `BaseBot.poll_action` instead.
+        .. deprecated:: v1.0
+            Will be removed in v2.0. Use `BaseBot.poll_action` instead.
         """
         return Idle()
 
@@ -172,9 +173,7 @@ class BaseBot:
 
 # Backward compatibility
 class world_info(NamedTuple):
-    """
-    .. deprecated:: Replaced by `logic.state.State`.
-    """
+    """Will be removed in v2.0. Replaced by `logic.state.State`."""
     positions: list
     walls: set
     pits: set

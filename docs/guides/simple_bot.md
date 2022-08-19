@@ -2,7 +2,7 @@
 
 In this guide, we will learn how to write a simple bot that will play in bot royale.
 
-*Updated for version 1.000*
+*Updated for v1.0*
 
 *Categories: guides, beginner*
 
