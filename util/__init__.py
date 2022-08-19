@@ -5,12 +5,10 @@ from os import PathLike
 from pathlib import Path
 
 
+VERSION: str = 'v1.0.0'
+"""Version of the program (using semantic versioning)."""
 TITLE: str = 'Bot Royale'
 """Title of the program."""
-VERSION: float = 1.000
-"""Version number of the program."""
-FULL_TITLE: str = f'{TITLE} v{VERSION:.3f}'
-"""Title of the program with version."""
 DESCRIPTION: str = 'A battle royale for bots.'
 """Short description of the program."""
 

@@ -1,7 +1,7 @@
 """.. include:: ./docs/README.md"""
 # We pass a fixed version of the README to the docstring, see below
 
-from util import PROJ_DIR
+from util import PROJ_DIR, VERSION
 from util.file import file_load, file_dump
 
 
@@ -29,6 +29,7 @@ __fixed_readme = _insert_readme_guides_link(file_load(__readme_path))
 file_dump(__fixed_readme_path, __fixed_readme)
 
 
+__version__ = VERSION
 __pdoc__ = {
     'main': False,
     'gui': False,
