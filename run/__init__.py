@@ -6,8 +6,7 @@ The function `run_script` will be called to parse the command line arguments and
 import sys
 from importlib import import_module
 from pkgutil import iter_modules
-import argparse
-from util import PROJ_DIR, TITLE, DESCRIPTION, VERSION
+from util import PROJ_DIR, TITLE, DESCRIPTION, MAIN_ARGS
 
 
 SCRIPT_DIR = PROJ_DIR / 'run'
@@ -16,7 +15,7 @@ SCRIPT_DIR = PROJ_DIR / 'run'
 def run_script():
     """Imports the module requested from the main program arguments and calls
     a `run()` function if exists. Searches the "run" directory for modules."""
-    args = _parse_args()
+    args = MAIN_ARGS
     if args.list:
         _print_run_modules(verbose=True)
         quit()
@@ -43,19 +42,6 @@ def run_script():
             print(f'Running: {module_name}.run()')
             module.run()
     print(f'Completed running: {module_name}')
-
-
-def _parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--version', action='version', version=VERSION)
-    parser.add_argument('module', metavar='MODULE',
-        nargs='?', default='gui',
-        help='name of module to run (default: gui)')
-    parser.add_argument('--list',
-        action='store_true',
-        help='print available modules to run and exit')
-    args = parser.parse_args()
-    return args
 
 
 def _find_run_modules() -> list[str]:
