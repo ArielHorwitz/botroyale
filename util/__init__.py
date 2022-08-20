@@ -11,9 +11,10 @@ PROJ_DIR = Path(__file__).parent.parent
 """The project directory root."""
 assert PROJ_DIR.is_dir()
 assert (PROJ_DIR / 'main.py').is_file()
+assert (PROJ_DIR / 'VERSION').is_file()
 
 
-VERSION = '1.0.0'
+VERSION: str = file_load(PROJ_DIR / "VERSION").split('\n')[0]
 """Version of the program (using semantic versioning)."""
 TITLE: str = 'Bot Royale'
 """Title of the program."""
