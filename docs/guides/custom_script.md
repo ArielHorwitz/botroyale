@@ -2,7 +2,7 @@
 
 In this guide, we will learn how to run a custom script in the project, allowing us to run our own battles programmatically. This is particularly useful if you need to run many battles without the GUI (e.g. you are implementing a bot that will use machine learning).
 
-*Updated for version 1.000*
+*Updated for v1.0*
 
 *Categories: guides, advanced*
 

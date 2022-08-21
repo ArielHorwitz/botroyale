@@ -3,6 +3,7 @@ Home of the `logic.state.State` class.
 """
 from typing import Optional, NamedTuple
 from numpy.typing import NDArray
+from warnings import warn
 import numpy as np
 import copy
 from util.hexagon import Hexagon, ORIGIN
@@ -15,8 +16,8 @@ from api.actions import MAX_AP, REGEN_AP, ALL_ACTIONS, Action, Idle, Move, Jump,
 assert all(isinstance(action.ap, int) for action in ALL_ACTIONS)
 
 
-NEXT_SEED_ITERATIONS = 100  # Number of iterations on the PRNG to apply between rounds
-CHECK_LEGAL_UNIT_DEPRECATE_DATE = 'September 15, 2022'
+# Number of iterations on the PRNG to apply between rounds.
+NEXT_SEED_ITERATIONS = 100
 
 
 class Effect(NamedTuple):
@@ -169,8 +170,10 @@ class State:
     def check_legal_action(self, unit: None = None, action: Optional[Action] = None) -> bool:
         """If applying *action* to this state is legal.
 
-        .. warning:: The *unit* argument will be deprecated
+        .. warning:: Signature Change
+            The *unit* argument is deprecated since v1.0 and will be removed in v2.0.
             Please only pass *action* like so: `check_legal_action(action=my_action)`
+            until v2.0.
         """
         # DEPRECATING the unit argument.
         # The action argument is non-optional, despite the typing hints.
@@ -180,12 +183,11 @@ class State:
         # After deprecation, the action argument will be a normal positional
         # argument expecting an Action.
         if action is None:
-            raise ValueError(f'Must provide an action. It is a (non-optional) keyword argument only until deprecation by {CHECK_LEGAL_UNIT_DEPRECATE_DATE}.')
+            raise ValueError(f'Must provide an action.')
         assert isinstance(action, Action)
         # Check if user is still using the unit argument and warn if so.
         if unit is not None:
-            warning_msg = f'\nDEPRECATION WARNING: State.check_legal_action signature will change by {CHECK_LEGAL_UNIT_DEPRECATE_DATE}: positional argument "unit" will be removed.\n    Please omit the unit argument and use keyword until deprecation like so: state.check_legal_action(action=my_action)'
-            glogger(warning_msg)
+            warn(f'State.check_legal_action signature will change. Please see documentation.')
         if isinstance(action, Idle):
             return True
         return self._check_legal_action(action)
@@ -278,7 +280,22 @@ class State:
     # Properties
     @property
     def current_unit(self) -> Optional[int]:
-        """The uid of the current unit in turn, or None if the current state is `State.end_of_round` (and there is no unit in turn)."""
+        """The uid of the current unit in turn, or None if the current state is `State.end_of_round` (and there is no unit in turn).
+
+        .. caution:: A statement in Python will equate to `False` if it is either `None` (no unit in turn in this case) or `0` (unit #0 in turn in this case).
+
+        Hence, do **not** use like this:
+        ```python
+        if state.winner:
+            winner_uid = state.winner
+        ```
+
+        Instead use like this:
+        ```python
+        if state.winner is not None:
+            winner_uid = state.winner
+        ```
+        """
         if not self.end_of_round:
             return self.round_remaining_turns[0]
         return None
@@ -297,16 +314,16 @@ class State:
 
         Hence, do **not** use like this:
         ```python
-        if battle.winner:
-            declare_victory(battle.winner)
+        if state.winner:
+            declare_victory(state.winner)
         else:
             declare_draw()
         ```
 
         Instead use like this:
         ```python
-        if battle.winner is not None:
-            declare_victory(battle.winner)
+        if state.winner is not None:
+            declare_victory(state.winner)
         else:
             declare_draw()
         ```
