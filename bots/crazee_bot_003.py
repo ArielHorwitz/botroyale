@@ -1,6 +1,6 @@
 import numpy as np
 
-from api.actions import Move, Push, Idle, Action, Jump
+from api.actions import Move, Push, Idle, Action, Jump, ALL_ACTIONS
 from bots import BaseBot
 from logic.state import State
 from util.hexagon import Hexagon
@@ -14,14 +14,20 @@ class CrazeeBotAlpha(BaseBot):
     MAX_AP = 100
     AP_REGEN = 50
     CENTER_TILE = CENTER
-    max_depth = 15
+    DEPTH_MOD = 1
     tile_view_distance = 5
     SPRITE = 'flower'
+    logging_enabled = False
 
     def __init__(self, id):
         super().__init__(id)
         self.planed_actions = []
         self.last_state = None
+        actions = [a for a in ALL_ACTIONS if a.ap > 0]
+        actions.sort(key=lambda a: a.ap)
+        min_ap_action = actions[0].ap
+        self.max_depth = round((self.MAX_AP / min_ap_action) * self.DEPTH_MOD)
+        self.logger(f"{self.max_depth=}")
 
     def poll_action(self, state: State):
         self.last_state = state
@@ -38,6 +44,9 @@ class CrazeeBotAlpha(BaseBot):
 
     @staticmethod
     def get_legal_actions(state: State):
+        legal_actions = []
+        if state.current_unit is None:
+            return legal_actions
         pos = state.positions[state.current_unit]
         pos_s = set(state.positions)
         neighbors_s = set(pos.neighbors)
@@ -45,6 +54,9 @@ class CrazeeBotAlpha(BaseBot):
         neighbors = neighbors_s - obstacles
         push_neighbors = neighbors_s & pos_s
         neighbors2 = set(pos.ring(2)) - obstacles
+        map_tiles = set(CENTER.range(state.death_radius - 1))
+        neighbors &= map_tiles
+        neighbors2 &= map_tiles
         possible_actions = []
         ap = state.ap[state.current_unit]
         if ap >= Move.ap:
@@ -53,26 +65,24 @@ class CrazeeBotAlpha(BaseBot):
             possible_actions.extend(Jump(t) for t in neighbors2)
         if ap >= Push.ap:
             possible_actions.extend(Push(t) for t in push_neighbors)
-        legal_actions = []
         for action in possible_actions:
             if state.check_legal_action(action=action):
                 legal_actions.append(action)
         return legal_actions
 
     def get_state_score(self, _state: State):
-        bot_id = _state.current_unit
-        if not _state.alive_mask[bot_id]:
+        if not _state.alive_mask[self.id]:
             return float('-inf')
 
-        enemys_alive = _state.alive_mask.sum() - 1
-        if enemys_alive == 0:
+        enemies_alive = _state.alive_mask.sum() - 1
+        if enemies_alive == 0:
             return float('inf')
 
+        bot_id = _state.current_unit
         my_pos: Hexagon = _state.positions[bot_id]
         if center_distance(my_pos) >= _state.death_radius - 1:
             return float('-inf')
-
-        enemy_dead_score = -enemys_alive * 1.5
+        enemy_dead_score = -enemies_alive * 1.5
         enemy_mask = np.ones(len(_state.positions), dtype=np.bool)
         enemy_mask[bot_id] = False
         enemy_ids = np.flatnonzero(enemy_mask)
@@ -229,14 +239,14 @@ def hash_state(state):
 class CrazeeEasy(CrazeeBotAlpha):
     NAME = "CrazeeBot_Easy"
     COLOR_INDEX = 7
-    max_depth = 3
+    DEPTH_MOD = 0.25
     tile_view_distance = 2
 
 
 class CrazeeHard(CrazeeBotAlpha):
     NAME = "CrazeeBot_Hard"
     COLOR_INDEX = 8
-    max_depth = 6
+    DEPTH_MOD = 0.5
     tile_view_distance = 10
 
 
