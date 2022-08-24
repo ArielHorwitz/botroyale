@@ -2,6 +2,8 @@
 Home of the `logic.battle.Battle` class.
 """
 from typing import Union, Optional, Sequence, Callable
+import sys
+import traceback
 import numpy as np
 from api.logging import Logger, logger as glogger
 from api.bots import BaseBot
@@ -101,13 +103,22 @@ class Battle:
         else:
             unit_id = state.current_unit
             action = self._get_bot_action(unit_id, state)
-            self.logger(f'Applying {action} to state')
-            if self.__only_bot_turn_states:
-                new_state = state.apply_action(action)
+            if action is not None:
+                # Bot returned an action, apply.
+                self.logger(f'Applying {action} to state')
+                if self.__only_bot_turn_states:
+                    new_state = state.apply_action(action)
+                else:
+                    new_state = state.apply_action_no_round_increment(action)
+                    if not new_state.is_last_action_legal:
+                        self.logger(f'ILLEGAL: {action}')
             else:
-                new_state = state.apply_action_no_round_increment(action)
-                if not new_state.is_last_action_legal:
-                    self.logger(f'ILLEGAL: {action}')
+                # Bot failed to return an action, kill.
+                self.logger(f'Killing {self.bots[unit_id]}...')
+                if self.__only_bot_turn_states:
+                    new_state = state.apply_kill_unit()
+                else:
+                    new_state = state.apply_kill_unit_no_round_increment()
         self.__current_state = new_state
         self.history.append(new_state)
         if new_state.round_count >= self.bot_timer.round_count:
@@ -146,17 +157,32 @@ class Battle:
         if print_progress:
             print('')
 
-    def _get_bot_action(self, unit_id: int, state: State):
+    def _get_bot_action(self, unit_id: int, state: State) -> Optional[Action]:
+        """Call the bot's `api.bots.BaseBot.poll_action` to get their action.
+
+        Args:
+            unit_id: uid of the unit
+            state: current state of the battle
+
+        Returns:
+            `api.actions.Action` if *poll_action* is successful.
+            None if there was an exception.
+        """
         state = state.copy()
         bot = self.bots[unit_id]
         pingpong_desc = f'{bot} poll_action (step {state.step_count})'
         def add_bot_time(elapsed):
             self.bot_timer.add_time(unit_id, elapsed)
         with pingpong(pingpong_desc, logger=self.logger, return_elapsed=add_bot_time):
-            action = bot.poll_action(state)
+            try:
+                action = bot.poll_action(state)
+                assert isinstance(action, Action)
+            except Exception as e:
+                formatted_exc = ''.join(traceback.format_exception(*sys.exc_info()))
+                self.logger(f'CRASH {bot}: {e}\n\n{formatted_exc}')
+                return None
         self.logger(LINEBR)
         self.logger(f'Received action: {action}')
-        assert isinstance(action, Action)
         ttime = self.bot_timer.get_time(unit_id)
         if ttime > self.__threshold_bot_block_ms:
             self.logger(f'BLOCK TIME WARNING : {bot} has taken {ttime/1000:.2f} seconds this turn')
