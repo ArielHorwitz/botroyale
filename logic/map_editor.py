@@ -3,13 +3,13 @@ Home of `logic.map_editor.MapEditor`.
 """
 from typing import Optional, Any, Literal
 from collections import deque
-from util.settings import Settings
 from util.hexagon import Hexagon, ORIGIN
 from logic.maps import MapCreator
 from api.gui import (
     GameAPI as BaseGameAPI, BattleAPI,
     Tile, VFX, InputWidget, Control, ControlMenu,
     )
+from logic import *
 
 
 class MapEditor(MapCreator, BattleAPI):
@@ -18,28 +18,6 @@ class MapEditor(MapCreator, BattleAPI):
     Enables interactive map editing in the GUI.
     """
 
-    DEFAULT_CELL_BG = Settings.get('tilemap.|colors._default_tile', (0.25, 0.1, 0))
-    """See: `logic.battle_manager.BattleManager.DEFAULT_CELL_BG`"""
-    OUT_OF_BOUNDS_CELL_BG = Settings.get('tilemap.|colors._out_of_bounds', (0.05, 0, 0.075))
-    """See: `logic.battle_manager.BattleManager.OUT_OF_BOUNDS_CELL_BG`."""
-    WALL_COLOR = Settings.get('tilemap.|colors._walls', (0.6, 0.6, 0.6))
-    """See: `logic.battle_manager.BattleManager.WALL_COLOR`"""
-    PIT_COLOR = Settings.get('tilemap.|colors._pits', (0.05, 0.05, 0.05))
-    """See: `logic.battle_manager.BattleManager.PIT_COLOR`"""
-    UNIT_COLORS = Settings.get('tilemap.|colors.|units', [
-        (0.6, 0, 0.1),  # Red
-        (0.9, 0.3, 0.4),  # Pink
-        (0.8, 0.7, 0.1),  # Yellow
-        (0.7, 0.4, 0),  # Orange
-        (0.1, 0.4, 0),  # Green
-        (0.4, 0.7, 0.1),  # Lime
-        (0.1, 0.7, 0.7),  # Teal
-        (0.1, 0.4, 0.9),  # Blue
-        (0, 0.1, 0.5),  # Navy
-        (0.7, 0.1, 0.9),  # Purple
-        (0.4, 0, 0.7),  # Violet
-        (0.7, 0, 0.5),  # Magenta
-    ])
     """See: `logic.battle_manager.BattleManager.UNIT_COLORS`"""
     BRUSH_COLORS = {
         'eraser': (0.25, 0.05, 0.1),
@@ -174,17 +152,17 @@ class MapEditor(MapCreator, BattleAPI):
         out_of_bounds = hex.get_distance(ORIGIN) >= state.death_radius-1
         # Tile color
         if hex in state.pits:
-            bg = self.PIT_COLOR
+            bg = PIT_COLOR
         elif out_of_bounds:
-            bg = self.OUT_OF_BOUNDS_CELL_BG
+            bg = OUT_OF_BOUNDS_CELL_BG
         else:
-            bg = self.DEFAULT_CELL_BG
+            bg = DEFAULT_CELL_BG
         # Sprite
         color = None
         sprite = None
         text = ''
         if hex in state.walls:
-            color = self.WALL_COLOR
+            color = WALL_COLOR
             sprite = 'hex'
             text = ''
         elif hex in state.positions:
@@ -192,7 +170,7 @@ class MapEditor(MapCreator, BattleAPI):
             if out_of_bounds:
                 color = 0.5, 0.5, 0.5
             else:
-                color = self.UNIT_COLORS[unit_id % len(self.UNIT_COLORS)]
+                color = UNIT_COLORS[unit_id % len(UNIT_COLORS)]
             sprite = 'bot'
             text = f'{unit_id}'
 
