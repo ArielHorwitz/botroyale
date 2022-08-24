@@ -1,7 +1,7 @@
 """
 Home of the `logic.state.State` class.
 """
-from typing import Optional, NamedTuple
+from typing import Optional, Sequence, NamedTuple
 from numpy.typing import NDArray
 from warnings import warn
 import numpy as np
@@ -277,6 +277,42 @@ class State:
             seed=self.seed,
             )
 
+    def apply_kill_unit(self):
+        """Return the state resulting from killing the `State.current_unit`.
+
+        Works as an alternative for `State.apply_action` when a unit is
+        non-cooperative and will not return an action.
+
+        Returns:
+            A new `State` after the current unit dies on their turn.
+        """
+        new_state = self.apply_kill_unit_no_round_increment()
+        if new_state.end_of_round and not new_state.game_over:
+            new_state._next_round()
+        return new_state
+
+    def apply_kill_unit_no_round_increment(self):
+        """Return the state resulting from killing the `State.current_unit`.
+
+        Works as an alternative for `State.apply_action_no_round_increment`
+        when a unit is non-cooperative and will not return an action.
+
+        Returns:
+            A new `State` after the current unit dies on their turn.
+        """
+        if self.game_over:
+            raise OrderError(f'Game over, cannot kill')
+        if self.end_of_round:
+            raise OrderError(f'Cannot apply kill, round is over: use state.increment_round()')
+        current = self.current_unit
+        new_state = self.copy(copy_last_action=False)
+        if not new_state.game_over:
+            new_state._next_turn()
+        new_state._apply_mortality(force_kill=[current])
+        new_state._add_effect('kill', self.positions[current])
+        new_state.step_count += 1
+        return new_state
+
     # Properties
     @property
     def current_unit(self) -> Optional[int]:
@@ -467,16 +503,23 @@ class State:
         return sorted(live_uids,
             key=lambda uid: self.round_ap_spent[uid] + tiebreakers[uid])
 
-    def _apply_mortality(self):
+    def _apply_mortality(self, force_kill: Optional[Sequence[int]] = None):
         """Checks if any live units are supposed to be dead, and kills them in
         place. Should be called any time positions, pits, or death_radius change.
 
-        Units die if they are standing on a pit or beyond the death_radius."""
+        Units die if they are standing on a pit or beyond the death_radius.
+
+        Args:
+            force_kill: A sequence of uids to kill.
+        """
+        if force_kill is None:
+            force_kill = []
         for uid in np.flatnonzero(self.alive_mask):
             pos = self.positions[uid]
+            death_by_force = uid in force_kill
             death_by_pits = pos in self.pits
             death_by_ROD = pos.get_distance(ORIGIN) >= self.death_radius
-            if death_by_pits or death_by_ROD:
+            if death_by_pits or death_by_ROD or death_by_force:
                 self.alive_mask[uid] = False
                 self.casualties[uid] = self.step_count
                 if uid in self.round_remaining_turns:
