@@ -1,5 +1,6 @@
 from gui.kex import widgets
 from api.gui import GameAPI, Control, combine_control_menus, PALETTE_BG
+from gui.game.menuwidget import get_menu_widget
 
 
 class GameScreen(widgets.AnchorLayout):
@@ -9,10 +10,13 @@ class GameScreen(widgets.AnchorLayout):
         self.api = api
         self.new_battle = None
         self.input_widgets = {}
-        # Make widgets
-        main_frame = self.add(widgets.BoxLayout())
-        info_panel = widgets.Label(text=api.get_menu_title())
         self.input_widgets_container = widgets.StackLayout(orientation='tb-lr')
+        self.make_widgets()
+
+    def make_widgets(self):
+        self.clear_widgets()
+        main_frame = self.add(widgets.BoxLayout())
+        info_panel = widgets.Label(text=self.api.get_menu_title())
         new_battle_btn = widgets.Button(
             text=f'Start New Battle ([i]spacebar[/i])',
             on_release=self.set_new_battle, markup=True)
@@ -39,56 +43,15 @@ class GameScreen(widgets.AnchorLayout):
         self.input_widgets = {}
         self.input_widgets_container.clear_widgets()
         for iw in menu_widgets:
-            container = self.add_input_widget(iw)
-            self.input_widgets_container.add(container)
-
-    def add_input_widget(self, iw):
-        container = widgets.BoxLayout(orientation='vertical')
-        width = 250
-        container_size = 40
-        if iw.type == 'spacer':
-            container.make_bg(PALETTE_BG[0])
-            container.add(widgets.Label(text=iw.label))
-            container.set_size(x=width, y=container_size)
-            return container
-        if iw.type == 'toggle':
-            w = widgets.ToggleButton(text=iw.label)
-            w.active = iw.default
-            container.add(w)
-            value_getter = lambda: w.active
-        elif iw.type == 'text':
-            container_size *= 2
-            w = widgets.Entry()
-            container.add(widgets.Label(text=iw.label))
-            container.add(w)
-            w.text = iw.default
-            value_getter = lambda: w.text
-        elif iw.type == 'select':
-            container.orientation = 'horizontal'
-            w = widgets.DropDownSelect(callback=lambda *a: None)
-            if iw.options is None:
-                raise ValueError(f'Cannot make a select InputWidget without options')
-            w.set_options(iw.options)
-            w.text = iw.default
-            container.add(widgets.Label(text=iw.label))
-            container.add(w)
-            value_getter = lambda: w.text
-        elif iw.type == 'slider':
-            container_size *= 2
-            w = widgets.SliderText()
-            w.slider.value = iw.default
-            container.add(widgets.Label(text=iw.label))
-            container.add(w)
-            value_getter = lambda: w.slider.value
-        else:
-            raise ValueError(f'Unknown InputWidget type: {iw.type}')
-        self.input_widgets[iw.sendto] = value_getter
-        container.set_size(x=width, y=container_size)
-        return container
+            menu_widget = get_menu_widget(iw)
+            assert iw.sendto == menu_widget.sendto
+            if menu_widget.get_value is not None:
+                self.input_widgets[iw.sendto] = menu_widget
+            self.input_widgets_container.add(menu_widget)
 
     def set_new_battle(self, *args):
         self.new_battle = self.api.get_new_battle({
-            l: value_getter() for l, value_getter in self.input_widgets.items()
+            l: w.get_value() for l, w in self.input_widgets.items()
             })
 
     def get_controls(self):
