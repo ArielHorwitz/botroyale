@@ -70,14 +70,15 @@ class Select(MenuWidget):
         self.get_value = lambda: dropdown.text
 
 
-class Slider(MenuWidget):
+# The class name "Slider" confuses kivy
+class Slider_(MenuWidget):
     def __init__(self, iw, **kwargs):
         super().__init__(iw, **kwargs)
         self.double_height()
-        label = container.add(widgets.MLabel(text=iw.label))
-        slider = container.add(widgets.SliderText())
-        slider.slider.value = iw.default
-        self.get_value = lambda: slider.slider.value
+        label = self.container.add(widgets.MLabel(text=iw.label))
+        slider = self.container.add(widgets.Slider())
+        slider.value = iw.default
+        self.get_value = lambda: slider.value
 
 
 def get_menu_widget(iw):
@@ -90,6 +91,6 @@ def get_menu_widget(iw):
     elif iw.type == 'select':
         return Select(iw)
     elif iw.type == 'slider':
-        return Slider(iw)
+        return Slider_(iw)
     else:
         raise ValueError(f'Unknown InputWidget type: {iw.type}')
