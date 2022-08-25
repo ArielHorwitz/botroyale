@@ -1,6 +1,8 @@
 # Bot Royale
 A battle royale for bots.
 
+![Preview GIF](assets/preview.gif)
+
 <br>
 
 ## Requirements
