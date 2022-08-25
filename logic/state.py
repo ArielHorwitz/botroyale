@@ -213,7 +213,7 @@ class State:
         if self.game_over:
             raise OrderError(f'Game over, no more actions allowed')
         if self.end_of_round:
-            raise OrderError(f'Cannot apply action, round is over: use state.increment_round()')
+            raise OrderError(f'Cannot apply action, round is over: use `State.increment_round`.')
         # Create a copy and apply changes on it in place
         new_state = self.copy(copy_last_action=False)
         if isinstance(action, Idle):
@@ -303,11 +303,10 @@ class State:
         if self.game_over:
             raise OrderError(f'Game over, cannot kill')
         if self.end_of_round:
-            raise OrderError(f'Cannot apply kill, round is over: use state.increment_round()')
+            raise OrderError(f'Cannot apply kill, round is over: use `State.increment_round`.')
         current = self.current_unit
         new_state = self.copy(copy_last_action=False)
-        if not new_state.game_over:
-            new_state._next_turn()
+        new_state._next_turn()
         new_state._apply_mortality(force_kill=[current])
         new_state._add_effect('kill', self.positions[current])
         new_state.step_count += 1
