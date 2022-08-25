@@ -11,6 +11,7 @@ from util.settings import Settings
 from util.hexagon import Hex, Hexagon
 from api.actions import MAX_AP
 from logic.state import State
+from logic import *
 
 
 STEP_RATE = Settings.get('logic._step_rate_cap', 2)
@@ -33,29 +34,6 @@ class BattleManager(Battle, BattleAPI):
     """Whether to show coordinates on the tilemap."""
     step_interval_ms = 1000 / STEP_RATE
     """Time between steps for `BattleManager.autoplay` in ms."""
-    DEFAULT_CELL_BG = Settings.get('tilemap.|colors._default_tile', (0.25, 0.1, 0))
-    """Color of an empty tile."""
-    OUT_OF_BOUNDS_CELL_BG = Settings.get('tilemap.|colors._out_of_bounds', (0.05, 0, 0.075))
-    """Color of a tile outside the death radius."""
-    WALL_COLOR = Settings.get('tilemap.|colors._walls', (0.6, 0.6, 0.6))
-    """Color of a wall."""
-    PIT_COLOR = Settings.get('tilemap.|colors._pits', (0.05, 0.05, 0.05))
-    """Color of a pit."""
-    UNIT_COLORS = Settings.get('tilemap.|colors.|units', [
-        (0.6, 0, 0.1),  # Red
-        (0.9, 0.3, 0.4),  # Pink
-        (0.8, 0.7, 0.1),  # Yellow
-        (0.7, 0.4, 0),  # Orange
-        (0.1, 0.4, 0),  # Green
-        (0.4, 0.7, 0.1),  # Lime
-        (0.1, 0.7, 0.7),  # Teal
-        (0.1, 0.4, 0.9),  # Blue
-        (0, 0.1, 0.5),  # Navy
-        (0.7, 0.1, 0.9),  # Purple
-        (0.4, 0, 0.7),  # Violet
-        (0.7, 0, 0.5),  # Magenta
-    ])
-    """All available colors for unit sprites. 12 colors from red to purple on the rainbow."""
 
     def __init__(self, gui_mode: Optional[bool] = False, **kwargs):
         """
@@ -72,17 +50,17 @@ class BattleManager(Battle, BattleAPI):
         self.autoplay: bool = False
         """Determines whether to automatically play the game while the `BattleManager.update` method is called."""
         self.__last_step = ping()
-        self.unit_colors = [self.UNIT_COLORS[bot.COLOR_INDEX % len(self.UNIT_COLORS)] for bot in self.bots]
+        self.unit_colors = [UNIT_COLORS[bot.COLOR_INDEX % len(UNIT_COLORS)] for bot in self.bots]
         self.unit_sprites = [bot.SPRITE for bot in self.bots]
         self.__panel_mode: PanelMode = 'turns'
 
     # Replay
     def set_replay_index(self,
-            index: Optional[int] = None,
-            index_delta: Optional[int] = None,
-            apply_vfx: bool = True,
-            disable_autoplay: bool = True,
-            ):
+                         index: Optional[int] = None,
+                         index_delta: Optional[int] = None,
+                         apply_vfx: bool = True,
+                         disable_autoplay: bool = True,
+                         ):
         """Set the state index of the replay.
 
         Will play missing states until *index* is reached or the game is over.
@@ -110,7 +88,7 @@ class BattleManager(Battle, BattleAPI):
         if self.history_size <= index:
             missing_state_count = index - self.history_size + 1
             self.play_states(missing_state_count)
-            index = min(index, self.history_size-1)
+            index = min(index, self.history_size - 1)
         # Set the index
         apply_vfx = apply_vfx and index != self.__replay_index
         self.__replay_index = index
@@ -239,7 +217,6 @@ class BattleManager(Battle, BattleAPI):
             if last_state.end_of_round:
                 last_action_str = f'[i]Started round {state.round_count}[/i]'
             else:
-                last_bot = self.bots[self.history[state_index-1].current_unit]
                 last_action_str = f'{state.last_action}'
                 if not state.is_last_action_legal:
                     last_action_str = f'[i]ILLEGAL[/i] {last_action_str}'
@@ -356,7 +333,8 @@ class BattleManager(Battle, BattleAPI):
             'Battle': [
                 Control('Autoplay', self.toggle_autoplay, 'spacebar'),
                 Control('Preplay <!!!>', self.preplay, '^+ p'),
-                *[Control(f'Set speed {r}', lambda r=r: self.set_step_rate(r), f'{i+1}') for i, r in enumerate(STEP_RATES[:5])],
+                *[Control(f'Set speed {r}', lambda r=r: self.set_step_rate(r), f'{i + 1}') for i, r in
+                  enumerate(STEP_RATES[:5])],
             ],
             'Replay': [
                 Control('Battle start', lambda: self.set_replay_index(0), '^+ left'),
@@ -405,17 +383,20 @@ class BattleManager(Battle, BattleAPI):
         Overrides: `api.gui.BattleAPI.get_gui_tile_info`.
         """
         state = self.replay_state
+        fg_color = None
+        fg_text = ''
+        fg_sprite = None
         # BG
         if hex.get_distance(MAP_CENTER) >= state.death_radius:
-            bg_color = self.OUT_OF_BOUNDS_CELL_BG
+            bg_color = OUT_OF_BOUNDS_CELL_BG
         elif hex in state.pits:
-            bg_color = self.PIT_COLOR
+            bg_color = PIT_COLOR
         else:
-            bg_color = self.DEFAULT_CELL_BG
+            bg_color = DEFAULT_CELL_BG
         # FG
         if hex in state.walls:
             fg_text = ''
-            fg_color = self.WALL_COLOR
+            fg_color = WALL_COLOR
             fg_sprite = 'hex'
         elif hex in state.positions:
             unit_id = state.positions.index(hex)
@@ -425,16 +406,11 @@ class BattleManager(Battle, BattleAPI):
                 fg_color = self.unit_colors[unit_id]
             fg_text = f'{unit_id}'
             fg_sprite = self.unit_sprites[unit_id]
-            current = state.current_unit
             uid = state.current_unit
             if uid is not None:
                 if hex == state.positions[uid]:
                     ap_ratio = state.ap[uid] / MAX_AP
                     bg_color = tuple(0.1 + (0.9 * ap_ratio) for _ in range(3))
-        else:
-            fg_color = None
-            fg_text = ''
-            fg_sprite = None
         if self.show_coords:
             fg_text = f'{hex.x},{hex.y}'
         return Tile(
@@ -442,7 +418,7 @@ class BattleManager(Battle, BattleAPI):
             color=fg_color,
             sprite=fg_sprite,
             text=fg_text,
-            )
+        )
 
     def get_map_size_hint(self) -> int:
         """Tracks the `logic.state.State.death_radius` at `BattleManager.replay_index`.
