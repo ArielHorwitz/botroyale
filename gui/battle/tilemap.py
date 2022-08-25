@@ -52,18 +52,14 @@ class TileMap(widgets.RelativeLayout):
     def get_controls(self):
         return {
             'Map': [
-                Control('Zoom in', self.zoom_in, 'pageup'),
-                Control('Zoom out', self.zoom_out, 'pagedown'),
-                Control('Reset view', self.reset_view, 'home'),
+                Control('Zoom in', self.zoom_in, '+ pageup'),
+                Control('Zoom out', self.zoom_out, '+ pagedown'),
+                Control('Reset view', self.reset_view, '+ home'),
                 Control('Clear VFX', self.clear_vfx, '^+ c'),
-                Control('Pan up', lambda: self.pan(y=1), 'w'),
-                Control('Pan down', lambda: self.pan(y=-1), 's'),
-                Control('Pan right', lambda: self.pan(x=1), 'd'),
-                Control('Pan left', lambda: self.pan(x=-1), 'a'),
-                Control('Page up', lambda: self.pan(y=1, zoom_scale=True), '+ w'),
-                Control('Page down', lambda: self.pan(y=-1, zoom_scale=True), '+ s'),
-                Control('Page right', lambda: self.pan(x=1, zoom_scale=True), '+ d'),
-                Control('Page left', lambda: self.pan(x=-1, zoom_scale=True), '+ a'),
+                Control('Pan up', lambda: self.pan(y=1), '+ i'),
+                Control('Pan down', lambda: self.pan(y=-1), '+ k'),
+                Control('Pan right', lambda: self.pan(x=1), '+ l'),
+                Control('Pan left', lambda: self.pan(x=-1), '+ j'),
                 Control('Debug', self.debug),
                 ],
             }
