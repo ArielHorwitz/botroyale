@@ -444,20 +444,29 @@ class State:
         unit_pos = self.positions[unit]
         target = action.target
         if type(action) is Move:
-            self.positions[unit] = target
+            self._reposition_unit(unit, target)
             self._add_effect('move', unit_pos, target)
         elif type(action) is Jump:
-            self.positions[unit] = target
+            self._reposition_unit(unit, target)
             self._add_effect('jump', unit_pos, target)
         elif type(action) is Push:
             opp_id = self.positions.index(target)
-            self.positions[opp_id] = next(unit_pos.straight_line(target))
+            push_target = next(unit_pos.straight_line(target))
+            self._reposition_unit(opp_id, push_target)
             self._add_effect('push', unit_pos, target)
         else:
             raise TypeError(f'Unkown action: {action}')
         self.ap[unit] -= action.ap
         self.round_ap_spent[unit] += action.ap
         self._apply_mortality()
+
+    def _reposition_unit(self, uid: int, target: Hexagon):
+        """
+        moves a unit to target and resolves the effect of movement
+        :param uid: unit id
+        :param target: hex to move to
+        """
+        self.positions[uid] = target
 
     def _next_turn(self):
         """Increment turn in place."""
