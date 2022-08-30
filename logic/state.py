@@ -411,7 +411,7 @@ class State:
         return self._check_legal_movement(target)
 
     def _check_legal_push(self, target: Hexagon) -> bool:
-        # Can only push an adjascent target
+        # Can only push an adjacent target
         if not self._check_unit_distance(target, 1):
             return False
         # Target must contain a unit
@@ -474,15 +474,28 @@ class State:
         self.round_ap_spent = [0] * self.num_of_units
         self.ap[self.alive_mask] += REGEN_AP
         self.ap[self.ap > MAX_AP] = MAX_AP
-        self.death_radius -= 1
-        if set_death_pits:
-            self.pits |= set(ORIGIN.ring(self.death_radius))
+        self._decrement_death_radius(1, set_death_pits)
         # Contracting ring of death may kill, let's apply that
         self._apply_mortality()
         self.step_count += 1
         self.round_count += 1
         # New round, new seed
         self.seed = self._get_next_seed()
+
+    def _decrement_death_radius(self, delta: int, set_death_pits: bool = True):
+        """
+        change the death radius
+        :param delta: amount to decrement from death radius, (>0)
+        :param set_death_pits: set hex in death radius to pits
+        """
+        assert delta > 0
+        for radius in range(self.death_radius - delta, self.death_radius):
+            ring_hex = set(ORIGIN.ring(radius))
+            if set_death_pits:
+                self.pits |= ring_hex
+            else:
+                self.pits -= ring_hex
+        self.death_radius -= delta
 
     def _get_next_seed(self) -> int:
         """Derives the next round's seed. We simply take the seed value from
