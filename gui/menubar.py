@@ -3,9 +3,9 @@ from util.settings import Settings
 from gui import ASSETS_DIR, FONT
 
 
-font = Settings.get('gui.font_menu', 'liberation-bold')
+font = Settings.get('gui.font_menubar', 'liberation-bold')
 FONT_MENU = str(ASSETS_DIR / 'fonts' / f'{font}.ttf')
-FONT_SIZE = Settings.get('gui.font_menu_size', 16)
+FONT_SIZE = Settings.get('gui.font_menubar_size', 16)
 
 
 class MenuBar(widgets.BoxLayout):

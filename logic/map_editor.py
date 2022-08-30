@@ -91,10 +91,10 @@ class MapEditor(MapCreator, BattleAPI):
                 Control('Load', self.load, '^+ l'),
                 ],
             'Brush': [
-                Control('Pit', lambda: self.set_brush('pit'), 'z'),
-                Control('Wall', lambda: self.set_brush('wall'), 'x'),
-                Control('Spawn', lambda: self.set_brush('spawn'), 'c'),
-                Control('Eraser', lambda: self.set_brush('eraser'), 'v'),
+                Control('Pit', lambda: self.set_brush('pit'), 'q'),
+                Control('Wall', lambda: self.set_brush('wall'), 'w'),
+                Control('Spawn', lambda: self.set_brush('spawn'), 'e'),
+                Control('Eraser', lambda: self.set_brush('eraser'), 'z'),
                 ],
             'Mirror Mode': [
                 Control('Mirror off', lambda: self.set_mirror_mode(1), '1'),

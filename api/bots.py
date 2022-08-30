@@ -41,9 +41,7 @@ class BaseBot:
     TESTING_ONLY: bool = False
     """Marks the bot class as a test bot. Indicates that it should not be used by default."""
     COLOR_INDEX: int = 0
-    """The color (as an index) of the bot class.
-
-    See `logic.battle_manager.BattleManager.UNIT_COLORS`."""
+    """The color (as an index) of the bot class. See `logic.UNIT_COLORS`."""
     logging_enabled: bool = False
     """Enables `BaseBot.logger`."""
     max_ap: int = 100

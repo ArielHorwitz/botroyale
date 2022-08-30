@@ -43,7 +43,7 @@ class Control(NamedTuple):
 
     `spacebar` - The spacebar
 
-    `f1` - The F1 key
+    `f1` - The "F1" key
 
     `^+ a` - Control + Shift + a
     """
@@ -98,18 +98,15 @@ class InputWidget:
     Widget types include:
 
     * 'spacer' - has a label but no value
-
     * 'toggle' - toggle button (boolean value)
-
     * 'text' - arbitrary text input (string value)
-
     * 'select' - select from list (string value, must supply options)
-
     * 'slider' - a slider (float value)
+    * 'divider' - like *spacer* but creates a new section
     """
     label: str
     """Text to place near the widget."""
-    type: Literal['spacer', 'toggle', 'text', 'select', 'slider']
+    type: Literal['spacer', 'toggle', 'text', 'select', 'slider', 'divider']
     """Type of widget."""
     default: Any = None
     """Starting value of the widget (default: None)"""
@@ -117,7 +114,8 @@ class InputWidget:
     """
     Name of value (default is to use the label as sendto).
 
-    This is used by the GUI to map the value of the widget to a key in a dictionary. See `GameAPI.get_new_battle`.
+    This is used by the GUI to map the value of the widget to a key in a
+    dictionary. See `GameAPI.get_new_battle`.
     """
     options: Optional[Sequence[str]] = None
     """List of strings, required only by "select" widgets."""
@@ -297,14 +295,16 @@ class GameAPI:
     """
     Base class for the API between the GUI's main menu and the logic.
 
-    Used to populate the main menu and start battles. Battles are created using the `GameAPI.get_new_battle` method, which returns a `BattleAPI` object.
+    Used to populate the main menu and start battles. Battles are created using
+    the `GameAPI.get_new_battle` method, which returns a `BattleAPI` object.
     """
 
     def get_new_battle(self, menu_values: dict[str, Any]) -> Union[BattleAPI, None]:
         """
         Called by the GUI when the user requests to start a new battle.
 
-        The `menu_values` dictionary maps the each InputWidget's `sendto` name to the widget's value. See `GameAPI.get_menu_widgets` and `InputWidget`.
+        Args:
+            menu_values: Dictionary that maps each InputWidget's `sendto` name to the widget's value. See `GameAPI.get_menu_widgets` and `InputWidget`.
 
         Returns:
             `BattleAPI` (or None if we decide not to start a new battle).
@@ -312,8 +312,15 @@ class GameAPI:
         return BattleAPI()
 
     def get_menu_title(self) -> str:
-        """Returns the string to be displayed in the menu title."""
-        return 'New Game Menu'
+        """Returns the string to be displayed in the menu info panel.
+
+        .. deprecated: 1.0. Please use `GameAPI.get_info_panel_text`.
+        """
+        return self.get_info_panel_text()
+
+    def get_info_panel_text(self) -> str:
+        """Returns the string to be displayed in the menu info panel."""
+        return 'Main Menu'
 
     def get_menu_widgets(self) -> list[InputWidget]:
         """Returns a list of InputWidgets to populate the main menu. The values
@@ -324,6 +331,23 @@ class GameAPI:
         """Returns a ControlMenu (dictionary of menu names and Control lists)
         for buttons and hotkeys in GUI."""
         return {}
+
+    def handle_menu_widget(
+            self, widgets: list[str], menu_values: dict[str, Any]
+        ) -> bool:
+        """Called by the GUI when the user interacts with the `InputWidget`s
+        with `sendto` names of *widgets*.
+
+        This will be called without arguments if the user refreshes the menu.
+
+        Args:
+            widgets: The `sendto` names of the widgets that were interacted with.
+            menu_values: Dictionary that maps each InputWidget's `sendto` name to the widget's value. See `GameAPI.get_menu_widgets` and `InputWidget`.
+
+        Returns:
+            True if we wish the GUI to reset the main menu, by calling `GameAPI.get_info_panel_text` and `GameAPI.get_menu_widgets`.
+        """
+        return False
 
 
 __pdoc__ = {

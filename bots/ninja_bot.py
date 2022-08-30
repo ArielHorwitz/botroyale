@@ -109,7 +109,7 @@ class CheckPoint:
             return calculation_time_ms - pong(start_time_ms)
 
         # Shortcut if no enemies
-        if len(self.enemy_ids) == 0:
+        if len(self.enemy_ids) == 0 and len(self.doomed_ids) == 0:
             self.logger(f'Found no enemies, finding special sequence.')
             suicide_seq = self.get_suicide_sequence()
             suicide_seq.append(Idle())
@@ -190,7 +190,10 @@ class CheckPoint:
         if self.ap < MIN_AP_PER_PUSH:
             return []
         lethal_sequences = []
-        for enemy_id in self.enemy_ids:
+        enemy_ids = self.enemy_ids
+        if len(self.enemy_ids) == 0 and self.doomed_enemy_ids:
+            enemy_ids = self.doomed_enemy_ids
+        for enemy_id in enemy_ids:
             ls = self.get_lethal_sequences_uid(enemy_id)
             lethal_sequences.extend(ls)
         # Sort by ap cost, use number of actions as tiebreaker
@@ -279,7 +282,7 @@ class CheckPoint:
 
     def evaluate_kills(self, weight=1):
         if len(self.enemy_ids) == 0:
-            if self.pos in self.doomed_tiles:
+            if self.pos in self.doomed_tiles and len(self.alive_ids) > 1:
                 return 1_000, f'DRAW STATE'
             return float('inf'), f'WINNING STATE'
         kill_value = -len(self.enemy_ids) * weight
@@ -470,7 +473,7 @@ class CheckPoint:
     # OFFENSE
     def get_lethal_sequences_uid(self, uid):
         """Returns the lethal sequences by us against uid from this checkpoint."""
-        if uid not in self.enemy_ids:
+        if uid not in self.all_enemy_ids or uid not in self.alive_ids:
             return []
         sequences = []
         enemy_pos = self.state.positions[uid]
