@@ -12,7 +12,15 @@ from util.hexagon import Hex, Hexagon
 from api.actions import MAX_AP
 from logic.state import State
 from logic.plate import Plate
-from logic import *
+from logic import (
+    UNIT_COLORS,
+    DEFAULT_CELL_BG,
+    OUT_OF_BOUNDS_CELL_BG,
+    WALL_COLOR,
+    PIT_COLOR,
+    PLATE_RESET_COLOR,
+    PLATE_NO_RESET_COLOR,
+)
 
 
 STEP_RATE = Settings.get('logic._step_rate_cap', 2)

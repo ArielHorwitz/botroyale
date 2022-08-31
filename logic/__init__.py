@@ -5,16 +5,6 @@ from typing import Optional
 from enum import IntEnum, auto as enum_auto
 from util.settings import Settings
 
-__all__ = [
-    'UNIT_COLORS',
-    'DEFAULT_CELL_BG',
-    'OUT_OF_BOUNDS_CELL_BG',
-    'WALL_COLOR',
-    'PIT_COLOR',
-    'PLATE_RESET_COLOR',
-    'PLATE_NO_RESET_COLOR'
-]
-
 
 class PlateType(IntEnum):
     """Enumerator for types of pressure plates. See: `logic.plate.Plate`"""

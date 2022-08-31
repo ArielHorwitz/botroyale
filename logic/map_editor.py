@@ -11,7 +11,15 @@ from api.gui import (
     GameAPI as BaseGameAPI, BattleAPI,
     Tile, VFX, InputWidget, Control, ControlMenu,
     )
-from logic import *
+from logic import (
+    UNIT_COLORS,
+    DEFAULT_CELL_BG,
+    OUT_OF_BOUNDS_CELL_BG,
+    WALL_COLOR,
+    PIT_COLOR,
+    PLATE_RESET_COLOR,
+    PLATE_NO_RESET_COLOR,
+)
 
 
 __pdoc__ = {}
