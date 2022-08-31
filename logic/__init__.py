@@ -27,8 +27,8 @@ UNIT_COLORS = Settings.get('tilemap.|colors.|units', [
     (0.1, 0.7, 0.7),  # Teal
     (0.1, 0.4, 0.9),  # Blue
     (0, 0.1, 0.5),  # Navy
-    (0.7, 0.1, 0.9),  # Purple
     (0.4, 0, 0.7),  # Violet
+    (0.7, 0.1, 0.9),  # Purple
     (0.7, 0, 0.5),  # Magenta
 ])
 """All available colors for unit sprites. 12 colors from red to purple on the rainbow."""
