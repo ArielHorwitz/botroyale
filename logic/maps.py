@@ -161,31 +161,6 @@ class MapCreator:
         """Resets the map to the default state."""
         self.state = DEFAULT_STATE.copy()
 
-    def toggle_contents(self, hex: Hexagon):
-        """Toggles the contents of hex between: empty, pit, wall, and spawn."""
-        current = self.get_contents(hex)
-        self.clear_contents(hex, mirrored=True)
-        if current == 'empty':
-            self.add_pit(hex)
-        elif current == 'pit':
-            self.add_wall(hex)
-        elif current == 'wall':
-            self.add_spawn(hex)
-        elif current == 'spawn':
-            self.clear_contents(hex)
-        else:
-            raise ValueError(f'Unknown {hex} contents: {current}')
-
-    def get_contents(self, hex: Hexagon) -> str:
-        """Returns a string representation of the contents of hex."""
-        if hex in self.state.positions:
-            return 'spawn'
-        if hex in self.state.pits:
-            return 'pit'
-        if hex in self.state.walls:
-            return 'wall'
-        return 'empty'
-
     def check_valid(self, check_spawn: bool = True, check_overlap: bool = True) -> bool:
         """Checks that the map is valid.
 
