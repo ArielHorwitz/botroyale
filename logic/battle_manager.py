@@ -11,6 +11,7 @@ from util.settings import Settings
 from util.hexagon import Hex, Hexagon
 from api.actions import MAX_AP
 from logic.state import State
+from logic.plate import Plate
 from logic import *
 
 
@@ -387,6 +388,7 @@ class BattleManager(Battle, BattleAPI):
         fg_text = ''
         fg_sprite = None
         tile_sprite = 'hex'
+        bg_color = DEFAULT_CELL_BG
         # BG
         if hex.get_distance(MAP_CENTER) >= state.death_radius:
             bg_color = OUT_OF_BOUNDS_CELL_BG
@@ -396,8 +398,12 @@ class BattleManager(Battle, BattleAPI):
         elif hex in state.walls:
             bg_color = WALL_COLOR
             tile_sprite = 'wall'
-        else:
-            bg_color = DEFAULT_CELL_BG
+        elif hex in state.plates:
+            tile_sprite = 'plate'
+            plate = state.get_plate(hex)
+            intensity = -1 / min(plate.pressure, -1)
+            start_color = PLATE_COLORS[plate.plate_type]
+            bg_color = tuple(c * intensity for c in start_color)
         # FG
         if hex in state.positions:
             unit_id = state.positions.index(hex)
