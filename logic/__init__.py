@@ -1,33 +1,29 @@
 """
 Game mechanics.
 """
+from typing import Optional
+from enum import IntEnum, auto as enum_auto
 from util.settings import Settings
 
 __all__ = [
+    'UNIT_COLORS',
     'DEFAULT_CELL_BG',
     'OUT_OF_BOUNDS_CELL_BG',
     'WALL_COLOR',
     'PIT_COLOR',
-    'PLATE_COLOR',
-    'PIT_TRAP_COLOR',
-    'DEATH_PLATE_COLOR',
-    'UNIT_COLORS',
+    'PLATE_COLORS',
 ]
 
-DEFAULT_CELL_BG = Settings.get('tilemap.|colors._default_tile', (0.16, 0.16, 0.2))
-"""Color of an empty tile."""
-OUT_OF_BOUNDS_CELL_BG = Settings.get('tilemap.|colors._out_of_bounds', (0.06, 0.05, 0.04))
-"""Color of a tile outside the death radius."""
-WALL_COLOR = Settings.get('tilemap.|colors._walls', (0.6, 0.65, 0.6))
-"""Color of a wall."""
-PIT_COLOR = Settings.get('tilemap.|colors._pits', (0.25, 0.25, 0.25))
-"""Color of a pit."""
-PLATE_COLOR = Settings.get('tilemap.|colors._plate', (0.15, 0.15, 0.21))
-"""Color of a plate."""
-PIT_TRAP_COLOR = Settings.get('tilemap.|colors._pit_trap', (0.3, 0.05, 0.05))
-"""Color of a pit trap."""
-DEATH_PLATE_COLOR = Settings.get('tilemap.|colors._death_plate', (0.05, 0.3, 0.05))
-"""Color of a death plate."""
+
+class PlateType(IntEnum):
+    """Enumerator for types of pressure plates. See: `logic.plate.Plate`"""
+
+    DEATH_RADIUS_TRAP = enum_auto()
+    """Contracts the death radius."""
+    PIT_TRAP = enum_auto()
+    """Turns tiles into pits."""
+
+
 UNIT_COLORS = Settings.get('tilemap.|colors.|units', [
     (0.6, 0, 0.1),  # Red
     (0.9, 0.3, 0.4),  # Pink
@@ -43,3 +39,19 @@ UNIT_COLORS = Settings.get('tilemap.|colors.|units', [
     (0.7, 0, 0.5),  # Magenta
 ])
 """All available colors for unit sprites. 12 colors from red to purple on the rainbow."""
+DEFAULT_CELL_BG = Settings.get('tilemap.|colors._default_tile', (0.16, 0.16, 0.2))
+"""Color of an empty tile."""
+OUT_OF_BOUNDS_CELL_BG = Settings.get('tilemap.|colors._out_of_bounds', (0.06, 0.05, 0.04))
+"""Color of a tile outside the death radius."""
+WALL_COLOR = Settings.get('tilemap.|colors._walls', (0.6, 0.65, 0.6))
+"""Color of a wall."""
+PIT_COLOR = Settings.get('tilemap.|colors._pits', (0.25, 0.25, 0.25))
+"""Color of a pit."""
+PLATE_COLORS: dict[PlateType, tuple[float, float, float]] = {
+    PlateType.DEATH_RADIUS_TRAP: Settings.get('tilemap.|colors._death_radius_trap', (0.05, 0.3, 0.05)),
+    PlateType.PIT_TRAP: Settings.get('tilemap.|colors._pit_trap', (0.3, 0.05, 0.05)),
+}
+"""Colors of all plates."""
+
+# Make sure we are not missing plate colors
+assert all([p in PLATE_COLORS for p in PlateType])
