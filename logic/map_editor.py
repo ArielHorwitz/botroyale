@@ -84,6 +84,14 @@ class MapEditor(MapCreator, BattleAPI):
                 pressure_reset=self.plate_pressure_reset,
                 targets=self.selected_tiles if len(self.selected_tiles) > 0 else {hex},
             ))
+        elif self.brush == BrushType.WALL_TRAP:
+            self.add_plate(Plate(
+                hex.cube,
+                plate_type=PlateType.WALL_TRAP,
+                pressure=self.plate_pressure,
+                pressure_reset=self.plate_pressure_reset,
+                targets=self.selected_tiles,
+            ))
         else:
             raise ValueError(f'Unknown brush type: {self.brush}')
         self._clear_selected()

@@ -607,6 +607,8 @@ class State:
             self._decrement_death_radius(1)
         elif plate.plate_type is PlateType.PIT_TRAP:
             self._activate_pit_trap(plate)
+        elif plate.plate_type is PlateType.WALL_TRAP:
+            self._activate_wall_trap(plate)
         # Post-effect management
         if plate.pressure_reset and plate in self.plates:
             plate.pressure = plate.min_pressure
@@ -619,3 +621,10 @@ class State:
         self.walls -= trap.targets
         self.pits |= trap.targets
         self.plates -= trap.targets
+
+    def _activate_wall_trap(self, trap: Plate):
+        """Apply the effects of a `logic.PlateType.WALL_TRAP` pressure popping."""
+        targets = trap.targets - set(self.positions)
+        self.walls |= targets
+        self.pits -= targets
+        self.plates -= targets

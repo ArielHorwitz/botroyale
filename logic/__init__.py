@@ -22,6 +22,7 @@ class PlateType(IntEnum):
     """Contracts the death radius."""
     PIT_TRAP = enum_auto()
     """Turns tiles into pits."""
+    WALL_TRAP = enum_auto()
 
 
 UNIT_COLORS = Settings.get('tilemap.|colors.|units', [
@@ -50,6 +51,7 @@ PIT_COLOR = Settings.get('tilemap.|colors._pits', (0.25, 0.25, 0.25))
 PLATE_COLORS: dict[PlateType, tuple[float, float, float]] = {
     PlateType.DEATH_RADIUS_TRAP: Settings.get('tilemap.|colors._death_radius_trap', (0.05, 0.3, 0.05)),
     PlateType.PIT_TRAP: Settings.get('tilemap.|colors._pit_trap', (0.3, 0.05, 0.05)),
+    PlateType.WALL_TRAP: Settings.get('tilemap.|colors._wall_trap', (0.05, 0.05, 0.3)),
 }
 """Colors of all plates."""
 
