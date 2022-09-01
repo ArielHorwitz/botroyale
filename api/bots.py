@@ -42,7 +42,7 @@ class BaseBot:
     """Marks the bot class as a test bot. Indicates that it should not be used by default."""
     COLOR_INDEX: int = 0
     """The color (as an index) of the bot class. See `logic.UNIT_COLORS`."""
-    logging_enabled: bool = False
+    logging_enabled: bool = True
     """Enables `BaseBot.logger`."""
     max_ap: int = 100
     """The maximum amount of AP that can be accumulated."""
