@@ -382,6 +382,11 @@ class Tile(widgets.kvInstructionGroup):
         self.add(self._text)
 
     def update(self, tile_info):
+        # Always set the tile bg sprite
+        if tile_info.tile is None:
+            self._bg.source = HEX_PNG
+        else:
+            self._bg.source = str(SPRITES_DIR / f'{tile_info.tile}.png')
         # Always set the bg color
         self._bg_color.rgba = (*tile_info.bg, 1)
         # Set/hide the fg

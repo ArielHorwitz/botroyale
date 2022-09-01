@@ -141,10 +141,13 @@ class InputWidget:
 @dataclass
 class Tile:
     """Represents how a hex on the tilemap must be drawn."""
+
+    tile: Optional[str] = None
+    """Sprite name of the tile itself."""
     bg: tuple[float, float, float] = 0, 0, 0
-    """Background color of the tile."""
+    """Tile (background) color."""
     sprite: Optional[str] = None
-    """Sprite name to draw on the tile."""
+    """Sprite name to draw on top of the tile."""
     color: tuple[float, float, float] = 0.5, 0.5, 0.5
     """Sprite color."""
     text: Optional[str] = None
