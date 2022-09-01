@@ -81,8 +81,9 @@ class TileMap(widgets.RelativeLayout):
             pos = np.asarray(m.pos) - self.screen_center
             pos = self.to_widget(*pos, relative=True)
             hex = self.real_center.pixel_position_to_hex(self.tile_radius_padded, pos)
-            logger(f'Clicked {btn}: {pos} -> {hex}')
-            self.handle_hex_click(hex, btn)
+            mods = widgets.get_app().im.currently_pressed_mods
+            logger(f'Clicked {btn=} with {mods=} : {pos} -> {hex}')
+            self.handle_hex_click(hex, btn, mods=mods)
             return True
         return False
 

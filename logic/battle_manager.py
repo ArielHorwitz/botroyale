@@ -430,14 +430,14 @@ class BattleManager(Battle, BattleAPI):
             death_radius -= 1
         return max(5, death_radius)
 
-    def handle_hex_click(self, hex: Hexagon, button: str):
+    def handle_hex_click(self, hex: Hexagon, button: str, mods: str):
         """Handles a tile being clicked on in the tilemap.
 
         If a unit is positioned at *hex*, will call its `api.bots.BaseBot.gui_click` method with *hex* and *button*. Otherwise will mark *hex* with a color determined by *button* using `api.gui.BattleAPI.add_vfx`.
 
         Overrides: `api.gui.BattleAPI.handle_hex_click`.
         """
-        self.logger(f'Clicked {button} on: {hex}')
+        self.logger(f'Clicked {button=} with {mods=} on: {hex}')
         if hex in self.replay_state.positions:
             unit_id = self.replay_state.positions.index(hex)
             vfx_seq = self.bots[unit_id].gui_click(hex, button)

@@ -192,7 +192,7 @@ class MapEditor(MapCreator, BattleAPI):
         """
         return self.state.death_radius-1.5
 
-    def handle_hex_click(self, hex: Hexagon, button: str):
+    def handle_hex_click(self, hex: Hexagon, button: str, mods: str):
         """Handles a tile being clicked on in the tilemap.
 
         `Left click`: Applies the `MapCreator.brush`.
