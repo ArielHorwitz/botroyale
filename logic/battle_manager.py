@@ -449,23 +449,32 @@ class BattleManager(Battle, BattleAPI):
     def handle_hex_click(self, hex: Hexagon, button: str, mods: str):
         """Handles a tile being clicked on in the tilemap.
 
-        If a unit is positioned at *hex*, will call its `api.bots.BaseBot.gui_click` method with *hex* and *button*. Otherwise will mark *hex* with a color determined by *button* using `api.gui.BattleAPI.add_vfx`.
-
         Overrides: `api.gui.BattleAPI.handle_hex_click`.
         """
-        self.logger(f'Clicked {button=} with {mods=} on: {hex}')
-        if hex in self.replay_state.positions:
-            unit_id = self.replay_state.positions.index(hex)
-            vfx_seq = self.bots[unit_id].gui_click(hex, button)
-            if vfx_seq is not None:
-                for vfx_kwargs in vfx_seq:
-                    vfx_kwargs['steps'] = 1
-                    self.add_vfx(**vfx_kwargs)
-        else:
+        click = f"{mods} {button}"
+        self.logger(f'Clicked {click} on: {hex}')
+        # Normal click and Control click: info
+        if mods == '' or mods == '^':
             if button == 'left':
-                vfx = 'mark-green'
-            elif button == 'right':
-                vfx = 'mark-red'
-            else:
-                vfx = 'mark-blue'
-            self.add_vfx(vfx, hex, steps=1)
+                # Show targets of a plate
+                p = self.replay_state.get_plate(hex)
+                if p:
+                    for t in p.targets:
+                        self.add_vfx(f'highlight', t, steps=1)
+        # Shift click: mark
+        elif mods == '+':
+            vfx = {
+                'left': 'green',
+                'right': 'red',
+                'middle': 'blue',
+            }[button]
+            self.add_vfx(f'mark-{vfx}', hex, steps=1)
+        # Alt click: bot debug
+        elif click == '! left':
+            if hex in self.replay_state.positions:
+                unit_id = self.replay_state.positions.index(hex)
+                vfx_seq = self.bots[unit_id].gui_click(hex, button)
+                if vfx_seq is not None:
+                    for vfx_kwargs in vfx_seq:
+                        vfx_kwargs['steps'] = 1
+                        self.add_vfx(**vfx_kwargs)

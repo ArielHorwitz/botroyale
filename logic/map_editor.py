@@ -201,8 +201,7 @@ class MapEditor(MapCreator, BattleAPI):
             f'{valid_str}¹',
             '\n',
             f'Brush:           {self.brush.name.capitalize()}  × {self.mirror_mode} mirrors',
-            'Selected tiles:',
-            *[f'  {t}' for t in self.selected_tiles],
+            f'Selected tiles:  {len(self.selected_tiles)}',
             '\n',
             f'Plate pressure:  {self.plate_pressure}',
             f'Pressure reset:  {self.plate_pressure_reset}',
@@ -297,15 +296,23 @@ class MapEditor(MapCreator, BattleAPI):
     def handle_hex_click(self, hex: Hexagon, button: str, mods: str):
         """Handles a tile being clicked on in the tilemap.
 
-        `Left click`: Applies the `MapCreator.brush`.
-        `Right click`: Clears the tile.
-        `Middle click`: Toggles selected the tile.
-
         Overrides: `api.gui.BattleAPI.handle_hex_click`.
         """
-        if button == 'left':
-            self._apply_brush(hex)
-        elif button == 'right':
-            self.clear_contents(hex, mirrored=True)
-        elif button == 'middle':
-            self._toggle_selected(hex)
+        # Normal click: modify
+        if mods == '':
+            if button == 'left':
+                self._apply_brush(hex)
+            elif button == 'right':
+                self.clear_contents(hex, mirrored=True)
+        # Control click: info
+        elif mods == '^':
+            if button == 'left':
+                # Show targets of a plate
+                p = self.state.get_plate(hex)
+                if p:
+                    for t in p.targets:
+                        self.add_vfx(f'highlight', t, steps=1)
+        # Shift click: select
+        elif mods == '+':
+            if button == 'left':
+                self._toggle_selected(hex)
