@@ -11,7 +11,8 @@ __all__ = [
     'OUT_OF_BOUNDS_CELL_BG',
     'WALL_COLOR',
     'PIT_COLOR',
-    'PLATE_COLORS',
+    'PLATE_RESET_COLOR',
+    'PLATE_NO_RESET_COLOR'
 ]
 
 
@@ -23,6 +24,7 @@ class PlateType(IntEnum):
     PIT_TRAP = enum_auto()
     """Turns tiles into pits."""
     WALL_TRAP = enum_auto()
+    """Turns tiles into walls."""
 
 
 UNIT_COLORS = Settings.get('tilemap.|colors.|units', [
@@ -48,12 +50,6 @@ WALL_COLOR = Settings.get('tilemap.|colors._walls', (0.6, 0.65, 0.6))
 """Color of a wall."""
 PIT_COLOR = Settings.get('tilemap.|colors._pits', (0.25, 0.25, 0.25))
 """Color of a pit."""
-PLATE_COLORS: dict[PlateType, tuple[float, float, float]] = {
-    PlateType.DEATH_RADIUS_TRAP: Settings.get('tilemap.|colors._death_radius_trap', (0.05, 0.3, 0.05)),
-    PlateType.PIT_TRAP: Settings.get('tilemap.|colors._pit_trap', (0.3, 0.05, 0.05)),
-    PlateType.WALL_TRAP: Settings.get('tilemap.|colors._wall_trap', (0.05, 0.05, 0.3)),
-}
-"""Colors of all plates."""
 
-# Make sure we are not missing plate colors
-assert all([p in PLATE_COLORS for p in PlateType])
+PLATE_RESET_COLOR = Settings.get('tilemap.|colors._plate_reset', (0.4, 0.5, 0.5))
+PLATE_NO_RESET_COLOR = Settings.get('tilemap.|colors._plate_no_reset', (0.4, 0.4, 0.4))

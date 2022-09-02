@@ -399,10 +399,10 @@ class BattleManager(Battle, BattleAPI):
             bg_color = WALL_COLOR
             tile_sprite = 'wall'
         elif hex in state.plates:
-            tile_sprite = 'plate'
             plate = state.get_plate(hex)
+            tile_sprite = f'plate_{plate.plate_type.name.lower()}'
+            start_color = PLATE_RESET_COLOR if plate.pressure_reset else PLATE_NO_RESET_COLOR
             intensity = -1 / min(plate.pressure, -1)
-            start_color = PLATE_COLORS[plate.plate_type]
             bg_color = tuple(c * intensity for c in start_color)
         # FG
         if hex in state.positions:
