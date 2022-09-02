@@ -50,6 +50,7 @@ WALL_COLOR = Settings.get('tilemap.|colors._walls', (0.6, 0.65, 0.6))
 """Color of a wall."""
 PIT_COLOR = Settings.get('tilemap.|colors._pits', (0.25, 0.25, 0.25))
 """Color of a pit."""
-
-PLATE_RESET_COLOR = Settings.get('tilemap.|colors._plate_reset', (0.4, 0.5, 0.5))
-PLATE_NO_RESET_COLOR = Settings.get('tilemap.|colors._plate_no_reset', (0.4, 0.4, 0.4))
+PLATE_NO_RESET_COLOR = Settings.get('tilemap.|colors._plate_no_reset', (0.4, 0.45, 0.6))
+"""Color of a plate that will not reset its pressure."""
+PLATE_RESET_COLOR = Settings.get('tilemap.|colors._plate_reset', (0.4, 0.4, 0.65))
+"""Color of a plate that will reset its pressure."""
