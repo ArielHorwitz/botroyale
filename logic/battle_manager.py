@@ -386,19 +386,20 @@ class BattleManager(Battle, BattleAPI):
         fg_color = None
         fg_text = ''
         fg_sprite = None
+        tile_sprite = 'hex'
         # BG
         if hex.get_distance(MAP_CENTER) >= state.death_radius:
             bg_color = OUT_OF_BOUNDS_CELL_BG
         elif hex in state.pits:
             bg_color = PIT_COLOR
+            tile_sprite = 'pit'
+        elif hex in state.walls:
+            bg_color = WALL_COLOR
+            tile_sprite = 'wall'
         else:
             bg_color = DEFAULT_CELL_BG
         # FG
-        if hex in state.walls:
-            fg_text = ''
-            fg_color = WALL_COLOR
-            fg_sprite = 'hex'
-        elif hex in state.positions:
+        if hex in state.positions:
             unit_id = state.positions.index(hex)
             if not state.alive_mask[unit_id]:
                 fg_color = 0.5, 0.5, 0.5
@@ -414,6 +415,7 @@ class BattleManager(Battle, BattleAPI):
         if self.show_coords:
             fg_text = f'{hex.x},{hex.y}'
         return Tile(
+            tile=tile_sprite,
             bg=bg_color,
             color=fg_color,
             sprite=fg_sprite,

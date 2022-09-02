@@ -11,7 +11,7 @@ from util.hexagon import Hex, ORIGIN, WIDTH_HEIGHT_RATIO, SQRT3
 ZOOM_RATIO = 3/2
 AUTO_ZOOM = Settings.get('tilemap.autozoom', True)
 MAX_MAP_TILES = Settings.get('tilemap.max_draw_tiles', 2500)
-TILE_PADDING = Settings.get('tilemap._tile_padding', 10)
+TILE_PADDING = Settings.get('tilemap._tile_padding', 1)
 MAX_TILE_RADIUS = Settings.get('tilemap.max_tile_radius', 300)
 UNIT_SIZE = Settings.get('tilemap.unit_size', 0.7)
 font = Settings.get('gui.font_tilemap', 'liberation-mono')
