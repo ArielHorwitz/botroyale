@@ -150,22 +150,26 @@ class MapEditor(MapCreator, BattleAPI):
         """
         state = self.state
         out_of_bounds = hex.get_distance(ORIGIN) >= state.death_radius-1
+
+        tile_sprite = 'hex'
+        color = None
+        sprite = None
+        text = ''
+
         # Tile color
         if hex in state.pits:
             bg = PIT_COLOR
+            tile_sprite = 'pit'
+        elif hex in state.walls:
+            bg = WALL_COLOR
+            tile_sprite = 'wall'
         elif out_of_bounds:
             bg = OUT_OF_BOUNDS_CELL_BG
         else:
             bg = DEFAULT_CELL_BG
+
         # Sprite
-        color = None
-        sprite = None
-        text = ''
-        if hex in state.walls:
-            color = WALL_COLOR
-            sprite = 'hex'
-            text = ''
-        elif hex in state.positions:
+        if hex in state.positions:
             unit_id = state.positions.index(hex)
             if out_of_bounds:
                 color = 0.5, 0.5, 0.5
@@ -177,6 +181,7 @@ class MapEditor(MapCreator, BattleAPI):
         if self.show_coords:
             text = f'{hex.x}, {hex.y}'
         return Tile(
+            tile=tile_sprite,
             bg=bg,
             color=color,
             sprite=sprite,
@@ -192,7 +197,7 @@ class MapEditor(MapCreator, BattleAPI):
         """
         return self.state.death_radius-1.5
 
-    def handle_hex_click(self, hex: Hexagon, button: str):
+    def handle_hex_click(self, hex: Hexagon, button: str, mods: str):
         """Handles a tile being clicked on in the tilemap.
 
         `Left click`: Applies the `MapCreator.brush`.

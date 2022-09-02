@@ -29,31 +29,54 @@ class Battle:
             bot_classes_getter: Callable[[int], Sequence[type]] = get_bot_classes,
             description: str = 'No description set',
             enable_logging: bool = True,
+            enable_bot_logging: bool = True,
             only_bot_turn_states: bool = True,
             threshold_bot_block_seconds: float = 20.0,
             ):
         """
         Args:
-            initial_state: The first state of the battle. If initial_state is not provided, it will be generated using the map generator based on configured settings.
+            initial_state: The first state of the battle. If initial_state is
+                not provided, it will be generated using the map generator based
+                on configured settings.
 
-            bot_classes_getter: A function that takes an integer and returns that many bots classes. If bot_classes_getter is not provided, the default `bots.get_bot_classes` will be used that is based on configured settings.
+            bot_classes_getter: A function that takes an integer and returns
+                that many bots classes. If bot_classes_getter is not provided,
+                the default `bots.get_bot_classes` will be used that is based on
+                configured settings.
 
             description: A description of the battle.
 
-            enable_logging: Passing False will disable the logger for the battle. It also disables logging while calling the bot_classes_getter.
+            enable_logging: Passing False will disable battle logs.
 
-            only_bot_turn_states: Determines whether to skip `State.end_of_round` states and other states that are not expecting an action from a unit. This is useful for bot developers who may not care about states out of turn and only care to see when a bot needs to take action. This essentially determines whether actions are applied to states with `State.apply_action` or `State.apply_action_no_round_increment`.
+            enable_bot_logging: Passing False will disable the logger while
+                `Battle._get_bot_action` is called.
 
-            threshold_bot_block_seconds: Threshold of calculation time for bots to trigger a warning in the log.
+            only_bot_turn_states: Determines whether to skip `State.end_of_round`
+                states and other states that are not expecting an action from a
+                unit. This is useful for bot developers who may not care about
+                states out of turn and only care to see when a bot needs to take
+                action. This essentially determines whether actions are applied
+                to states with `State.apply_action` or
+                `State.apply_action_no_round_increment`.
+
+            threshold_bot_block_seconds: Threshold of calculation time for bots
+                to trigger a warning in the log.
+
+        .. admonition:: New in v1.1
+            Added *enable_bot_logging* argument.
         """
-        self.enable_logging = enable_logging
-        self.description = description
-        """A description of the battle"""
+        self.enable_logging: bool = enable_logging
+        """Enable logging of the battle itself."""
+        self.enable_bot_logging: bool = enable_bot_logging
+        """Enable logging for the bots."""
+        self.description: str = description
+        """A description of the battle."""
         if initial_state is None:
             with Logger.set_logging_temp(enable_logging):
                 initial_state = get_map_state()
         self.__current_state: State = initial_state
         self.history: list[State] = [initial_state]
+        """A list of states."""
         self.__only_bot_turn_states: bool = only_bot_turn_states
         self.__threshold_bot_block_ms: float = threshold_bot_block_seconds * 1000
         # Bots
@@ -63,9 +86,10 @@ class Battle:
         with Logger.set_logging_temp(enable_logging):
             bot_classes = bot_classes_getter(bot_count)
         assert len(bot_classes) == bot_count
-        self.bots = tuple(bcls(i) for i, bcls in enumerate(bot_classes))
+        self.bots: tuple[BaseBot, ...] = tuple(bcls(i) for i, bcls in enumerate(bot_classes))
+        """Tuple of bot instances."""
         # Allow bots to prepare
-        with Logger.set_logging_temp(enable_logging):
+        with Logger.set_logging_temp(enable_bot_logging):
             for uid, bot in enumerate(self.bots):
                 assert isinstance(bot, BaseBot)
                 bot.setup(initial_state)
@@ -175,7 +199,8 @@ class Battle:
             self.bot_timer.add_time(unit_id, elapsed)
         with pingpong(pingpong_desc, logger=self.logger, return_elapsed=add_bot_time):
             try:
-                action = bot.poll_action(state)
+                with Logger.set_logging_temp(self.enable_bot_logging):
+                    action = bot.poll_action(state)
                 assert isinstance(action, Action)
             except Exception as e:
                 formatted_exc = ''.join(traceback.format_exception(*sys.exc_info()))

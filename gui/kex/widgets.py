@@ -67,6 +67,10 @@ from gui import kex
 from gui.kex import KexWidget, restart_script, ping, pong
 
 
+def get_app():
+    return kvApp.get_running_app()
+
+
 # ABSTRACTIONS
 class App(kvApp):
     def __init__(self,
@@ -177,6 +181,18 @@ class InputManager(Widget):
     # Super
     """
     MODIFIER_SORT = '^!+#'
+
+    @property
+    def currently_pressed(self):
+        return self.__last_keys_down
+
+    @property
+    def currently_pressed_mods(self):
+        last_keys = self.__last_keys_down
+        if ' ' not in last_keys:
+            return ''
+        mods = last_keys.split(' ')[0]
+        return mods
 
     @property
     def actions(self):

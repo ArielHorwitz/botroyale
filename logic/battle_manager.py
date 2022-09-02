@@ -386,19 +386,20 @@ class BattleManager(Battle, BattleAPI):
         fg_color = None
         fg_text = ''
         fg_sprite = None
+        tile_sprite = 'hex'
         # BG
         if hex.get_distance(MAP_CENTER) >= state.death_radius:
             bg_color = OUT_OF_BOUNDS_CELL_BG
         elif hex in state.pits:
             bg_color = PIT_COLOR
+            tile_sprite = 'pit'
+        elif hex in state.walls:
+            bg_color = WALL_COLOR
+            tile_sprite = 'wall'
         else:
             bg_color = DEFAULT_CELL_BG
         # FG
-        if hex in state.walls:
-            fg_text = ''
-            fg_color = WALL_COLOR
-            fg_sprite = 'hex'
-        elif hex in state.positions:
+        if hex in state.positions:
             unit_id = state.positions.index(hex)
             if not state.alive_mask[unit_id]:
                 fg_color = 0.5, 0.5, 0.5
@@ -414,6 +415,7 @@ class BattleManager(Battle, BattleAPI):
         if self.show_coords:
             fg_text = f'{hex.x},{hex.y}'
         return Tile(
+            tile=tile_sprite,
             bg=bg_color,
             color=fg_color,
             sprite=fg_sprite,
@@ -430,14 +432,14 @@ class BattleManager(Battle, BattleAPI):
             death_radius -= 1
         return max(5, death_radius)
 
-    def handle_hex_click(self, hex: Hexagon, button: str):
+    def handle_hex_click(self, hex: Hexagon, button: str, mods: str):
         """Handles a tile being clicked on in the tilemap.
 
         If a unit is positioned at *hex*, will call its `api.bots.BaseBot.gui_click` method with *hex* and *button*. Otherwise will mark *hex* with a color determined by *button* using `api.gui.BattleAPI.add_vfx`.
 
         Overrides: `api.gui.BattleAPI.handle_hex_click`.
         """
-        self.logger(f'Clicked {button} on: {hex}')
+        self.logger(f'Clicked {button=} with {mods=} on: {hex}')
         if hex in self.replay_state.positions:
             unit_id = self.replay_state.positions.index(hex)
             vfx_seq = self.bots[unit_id].gui_click(hex, button)

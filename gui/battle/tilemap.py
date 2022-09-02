@@ -11,7 +11,7 @@ from util.hexagon import Hex, ORIGIN, WIDTH_HEIGHT_RATIO, SQRT3
 ZOOM_RATIO = 3/2
 AUTO_ZOOM = Settings.get('tilemap.autozoom', True)
 MAX_MAP_TILES = Settings.get('tilemap.max_draw_tiles', 2500)
-TILE_PADDING = Settings.get('tilemap._tile_padding', 10)
+TILE_PADDING = Settings.get('tilemap._tile_padding', 1)
 MAX_TILE_RADIUS = Settings.get('tilemap.max_tile_radius', 300)
 UNIT_SIZE = Settings.get('tilemap.unit_size', 0.7)
 font = Settings.get('gui.font_tilemap', 'liberation-mono')
@@ -81,8 +81,9 @@ class TileMap(widgets.RelativeLayout):
             pos = np.asarray(m.pos) - self.screen_center
             pos = self.to_widget(*pos, relative=True)
             hex = self.real_center.pixel_position_to_hex(self.tile_radius_padded, pos)
-            logger(f'Clicked {btn}: {pos} -> {hex}')
-            self.handle_hex_click(hex, btn)
+            mods = widgets.get_app().im.currently_pressed_mods
+            logger(f'Clicked {btn=} with {mods=} : {pos} -> {hex}')
+            self.handle_hex_click(hex, btn, mods=mods)
             return True
         return False
 
@@ -382,6 +383,11 @@ class Tile(widgets.kvInstructionGroup):
         self.add(self._text)
 
     def update(self, tile_info):
+        # Always set the tile bg sprite
+        if tile_info.tile is None:
+            self._bg.source = HEX_PNG
+        else:
+            self._bg.source = str(SPRITES_DIR / f'{tile_info.tile}.png')
         # Always set the bg color
         self._bg_color.rgba = (*tile_info.bg, 1)
         # Set/hide the fg

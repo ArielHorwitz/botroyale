@@ -141,10 +141,13 @@ class InputWidget:
 @dataclass
 class Tile:
     """Represents how a hex on the tilemap must be drawn."""
+
+    tile: Optional[str] = None
+    """Sprite name of the tile itself."""
     bg: tuple[float, float, float] = 0, 0, 0
-    """Background color of the tile."""
+    """Tile (background) color."""
     sprite: Optional[str] = None
-    """Sprite name to draw on the tile."""
+    """Sprite name to draw on top of the tile."""
     color: tuple[float, float, float] = 0.5, 0.5, 0.5
     """Sprite color."""
     text: Optional[str] = None
@@ -221,13 +224,24 @@ class BattleAPI:
         """The radius of the map size for the GUI to display."""
         return 5
 
-    def handle_hex_click(self, hex: Hexagon, button: str):
+    def handle_hex_click(self, hex: Hexagon, button: str, mods: str):
         """
         Called when a tile is clicked on in the GUI.
 
         Args:
             hex: The hex that was clicked.
-            button: one of "left", "right", "middle", "mouse1", "mouse2", etc.
+            button: One of "left", "right", "middle", "mouse1", "mouse2", etc.
+            mods: A string of keyboard modifiers that were pressed when the
+                mouse was clicked.
+
+                - `^` control
+                - `+` shift
+                - `!` alt
+                - `#` meta ("win" key)
+                - `^+` control + shift
+
+        .. admonition:: New in v1.1
+            Added the *mods* argument
         """
         glogger(f'Clicked {button} on: {hex}')
         if button == 'left':
