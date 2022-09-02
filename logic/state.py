@@ -593,12 +593,11 @@ class State:
         if plate.pressure == 0:
             self._add_effect("pressure-pop", target)
             self._apply_plate_effect(plate)
-
         # Post-effect management
-        if plate in self.plates:
+        if plate in self.plates and plate.pressure >= 0:
             if plate.pressure_reset:
                 plate.pressure = plate.min_pressure
-            if plate.pressure >= 0:
+            else:
                 self.plates.remove(plate)
 
     def _apply_plate_effect(self, plate: Plate):
