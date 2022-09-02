@@ -504,7 +504,7 @@ class State:
         self.round_remaining_turns.pop(0)
         self.turn_count += 1
 
-    def _next_round(self, set_death_pits: bool = True):
+    def _next_round(self):
         """Increment round in place."""
         # Setting the new turn order uses AP spent and this round's seed.
         # Let's do that before resetting either.
@@ -513,7 +513,7 @@ class State:
         self.round_ap_spent = [0] * self.num_of_units
         self.ap[self.alive_mask] += REGEN_AP
         self.ap[self.ap > MAX_AP] = MAX_AP
-        self._decrement_death_radius(1, set_death_pits)
+        self._decrement_death_radius(1)
         # Contracting ring of death may kill, let's apply that
         self._apply_mortality()
         self.step_count += 1
@@ -521,21 +521,16 @@ class State:
         # New round, new seed
         self.seed = self._get_next_seed()
 
-    def _decrement_death_radius(self, delta: int, set_death_pits: bool = True):
+    def _decrement_death_radius(self, delta: int):
         """
         change the death radius
         :param delta: amount to decrement from death radius, (>0)
-        :param set_death_pits: set hex in death radius to pits
         """
         assert delta > 0
         for radius in range(self.death_radius - delta, self.death_radius):
             ring_hex = set(ORIGIN.ring(radius))
-            # Set death pits on the new ring
-            if set_death_pits:
-                self.pits |= ring_hex
-            else:
-                self.pits -= ring_hex
-            # Remove plates outside the death radius
+            self.pits -= ring_hex
+            self.walls -= ring_hex
             self.plates -= ring_hex
         self.death_radius -= delta
 
@@ -599,8 +594,15 @@ class State:
             self._add_effect("pressure_pop", target)
             self._apply_plate_effect(plate)
 
+        # Post-effect management
+        if plate in self.plates:
+            if plate.pressure_reset:
+                plate.pressure = plate.min_pressure
+            if plate.pressure >= 0:
+                self.plates.remove(plate)
+
     def _apply_plate_effect(self, plate: Plate):
-        """Apply the effects of *plate* pressure popping."""
+        """Apply the effects of *plate* pressure popping. this may change the map including the *plate*"""
         assert plate in self.plates
         # Apply the actual effect
         if plate.plate_type is PlateType.DEATH_RADIUS_TRAP:
@@ -609,9 +611,6 @@ class State:
             self._activate_pit_trap(plate)
         elif plate.plate_type is PlateType.WALL_TRAP:
             self._activate_wall_trap(plate)
-        # Post-effect management
-        if plate.pressure_reset and plate in self.plates:
-            plate.pressure = plate.min_pressure
 
     def _get_all_of_plate_by_type(self, plate_type: PlateType) -> set[Plate]:
         return {p for p in self.plates if p.plate_type is plate_type}
