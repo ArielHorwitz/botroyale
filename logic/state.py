@@ -591,7 +591,7 @@ class State:
             return
         plate.pressure += 1
         if plate.pressure == 0:
-            self._add_effect("pressure_pop", target)
+            self._add_effect("pressure-pop", target)
             self._apply_plate_effect(plate)
 
         # Post-effect management
