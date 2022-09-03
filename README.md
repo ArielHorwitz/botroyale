@@ -10,6 +10,8 @@ A battle royale for bots.
 - [Kivy](https://pypi.org/project/Kivy/) for the GUI
 - [numpy](https://pypi.org/project/numpy/) because of course
 - [pdoc3](https://pypi.org/project/pdoc3/) to create the docs (optional)
+- [black](https://github.com/psf/black) for code formatting (optional)
+- [flake8](https://flake8.pycqa.org/) for code quality analysis (optional)
 
 It is recommended to use a [virtual environment](https://docs.python.org/3/tutorial/venv.html). Once activated, install the requirements:
 
@@ -41,4 +43,4 @@ This will create the docs from source if missing, and then open them in the defa
 
 `python main.py makedocs`
 
-The docs expect the project folder to be a valid python package name (if you are unsure, name your project folder "botroyale")
+The docs expect the project folder to be a valid python package name (if you are unsure, name your project folder "botroyale").

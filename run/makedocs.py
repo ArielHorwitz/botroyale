@@ -101,7 +101,6 @@ def _rebuild_guides():
         guide_fname = child.stem
         new_docstring = f'""".. include:: {_windows_compat(str(child))}"""'
         gmod_path = GUIDES_PY_DIR / f'{guide_fname}.py'
-        print(f'Writing guide module: {gmod_path}')
         file_dump(gmod_path, new_docstring, clear=True)
         ghtml_path = GUIDES_OUTPUT_DIR / f'{guide_fname}.html'
         guides.append(Guide(ghtml_path, title, categories))
@@ -182,7 +181,6 @@ def _module_path(mod):
 
 
 def _write_html(file_path, html):
-    print(f'Writing: {file_path} {len(html)=}')
     file_path.parent.mkdir(parents=True, exist_ok=True)
     file_dump(file_path, html)
 
