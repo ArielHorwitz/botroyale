@@ -11,6 +11,7 @@ from util.settings import Settings
 from util.hexagon import Hexagon, Hex, ORIGIN
 from api.logging import logger
 from logic.state import State
+from logic.plate import Plate
 
 
 def _find_maps() -> list[str]:
@@ -64,6 +65,7 @@ def _load_map(map_name: Optional[str] = None, use_default: bool = True) -> State
         positions=[Hex(x, y) for x, y in data['positions']],
         pits={Hex(x, y) for x, y in data['pits']},
         walls={Hex(x, y) for x, y in data['walls']},
+        plates={Plate.from_exported(p) for p in data.get('plates', [])},
     )
 
 
@@ -76,6 +78,7 @@ def _save_map(map_name: str, state: State, allow_overwrite: bool = True):
         'positions': [p.xy for p in state.positions],
         'pits': [p.xy for p in state.pits],
         'walls': [w.xy for w in state.walls],
+        'plates': [p.export() for p in state.plates],
     }
     map_file = MAP_DIR / f'{map_name}.json'
     if not allow_overwrite and map_file.is_file():
@@ -141,6 +144,13 @@ class MapCreator:
             self.clear_contents(h)
             self.state.walls.add(h)
 
+    def add_plate(self, plate: Plate):
+        """Clear contents and add a plate at hex."""
+        assert isinstance(plate, Plate)
+        for p in self._get_mirrored_plate(plate):
+            self.clear_contents(p)
+            self.state.plates.add(p)
+
     def clear_contents(self, hex: Hexagon, mirrored: bool = False):
         """Clear the contents of hex: clears spawns, walls, and pits.
 
@@ -156,35 +166,12 @@ class MapCreator:
                 self.state.pits.remove(h)
             if h in self.state.walls:
                 self.state.walls.remove(h)
+            if h in self.state.plates:
+                self.state.plates.remove(h)
 
     def clear_all(self):
         """Resets the map to the default state."""
         self.state = DEFAULT_STATE.copy()
-
-    def toggle_contents(self, hex: Hexagon):
-        """Toggles the contents of hex between: empty, pit, wall, and spawn."""
-        current = self.get_contents(hex)
-        self.clear_contents(hex, mirrored=True)
-        if current == 'empty':
-            self.add_pit(hex)
-        elif current == 'pit':
-            self.add_wall(hex)
-        elif current == 'wall':
-            self.add_spawn(hex)
-        elif current == 'spawn':
-            self.clear_contents(hex)
-        else:
-            raise ValueError(f'Unknown {hex} contents: {current}')
-
-    def get_contents(self, hex: Hexagon) -> str:
-        """Returns a string representation of the contents of hex."""
-        if hex in self.state.positions:
-            return 'spawn'
-        if hex in self.state.pits:
-            return 'pit'
-        if hex in self.state.walls:
-            return 'wall'
-        return 'empty'
 
     def check_valid(self, check_spawn: bool = True, check_overlap: bool = True) -> bool:
         """Checks that the map is valid.
@@ -214,6 +201,18 @@ class MapCreator:
         """Returns a list of hexes that are mirrors of hex, based on the mirror mode."""
         return [hex.rotate(-self.mirror_rot*rot) for rot in range(self.mirror_mode)]
 
+    def _get_mirrored_plate(self, plate: Plate) -> list[Plate]:
+        """Returns a list of plates that are mirrors of plate, based on the mirror mode."""
+        new_plates = []
+        for r in range(self.mirror_mode):
+            rot = -self.mirror_rot * r
+            h = plate.rotate(rot)
+            p = plate.with_new_hex(h)
+            new_targets = {t.rotate(rot) for t in plate.targets}
+            p.targets = new_targets
+            new_plates.append(p)
+        return new_plates
+
     def _refresh_state(self):
         """Recreates the state. This is used to refresh the state when adding or removing spawns."""
         self.state = State(
@@ -221,4 +220,5 @@ class MapCreator:
             positions=self.state.positions,
             pits=self.state.pits,
             walls=self.state.walls,
+            plates=self.state.plates,
         )

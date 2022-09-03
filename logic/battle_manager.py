@@ -9,9 +9,9 @@ from api.gui import BattleAPI, Tile, VFX, Control, ControlMenu
 from util.time import ping, pong
 from util.settings import Settings
 from util.hexagon import Hex, Hexagon
-from api.actions import MAX_AP
 from logic.state import State
-from logic import *
+from logic.plate import Plate
+from logic import UNIT_COLORS, get_tile_info, get_tile_info_unit
 
 
 STEP_RATE = Settings.get('logic._step_rate_cap', 2)
@@ -94,6 +94,7 @@ class BattleManager(Battle, BattleAPI):
         self.__replay_index = index
         if apply_vfx:
             self.add_state_vfx(index, redraw_last_steps=True)
+            self._highlight_current_unit()
         if disable_autoplay:
             self.autoplay = False
 
@@ -288,6 +289,12 @@ class BattleManager(Battle, BattleAPI):
             for effect in self.history[index].effects:
                 self.add_vfx(effect.name, effect.origin, effect.target)
 
+    def _highlight_current_unit(self):
+        current_uid = self.replay_state.current_unit
+        if current_uid is not None:
+            pos = self.replay_state.positions[current_uid]
+            self.add_vfx('highlight', pos, steps=1)
+
     def toggle_coords(self, set_to: Optional[bool] = None):
         """Toggle whether to show coordinates on tiles (for `BattleManager.get_gui_tile_info`)."""
         if set_to is None:
@@ -383,43 +390,24 @@ class BattleManager(Battle, BattleAPI):
         Overrides: `api.gui.BattleAPI.get_gui_tile_info`.
         """
         state = self.replay_state
-        fg_color = None
-        fg_text = ''
-        fg_sprite = None
-        tile_sprite = 'hex'
-        # BG
-        if hex.get_distance(MAP_CENTER) >= state.death_radius:
-            bg_color = OUT_OF_BOUNDS_CELL_BG
-        elif hex in state.pits:
-            bg_color = PIT_COLOR
-            tile_sprite = 'pit'
-        elif hex in state.walls:
-            bg_color = WALL_COLOR
-            tile_sprite = 'wall'
-        else:
-            bg_color = DEFAULT_CELL_BG
-        # FG
-        if hex in state.positions:
-            unit_id = state.positions.index(hex)
-            if not state.alive_mask[unit_id]:
-                fg_color = 0.5, 0.5, 0.5
-            else:
-                fg_color = self.unit_colors[unit_id]
-            fg_text = f'{unit_id}'
-            fg_sprite = self.unit_sprites[unit_id]
-            uid = state.current_unit
-            if uid is not None:
-                if hex == state.positions[uid]:
-                    ap_ratio = state.ap[uid] / MAX_AP
-                    bg_color = tuple(0.1 + (0.9 * ap_ratio) for _ in range(3))
+
+        tile, bg = get_tile_info(hex, state)
+        sprite, color, text = get_tile_info_unit(
+            hex,
+            state,
+            self.unit_sprites,
+            self.unit_colors,
+        )
+
         if self.show_coords:
-            fg_text = f'{hex.x},{hex.y}'
+            text = f'{hex.x},{hex.y}'
+
         return Tile(
-            tile=tile_sprite,
-            bg=bg_color,
-            color=fg_color,
-            sprite=fg_sprite,
-            text=fg_text,
+            tile=tile,
+            bg=bg,
+            color=color,
+            sprite=sprite,
+            text=text,
         )
 
     def get_map_size_hint(self) -> int:
@@ -435,23 +423,28 @@ class BattleManager(Battle, BattleAPI):
     def handle_hex_click(self, hex: Hexagon, button: str, mods: str):
         """Handles a tile being clicked on in the tilemap.
 
-        If a unit is positioned at *hex*, will call its `api.bots.BaseBot.gui_click` method with *hex* and *button*. Otherwise will mark *hex* with a color determined by *button* using `api.gui.BattleAPI.add_vfx`.
-
         Overrides: `api.gui.BattleAPI.handle_hex_click`.
         """
-        self.logger(f'Clicked {button=} with {mods=} on: {hex}')
-        if hex in self.replay_state.positions:
-            unit_id = self.replay_state.positions.index(hex)
-            vfx_seq = self.bots[unit_id].gui_click(hex, button)
-            if vfx_seq is not None:
-                for vfx_kwargs in vfx_seq:
-                    vfx_kwargs['steps'] = 1
-                    self.add_vfx(**vfx_kwargs)
-        else:
+        click = f"{mods} {button}"
+        self.logger(f'Clicked {click} on: {hex}')
+        # Normal click and Control click: info
+        if mods == '' or mods == '^':
             if button == 'left':
-                vfx = 'mark-green'
-            elif button == 'right':
-                vfx = 'mark-red'
-            else:
-                vfx = 'mark-blue'
-            self.add_vfx(vfx, hex, steps=1)
+                # Show targets of a plate
+                p = self.replay_state.get_plate(hex)
+                if p:
+                    for t in p.targets:
+                        self.add_vfx(f'highlight', t, steps=1)
+        # Shift click: mark
+        elif mods == '+':
+            vfx = {'right': 'red', 'middle': 'blue'}.get(button, 'green')
+            self.add_vfx(f'mark-{vfx}', hex, steps=1)
+        # Alt click: bot debug
+        elif click == '! left':
+            if hex in self.replay_state.positions:
+                unit_id = self.replay_state.positions.index(hex)
+                vfx_seq = self.bots[unit_id].gui_click(hex, button)
+                if vfx_seq is not None:
+                    for vfx_kwargs in vfx_seq:
+                        vfx_kwargs['steps'] = 1
+                        self.add_vfx(**vfx_kwargs)

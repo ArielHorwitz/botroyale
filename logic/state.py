@@ -7,10 +7,10 @@ from warnings import warn
 import numpy as np
 import copy
 from util.hexagon import Hexagon, ORIGIN
+from logic.plate import Plate, PlateType
 from logic.prng import PRNG
 from api.logging import logger as glogger
 from api.actions import MAX_AP, REGEN_AP, ALL_ACTIONS, Action, Idle, Move, Jump, Push
-
 
 # Assert AP is always an integer, this is assumed by the round order tiebreaker
 assert all(isinstance(action.ap, int) for action in ALL_ACTIONS)
@@ -69,6 +69,7 @@ class State:
             positions: Optional[list[Hexagon]] = None,
             pits: Optional[set[Hexagon]] = None,
             walls: Optional[set[Hexagon]] = None,
+            plates: Optional[set[Plate]] = None,
             alive_mask: Optional[NDArray[np.bool_]] = None,
             ap: Optional[NDArray[np.int_]] = None,
             round_ap_spent: Optional[list[int]] = None,
@@ -131,6 +132,10 @@ class State:
             walls = set()
         self.walls: set[Hexagon] = walls
         """A set of hexes that are walls."""
+        if plates is None:
+            plates = set()
+        self.plates: set[Plate] = plates
+        """A set of Plates."""
 
         # Time-keeping
         self.step_count: int = step_count
@@ -262,6 +267,7 @@ class State:
             positions=copy.copy(self.positions),
             pits=copy.copy(self.pits),
             walls=copy.copy(self.walls),
+            plates=copy.deepcopy(self.plates),
             alive_mask=np.copy(self.alive_mask),
             ap=np.copy(self.ap),
             round_ap_spent=copy.copy(self.round_ap_spent),
@@ -387,6 +393,29 @@ class State:
         dead_units = np.flatnonzero(~self.alive_mask)
         return sorted(dead_units, key=lambda u: self.casualties[u])
 
+    @property
+    def death_plates(self) -> set[Plate]:
+        """Set of all Death Radius Traps in `State.plates`."""
+        return self._get_all_of_plate_by_type(PlateType.DEATH_RADIUS_TRAP)
+
+    @property
+    def pit_traps(self) -> set[Plate]:
+        """Set of all Pit Traps in `State.plates`."""
+        return self._get_all_of_plate_by_type(PlateType.PIT_TRAP)
+
+    def get_plate(self, hex: Hexagon) -> Optional[Plate]:
+        """Return the `logic.plate.Plate` that is in *hex* if it exists, else None."""
+        if hex not in self.plates:
+            return None
+        extra_plates = self.plates - {hex}
+        plate_set = self.plates - extra_plates
+        assert len(plate_set) == 1
+        plate = plate_set.pop()
+        assert isinstance(plate, Plate)
+        assert plate == hex
+        assert plate in self.plates
+        return plate
+
     # Legality methods
     def _check_legal_action(self, action: Action) -> bool:
         """Returns if applying the action is legal."""
@@ -411,7 +440,7 @@ class State:
         return self._check_legal_movement(target)
 
     def _check_legal_push(self, target: Hexagon) -> bool:
-        # Can only push an adjascent target
+        # Can only push an adjacent target
         if not self._check_unit_distance(target, 1):
             return False
         # Target must contain a unit
@@ -444,14 +473,15 @@ class State:
         unit_pos = self.positions[unit]
         target = action.target
         if type(action) is Move:
-            self.positions[unit] = target
+            self._reposition_unit(unit, target)
             self._add_effect('move', unit_pos, target)
         elif type(action) is Jump:
-            self.positions[unit] = target
+            self._reposition_unit(unit, target)
             self._add_effect('jump', unit_pos, target)
         elif type(action) is Push:
             opp_id = self.positions.index(target)
-            self.positions[opp_id] = next(unit_pos.straight_line(target))
+            push_target = next(unit_pos.straight_line(target))
+            self._reposition_unit(opp_id, push_target)
             self._add_effect('push', unit_pos, target)
         else:
             raise TypeError(f'Unkown action: {action}')
@@ -459,13 +489,22 @@ class State:
         self.round_ap_spent[unit] += action.ap
         self._apply_mortality()
 
+    def _reposition_unit(self, uid: int, target: Hexagon):
+        """
+        moves a unit to target and resolves the effect of movement
+        :param uid: unit id
+        :param target: hex to move to
+        """
+        self.positions[uid] = target
+        self._try_increase_pressure(target)
+
     def _next_turn(self):
         """Increment turn in place."""
         self.round_done_turns.append(self.current_unit)
         self.round_remaining_turns.pop(0)
         self.turn_count += 1
 
-    def _next_round(self, set_death_pits: bool = True):
+    def _next_round(self):
         """Increment round in place."""
         # Setting the new turn order uses AP spent and this round's seed.
         # Let's do that before resetting either.
@@ -474,15 +513,26 @@ class State:
         self.round_ap_spent = [0] * self.num_of_units
         self.ap[self.alive_mask] += REGEN_AP
         self.ap[self.ap > MAX_AP] = MAX_AP
-        self.death_radius -= 1
-        if set_death_pits:
-            self.pits |= set(ORIGIN.ring(self.death_radius))
+        self._decrement_death_radius(1)
         # Contracting ring of death may kill, let's apply that
         self._apply_mortality()
         self.step_count += 1
         self.round_count += 1
         # New round, new seed
         self.seed = self._get_next_seed()
+
+    def _decrement_death_radius(self, delta: int):
+        """
+        change the death radius
+        :param delta: amount to decrement from death radius, (>0)
+        """
+        assert delta > 0
+        for radius in range(self.death_radius - delta, self.death_radius):
+            ring_hex = set(ORIGIN.ring(radius))
+            self.pits -= ring_hex
+            self.walls -= ring_hex
+            self.plates -= ring_hex
+        self.death_radius -= delta
 
     def _get_next_seed(self) -> int:
         """Derives the next round's seed. We simply take the seed value from
@@ -533,3 +583,46 @@ class State:
             origin=origin,
             target=target,
         ))
+
+    def _try_increase_pressure(self, target: Hexagon):
+        """Increase pressure of the plate if exists at *target* and handle effects."""
+        plate = self.get_plate(target)
+        if plate is None:
+            return
+        plate.pressure += 1
+        if plate.pressure == 0:
+            self._add_effect("pressure-pop", target)
+            self._apply_plate_effect(plate)
+        # Post-effect management
+        if plate in self.plates and plate.pressure >= 0:
+            if plate.pressure_reset:
+                plate.pressure = plate.min_pressure
+            else:
+                self.plates.remove(plate)
+
+    def _apply_plate_effect(self, plate: Plate):
+        """Apply the effects of *plate* pressure popping. this may change the map including the *plate*"""
+        assert plate in self.plates
+        # Apply the actual effect
+        if plate.plate_type is PlateType.DEATH_RADIUS_TRAP:
+            self._decrement_death_radius(1)
+        elif plate.plate_type is PlateType.PIT_TRAP:
+            self._activate_pit_trap(plate)
+        elif plate.plate_type is PlateType.WALL_TRAP:
+            self._activate_wall_trap(plate)
+
+    def _get_all_of_plate_by_type(self, plate_type: PlateType) -> set[Plate]:
+        return {p for p in self.plates if p.plate_type is plate_type}
+
+    def _activate_pit_trap(self, trap: Plate):
+        """Apply the effects of a `logic.PlateType.PIT_TRAP` pressure popping."""
+        self.walls -= trap.targets
+        self.pits |= trap.targets
+        self.plates -= trap.targets
+
+    def _activate_wall_trap(self, trap: Plate):
+        """Apply the effects of a `logic.PlateType.WALL_TRAP` pressure popping."""
+        targets = trap.targets - set(self.positions)
+        self.walls |= targets
+        self.pits -= targets
+        self.plates -= targets
