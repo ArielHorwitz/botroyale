@@ -241,9 +241,8 @@ class MapEditor(MapCreator, BattleAPI):
         """
         state = self.first_round_state
         tile, bg = get_tile_info(hex, state)
-        sprite, color = get_tile_info_unit(hex, state)
+        sprite, color, text = get_tile_info_unit(hex, state)
 
-        text = None
         if self.show_coords:
             text = f'{hex.x},{hex.y}'
 

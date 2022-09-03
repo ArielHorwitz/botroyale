@@ -392,14 +392,13 @@ class BattleManager(Battle, BattleAPI):
         state = self.replay_state
 
         tile, bg = get_tile_info(hex, state)
-        sprite, color = get_tile_info_unit(
+        sprite, color, text = get_tile_info_unit(
             hex,
             state,
             self.unit_sprites,
             self.unit_colors,
         )
 
-        text = None
         if self.show_coords:
             text = f'{hex.x},{hex.y}'
 

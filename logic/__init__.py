@@ -97,7 +97,7 @@ def get_tile_info_unit(
     unit_colors: Optional[list[tuple[float, float, float]]] = None,
     disallow_double: bool = True,
 ) -> tuple[str, tuple[float, float, float]]:
-    """Get a tile's foreground (unit) sprite and color.
+    """Get a tile's foreground (unit) sprite, color, and text.
 
     Args:
         hex: The tile.
@@ -109,10 +109,11 @@ def get_tile_info_unit(
             contains more than one unit.
 
     Returns:
-        A (sprite, color) tuple.
+        A (sprite, color, text) tuple.
     """
     sprite = None
     color = None
+    text = None
     unit_count = state.positions.count(hex)
     if unit_count > 1 and disallow_double:
         sprite = 'error'
@@ -127,4 +128,5 @@ def get_tile_info_unit(
             sprite = 'bot'
         else:
             sprite = unit_sprites[uid % len(unit_sprites)]
-    return sprite, color
+        text = str(uid)
+    return sprite, color, text
