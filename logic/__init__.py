@@ -4,6 +4,7 @@ Game mechanics.
 from typing import Optional
 from enum import IntEnum, auto as enum_auto
 from util.settings import Settings
+from util.hexagon import ORIGIN, Hexagon
 
 
 class PlateType(IntEnum):
@@ -44,3 +45,86 @@ PLATE_NO_RESET_COLOR = Settings.get('tilemap.|colors._plate_no_reset', (0.4, 0.4
 """Color of a plate that will not reset its pressure."""
 PLATE_RESET_COLOR = Settings.get('tilemap.|colors._plate_reset', (0.4, 0.4, 0.65))
 """Color of a plate that will reset its pressure."""
+
+
+def get_tile_info(
+    hex: Hexagon,
+    state: 'logic.state.State',
+    disallow_double: bool = True,
+) -> tuple[str, tuple[float, float, float]]:
+    """Get a tile's background sprite and color.
+
+    Args:
+        hex: The tile.
+        state: The state.
+        disallow_double: If true, will show a special sprite/color when more
+            than one solution was found. E.g. show the "error" sprite if the
+            tile contains both a pit and a wall.
+
+    Returns:
+        A (sprite, color) tuple.
+    """
+    found = 0
+    color = DEFAULT_CELL_BG
+    sprite = 'hex'
+    if hex.get_distance(ORIGIN) >= state.death_radius:
+        color = OUT_OF_BOUNDS_CELL_BG
+    if hex in state.pits:
+        found += 1
+        color = PIT_COLOR
+        sprite = 'pit'
+    if hex in state.walls:
+        found += 1
+        color = WALL_COLOR
+        sprite = 'wall'
+    if hex in state.plates:
+        found += 1
+        plate = state.get_plate(hex)
+        start_color = PLATE_RESET_COLOR if plate.pressure_reset else PLATE_NO_RESET_COLOR
+        intensity = -1 / min(plate.pressure, -1)
+        color = tuple(c * intensity for c in start_color)
+        sprite = f'plate_{plate.plate_type.name.lower()}'
+    if found > 1 and disallow_double:
+        color = 1, 1, 1
+        sprite = 'error'
+    return sprite, color
+
+
+def get_tile_info_unit(
+    hex: Hexagon,
+    state: 'logic.state.State',
+    unit_sprites: Optional[list[str]] = None,
+    unit_colors: Optional[list[tuple[float, float, float]]] = None,
+    disallow_double: bool = True,
+) -> tuple[str, tuple[float, float, float]]:
+    """Get a tile's foreground (unit) sprite and color.
+
+    Args:
+        hex: The tile.
+        state: The state.
+        unit_sprites: A list of sprites for the units by uid.
+        unit_colors: A list of colors for the units by uid.
+        disallow_double: If true, will show a special sprite/color if more than
+            one unit was found. I.e. show the "error" sprite if the tile
+            contains more than one unit.
+
+    Returns:
+        A (sprite, color) tuple.
+    """
+    sprite = None
+    color = None
+    unit_count = state.positions.count(hex)
+    if unit_count > 1 and disallow_double:
+        sprite = 'error'
+        color = 1, 1, 1
+    elif unit_count == 1:
+        if unit_colors is None:
+            unit_colors = UNIT_COLORS
+        uid = state.positions.index(hex)
+        alive = state.alive_mask[uid]
+        color = unit_colors[uid % len(unit_colors)] if alive else (0.5, 0.5, 0.5)
+        if unit_sprites is None:
+            sprite = 'bot'
+        else:
+            sprite = unit_sprites[uid % len(unit_sprites)]
+    return sprite, color

@@ -9,18 +9,9 @@ from api.gui import BattleAPI, Tile, VFX, Control, ControlMenu
 from util.time import ping, pong
 from util.settings import Settings
 from util.hexagon import Hex, Hexagon
-from api.actions import MAX_AP
 from logic.state import State
 from logic.plate import Plate
-from logic import (
-    UNIT_COLORS,
-    DEFAULT_CELL_BG,
-    OUT_OF_BOUNDS_CELL_BG,
-    WALL_COLOR,
-    PIT_COLOR,
-    PLATE_RESET_COLOR,
-    PLATE_NO_RESET_COLOR,
-)
+from logic import UNIT_COLORS, get_tile_info, get_tile_info_unit
 
 
 STEP_RATE = Settings.get('logic._step_rate_cap', 2)
@@ -103,6 +94,7 @@ class BattleManager(Battle, BattleAPI):
         self.__replay_index = index
         if apply_vfx:
             self.add_state_vfx(index, redraw_last_steps=True)
+            self._highlight_current_unit()
         if disable_autoplay:
             self.autoplay = False
 
@@ -297,6 +289,12 @@ class BattleManager(Battle, BattleAPI):
             for effect in self.history[index].effects:
                 self.add_vfx(effect.name, effect.origin, effect.target)
 
+    def _highlight_current_unit(self):
+        current_uid = self.replay_state.current_unit
+        if current_uid is not None:
+            pos = self.replay_state.positions[current_uid]
+            self.add_vfx('highlight', pos, steps=1)
+
     def toggle_coords(self, set_to: Optional[bool] = None):
         """Toggle whether to show coordinates on tiles (for `BattleManager.get_gui_tile_info`)."""
         if set_to is None:
@@ -392,48 +390,25 @@ class BattleManager(Battle, BattleAPI):
         Overrides: `api.gui.BattleAPI.get_gui_tile_info`.
         """
         state = self.replay_state
-        fg_color = None
-        fg_text = ''
-        fg_sprite = None
-        tile_sprite = 'hex'
-        bg_color = DEFAULT_CELL_BG
-        # BG
-        if hex.get_distance(MAP_CENTER) >= state.death_radius:
-            bg_color = OUT_OF_BOUNDS_CELL_BG
-        elif hex in state.pits:
-            bg_color = PIT_COLOR
-            tile_sprite = 'pit'
-        elif hex in state.walls:
-            bg_color = WALL_COLOR
-            tile_sprite = 'wall'
-        elif hex in state.plates:
-            plate = state.get_plate(hex)
-            tile_sprite = f'plate_{plate.plate_type.name.lower()}'
-            start_color = PLATE_RESET_COLOR if plate.pressure_reset else PLATE_NO_RESET_COLOR
-            intensity = -1 / min(plate.pressure, -1)
-            bg_color = tuple(c * intensity for c in start_color)
-        # FG
-        if hex in state.positions:
-            unit_id = state.positions.index(hex)
-            if not state.alive_mask[unit_id]:
-                fg_color = 0.5, 0.5, 0.5
-            else:
-                fg_color = self.unit_colors[unit_id]
-            fg_text = f'{unit_id}'
-            fg_sprite = self.unit_sprites[unit_id]
-            uid = state.current_unit
-            if uid is not None:
-                if hex == state.positions[uid]:
-                    ap_ratio = state.ap[uid] / MAX_AP
-                    bg_color = tuple(0.1 + (0.9 * ap_ratio) for _ in range(3))
+
+        tile, bg = get_tile_info(hex, state)
+        sprite, color = get_tile_info_unit(
+            hex,
+            state,
+            self.unit_sprites,
+            self.unit_colors,
+        )
+
+        text = None
         if self.show_coords:
-            fg_text = f'{hex.x},{hex.y}'
+            text = f'{hex.x},{hex.y}'
+
         return Tile(
-            tile=tile_sprite,
-            bg=bg_color,
-            color=fg_color,
-            sprite=fg_sprite,
-            text=fg_text,
+            tile=tile,
+            bg=bg,
+            color=color,
+            sprite=sprite,
+            text=text,
         )
 
     def get_map_size_hint(self) -> int:

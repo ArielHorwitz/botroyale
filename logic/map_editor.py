@@ -11,15 +11,7 @@ from api.gui import (
     GameAPI as BaseGameAPI, BattleAPI,
     Tile, VFX, InputWidget, Control, ControlMenu,
     )
-from logic import (
-    UNIT_COLORS,
-    DEFAULT_CELL_BG,
-    OUT_OF_BOUNDS_CELL_BG,
-    WALL_COLOR,
-    PIT_COLOR,
-    PLATE_RESET_COLOR,
-    PLATE_NO_RESET_COLOR,
-)
+from logic import get_tile_info, get_tile_info_unit, PLATE_RESET_COLOR
 
 
 __pdoc__ = {}
@@ -149,6 +141,15 @@ class MapEditor(MapCreator, BattleAPI):
         self._clear_selected()
 
     # GUI API
+    def update(self):
+        assert self.state.round_count == 0
+        assert self.state.end_of_round
+        if self.state.game_over:
+            self.first_round_state = self.state.copy()
+            self.first_round_state.death_radius -= 1
+        else:
+            self.first_round_state = self.state.increment_round()
+
     def get_controls(self) -> ControlMenu:
         """Returns `api.gui.Control`s for map editing tools.
 
@@ -238,51 +239,21 @@ class MapEditor(MapCreator, BattleAPI):
 
         Overrides: `api.gui.BattleAPI.get_gui_tile_info`.
         """
-        state = self.state
-        out_of_bounds = hex.get_distance(ORIGIN) >= state.death_radius-1
+        state = self.first_round_state
+        tile, bg = get_tile_info(hex, state)
+        sprite, color = get_tile_info_unit(hex, state)
 
-        tile_sprite = 'hex'
-        color = None
-        sprite = None
-        text = ''
-
-        # Tile color
-        if hex in state.pits:
-            bg = PIT_COLOR
-            tile_sprite = 'pit'
-        elif hex in state.walls:
-            bg = WALL_COLOR
-            tile_sprite = 'wall'
-        elif out_of_bounds:
-            bg = OUT_OF_BOUNDS_CELL_BG
-        elif hex in state.plates:
-            plate = state.get_plate(hex)
-            tile_sprite = f'plate_{plate.plate_type.name.lower()}'
-            start_color = PLATE_RESET_COLOR if plate.pressure_reset else PLATE_NO_RESET_COLOR
-            intensity = -1 / min(plate.pressure, -1)
-            bg = tuple(c * intensity for c in start_color)
-        else:
-            bg = DEFAULT_CELL_BG
-
-        # Sprite
-        if hex in state.positions:
-            unit_id = state.positions.index(hex)
-            if out_of_bounds:
-                color = 0.5, 0.5, 0.5
-            else:
-                color = UNIT_COLORS[unit_id % len(UNIT_COLORS)]
-            sprite = 'bot'
-            text = f'{unit_id}'
-
+        text = None
         if self.show_coords:
-            text = f'{hex.x}, {hex.y}'
+            text = f'{hex.x},{hex.y}'
+
         return Tile(
-            tile=tile_sprite,
+            tile=tile,
             bg=bg,
             color=color,
             sprite=sprite,
             text=text,
-            )
+        )
 
     def get_map_size_hint(self) -> float:
         """Tracks the `logic.state.State.death_radius`.
