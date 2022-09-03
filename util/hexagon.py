@@ -17,6 +17,7 @@ class Hexagon:
     def __init__(self, q: int, r: int, s: int):
         self.__cube: tuple[int, int, int] = (q, r, s)
         assert all(isinstance(c, int) for c in self.__cube)
+        assert sum(self.__cube) == 0
         self.__offset: tuple[int, int] = convert_cube2offset(q, r, s)
 
     @functools.cache
@@ -146,22 +147,22 @@ class Hexagon:
         return self.cube == other.cube
 
     @classmethod
-    def round_(cls, q: float, r: float, s: float) -> 'Hexagon':
+    def round_(cls, fq: float, fr: float, fs: float) -> 'Hexagon':
         """Cube rounding. Will take floating point cube coordinates and return
         the nearest hex."""
-        q_ = round(q)
-        r_ = round(r)
-        s_ = round(s)
-        qdiff = abs(q_ - q)
-        rdiff = abs(r_ - r)
-        sdiff = abs(s_ - s)
-        if qdiff > rdiff and qdiff > sdiff:
-            q_ = -r_ - s_
-        elif rdiff > sdiff:
-            r = -q_ - s_
+        q = round(fq)
+        r = round(fr)
+        s = round(fs)
+        dq = abs(q - fq)
+        dr = abs(r - fr)
+        ds = abs(s - fs)
+        if dq > dr and dq > ds:
+            q = -r - s
+        elif dr > ds:
+            r = -q - s
         else:
-            s = -q_ - r_
-        return cls(q_, r_, s_)
+            s = -q - r
+        return cls(q, r, s)
 
     # Position in 2D space
     @functools.cache
@@ -374,6 +375,11 @@ def test():
     assert ring_set - dbl_set == diag_set
     assert ring_set - diag_set == dbl_set
     assert dbl_set | diag_set == ring_set
+
+    for i in range(100):
+        f = 0.02 * i
+        r = Hexagon.round_(f, f, f)
+        assert sum(r.cube) == 0
 
 
 try:
