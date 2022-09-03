@@ -437,11 +437,7 @@ class BattleManager(Battle, BattleAPI):
                         self.add_vfx(f'highlight', t, steps=1)
         # Shift click: mark
         elif mods == '+':
-            vfx = {
-                'left': 'green',
-                'right': 'red',
-                'middle': 'blue',
-            }[button]
+            vfx = {'right': 'red', 'middle': 'blue'}.get(button, 'green')
             self.add_vfx(f'mark-{vfx}', hex, steps=1)
         # Alt click: bot debug
         elif click == '! left':

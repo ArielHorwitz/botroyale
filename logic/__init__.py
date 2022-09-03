@@ -96,7 +96,7 @@ def get_tile_info_unit(
     unit_sprites: Optional[list[str]] = None,
     unit_colors: Optional[list[tuple[float, float, float]]] = None,
     disallow_double: bool = True,
-) -> tuple[str, tuple[float, float, float]]:
+) -> tuple[str, tuple[float, float, float], str]:
     """Get a tile's foreground (unit) sprite, color, and text.
 
     Args:
