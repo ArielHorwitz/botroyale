@@ -29,7 +29,7 @@ BRUSH_COLORS = {
     BrushType.SPAWN: (0.05, 0.25, 0.1),
     **{getattr(BrushType, p.name): PLATE_RESET_COLOR for p in PlateType},
 }
-DEFAULT_PRESSURE = -3
+DEFAULT_PRESSURE = -2
 MIN_PRESSURE = -5
 
 
