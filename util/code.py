@@ -38,6 +38,7 @@ EXCLUDE_FOLDERS = [
     "dev",  # Convenience folder for developers for arbitrary files
     "gui",  # Currently too messy to consider (should be removed in the future)
 ]
+DOCSTRING_CONVENTION = "google"
 
 
 def check_format() -> bool:
@@ -139,6 +140,8 @@ def _run_flake8(
         str(max_line_length),
         "--max-complexity",
         str(max_complexity),
+        "--docstring-convention",
+        DOCSTRING_CONVENTION,
         *extra_args,
     ]
     print(f"≡≡≡≡≡ Running flake8 code checker...\n{' '.join(command_args)}")
