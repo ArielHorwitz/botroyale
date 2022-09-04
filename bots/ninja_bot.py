@@ -1,4 +1,7 @@
-# Maintainer: ninja
+"""Ninja Bot.
+
+Evaluates resulting states given from a tree search of prescripted sequences.
+"""
 from collections import defaultdict
 from contextlib import contextmanager
 import numpy as np
@@ -9,7 +12,7 @@ from api.actions import Idle, Move, Push, Jump
 
 
 DEBUG_VERBOSE = False
-BOT_NAME = 'ninja'
+BOT_NAME = "ninja"
 
 
 MAX_CALC_TIME_MS = 10_000
@@ -20,6 +23,8 @@ MIN_AP_PER_PUSH = Push.ap
 
 
 class CheckPoint:
+    """Class for extending a state."""
+
     EVALUATION_HANDICAP = 0.0
     EVAL_THREAT_FACTOR = 25
     EVAL_KILL_FACTOR = 10
@@ -28,6 +33,13 @@ class CheckPoint:
     CONSIDER_DOOMED = True
 
     def __init__(self, state, logger, friendly_uids):
+        """Initialize the class.
+
+        Args:
+            state: The state instance.
+            logger: Where to log.
+            friendly_uids: List of friendly uids.
+        """
         self.logger = logger
         self.uid = state.current_unit
         assert self.uid is not None
@@ -43,14 +55,15 @@ class CheckPoint:
         self.ap = state.ap[self.uid]
 
         # Map features
-        self.map_tiles = set(CENTER.range(state.death_radius-1))
-        self.doomed_tiles = set(CENTER.ring(state.death_radius-1))
+        self.map_tiles = set(CENTER.range(state.death_radius - 1))
+        self.doomed_tiles = set(CENTER.ring(state.death_radius - 1))
         self.ring_of_death_tiles = set(CENTER.ring(state.death_radius))
         self.blockers = state.walls | set(state.positions)
         self.obstacles = state.pits | self.blockers
         self.reposition_obstacles = self.obstacles - {self.pos}
-        self.blocked_pits = state.pits & self.blockers
-        self.open_pits = state.pits - self.blockers
+        pits = state.pits | self.ring_of_death_tiles
+        self.blocked_pits = pits & self.blockers
+        self.open_pits = pits - self.blockers
         self.open_doomed_tiles = self.doomed_tiles - self.obstacles
 
         # Enemy stats
@@ -72,24 +85,30 @@ class CheckPoint:
 
     @classmethod
     def get_new(cls, *args, **kwargs):
+        """Create a new Checkpoint."""
         return cls(*args, **kwargs)
 
     def __repr__(self):
-        return f'<CheckPoint S#{str(self.state.step_count):>4} {str(round(self.ap)):>3} AP {len(self.enemy_ids)} E {str(self.pos):<14}>'
+        """Repr."""
+        return (
+            f"<CheckPoint S#{str(self.state.step_count):>4} "
+            f"{str(round(self.ap)):>3} AP {len(self.enemy_ids)} E "
+            f"{str(self.pos):<14}>"
+        )
 
     def _get_branch_sequences(self, recursive_index=0):
-        """Returns branching sequences from this checkpoint and their guess
-        evaluations as tuple(guess_evaluation, sequence).
-        """
+        """Return branching sequences from this checkpoint and guess evaluations."""
         vals_seqs = []
         # Add branching lethal push sequences
         lethal_seqs = self.get_lethal_sequences()
 
         # Branch recursively for each lethal push sequence
         for push_seq in lethal_seqs:
-            branch_cp = self.get_new(push_seq.last_state, self.logger, self.friendly_uids)
+            branch_cp = self.get_new(
+                push_seq.last_state, self.logger, self.friendly_uids
+            )
             # Extend the push sequence with each sequence in this branch and save it
-            branch_vals_seqs = branch_cp._get_branch_sequences(recursive_index+1)
+            branch_vals_seqs = branch_cp._get_branch_sequences(recursive_index + 1)
             for val, branch_seq, debug_str in branch_vals_seqs:
                 full_seq = push_seq + branch_seq
                 vals_seqs.append((val, full_seq, debug_str))
@@ -102,45 +121,54 @@ class CheckPoint:
         return vals_seqs
 
     def get_sequences(self, calculation_time_ms):
-        """Returns a list of action sequences from this checkpoint sorted by evaluation."""
+        """Return list of action sequences from this checkpoint sorted by evaluation."""
         start_time_ms = ping()
-        self.logger(f'Searching sequences from {self} (allotted: {calculation_time_ms:.1f} ms)...')
+        self.logger(
+            f"Searching sequences from {self} "
+            f"(allotted: {calculation_time_ms:.1f} ms)..."
+        )
+
         def remaining_time_ms():
             return calculation_time_ms - pong(start_time_ms)
 
         # Shortcut if no enemies
         if len(self.enemy_ids) == 0 and len(self.doomed_ids) == 0:
-            self.logger(f'Found no enemies, finding special sequence.')
-            suicide_seq = self.get_suicide_sequence()
+            self.logger("Found no enemies, finding special sequence.")
+            suicide_seq = self._get_suicide_sequence()
             suicide_seq.append(Idle())
             return [suicide_seq]
 
         # Get all branching sequences and their guess values
-        with pingpong('Get all branch sequences', self.logger):
+        with pingpong("Get all branch sequences", self.logger):
             gvals_seqs = self._get_branch_sequences()
         assert gvals_seqs
-        self.logger(f'Found {len(gvals_seqs)} total sequences')
+        self.logger(f"Found {len(gvals_seqs)} total sequences")
         sorted_gvals_seqs = sorted(gvals_seqs, key=lambda x: x[0], reverse=True)
         gsorted_seqs = [(gval, seq) for gval, seq, debug_str in sorted_gvals_seqs]
         if DEBUG_VERBOSE:
             for gval, seq, debug_str in reversed(sorted_gvals_seqs):
-                self.logger(f'Guess: [{self.__format_eval_value(gval)}] {seq}\t{debug_str}')
+                self.logger(
+                    f"Guess: [{self.__format_eval_value(gval)}] {seq}\t{debug_str}"
+                )
 
         # Evaluate the sequences (as many as possible/allowed)
         gs_count = len(gsorted_seqs)
         max_evaluations = max(2, int(gs_count - (gs_count * self.EVALUATION_HANDICAP)))
-        self.logger(f'Available evaluation calc time: {remaining_time_ms():.1f} ms')
-        self.logger(f'Max evaluations: {max_evaluations} / {gs_count} sequences (handicap: {self.EVALUATION_HANDICAP*100:.1f}%)')
-        with pingpong('Sequence evaluations', self.logger):
+        self.logger(f"Available evaluation calc time: {remaining_time_ms():.1f} ms")
+        self.logger(
+            f"Max evaluations: {max_evaluations} / {gs_count} sequences "
+            f"(handicap: {self.EVALUATION_HANDICAP*100:.1f}%)"
+        )
+        with pingpong("Sequence evaluations", self.logger):
             vals_seqs = []
             for sidx, (gval, seq) in enumerate(gsorted_seqs):
                 cp = self.get_new(seq.last_state, self.logger, self.friendly_uids)
                 val, debug_strs = cp.evaluate()
                 vals_seqs.append((val, gval, seq, debug_strs))
-                if sidx >= max_evaluations-1:
+                if sidx >= max_evaluations - 1:
                     break
                 if remaining_time_ms() <= 0:
-                    self.logger(f'Ran out of time for evaluations!')
+                    self.logger("Ran out of time for evaluations!")
                     break
 
         # Sort and log the sequences with evaluations
@@ -151,22 +179,28 @@ class CheckPoint:
             val_str = self.__format_eval_value(val)
             gval_str = self.__format_eval_value(gval)
             if DEBUG_VERBOSE:
-                seq_dstr = f'{seq}\n\t'
+                seq_dstr = f"{seq}\n\t"
             else:
-                seq_dstr = f'{str(seq)[:60]:<60}\t'
-            self.logger(f'[{val_str} <- {gval_str}] {seq_dstr}{debug_strs}')
-        self.logger(f'Finished get_sequences with time remaining: {remaining_time_ms():.1f} ms')
+                seq_dstr = f"{str(seq)[:60]:<60}\t"
+            self.logger(f"[{val_str} <- {gval_str}] {seq_dstr}{debug_strs}")
+        self.logger(
+            f"Finished get_sequences with time remaining: {remaining_time_ms():.1f} ms"
+        )
         return final_sorted_seqs
 
     def get_reposition_sequences(self):
         """Find move sequences and their guess evaluation.
-        We assume repositions are done last, before ending our turn."""
+
+        We assume repositions are done last, before ending our turn.
+        """
         # Collect tiles in potential range
         max_move = int(self.ap / MIN_AP_PER_MOVE)
         available_tiles = set(self.pos.range(max_move)) & self.map_tiles
         available_tiles -= self.doomed_tiles
         available_tiles -= self.reposition_obstacles
-        available_tiles |= {self.pos}  # Should at least have our own tile for "idle" reposition
+        available_tiles |= {
+            self.pos
+        }  # Should at least have our own tile for "idle" reposition
 
         # Guess evaluate tiles
         tile_values = {}
@@ -179,7 +213,7 @@ class CheckPoint:
         # Convert to sequences, filter unreachable tiles, collect in list
         sequences = []
         for tile, val in tile_values.items():
-            path_seq = self.get_path_sequence(tile)
+            path_seq = self._get_path_sequence(tile)
             if path_seq is None:
                 continue
             sequences.append((val, path_seq, tile_debugs[tile]))
@@ -197,67 +231,94 @@ class CheckPoint:
             ls = self.get_lethal_sequences_uid(enemy_id)
             lethal_sequences.extend(ls)
         # Sort by ap cost, use number of actions as tiebreaker
-        lethal_sequences = sorted(lethal_sequences,
-            key=lambda x: x.ap + (len(x.actions) / 100))
+        lethal_sequences = sorted(
+            lethal_sequences, key=lambda x: x.ap + (len(x.actions) / 100)
+        )
         return lethal_sequences
 
-    def get_suicide_sequence(self):
+    def _get_suicide_sequence(self):
         if self.pos == CENTER:
-            return ActionSequence(self.state, actions=[Idle()], logger=self.logger, description='Designated winner')
-        center_path = self.get_path(CENTER, prune_ap_distance=False)
+            return ActionSequence(
+                self.state,
+                actions=[Idle()],
+                logger=self.logger,
+                description="Designated winner",
+            )
+        center_path = self._get_path(CENTER, prune_ap_distance=False)
         if center_path:
             # Ensure at least one of us wins
-            path_seq = self._path_to_sequence(center_path,
+            path_seq = self._path_to_sequence(
+                center_path,
                 allow_partial=True,
-                description=f'Designated winner to center',
-                )
+                description="Designated winner to center",
+            )
             return path_seq
         targets = self.open_pits | self.ring_of_death_tiles
         targets = sorted(targets, key=lambda t: self.pos.get_distance(t))[:15]
+
         def suicide_neighbors(tile):
-            neighbors = set(tile.range(2)) - self.state.walls - set(self.state.positions) - {tile}
+            neighbors = (
+                set(tile.range(2))
+                - self.state.walls
+                - set(self.state.positions)
+                - {tile}
+            )
             return neighbors & (self.map_tiles | self.ring_of_death_tiles)
+
         def get_next_path():
             target = targets.pop(0)
-            path = a_star(self.pos, target, cost=self.pathfinder_cost, get_neighbors=suicide_neighbors)
+            path = a_star(
+                self.pos,
+                target,
+                cost=self._pathfinder_cost,
+                get_neighbors=suicide_neighbors,
+            )
             return path
+
         path = get_next_path()
         while targets and not path:
             path = get_next_path()
         if path:
-            path_seq = self._path_to_sequence(path,
+            path_seq = self._path_to_sequence(
+                path,
                 allow_partial=True,
-                description=f'Suicide path to {path[-1]}',
-                )
+                description=f"Suicide path to {path[-1]}",
+            )
             return path_seq
         # No path to pit found, give up
-        return ActionSequence(self.state, actions=[Idle()], logger=self.logger, description='Suicide idle')
+        return ActionSequence(
+            self.state, actions=[Idle()], logger=self.logger, description="Suicide idle"
+        )
 
     # EVALUATION
     def evaluate(self):
         """Evaluate ending our turn in this state."""
-        kill_value, d_kill = self.evaluate_kills(self.EVAL_KILL_FACTOR)
-        ap_value, d_ap = self.evaluate_ap(self.EVAL_AP_FACTOR)
-        position_value, d_pos = self.evaluate_position(self.EVAL_POS_FACTOR)
-        threat_value, d_threat = self.evaluate_threats(self.EVAL_THREAT_FACTOR)
-        total = sum([
-            kill_value,
-            ap_value,
-            position_value,
-            threat_value,
-        ])
-        d = ' | '.join((d_pos, d_ap, d_kill, f'threats: {self.__format_eval_value(threat_value)} '))
+        kill_value, d_kill = self._evaluate_kills(self.EVAL_KILL_FACTOR)
+        ap_value, d_ap = self._evaluate_ap(self.EVAL_AP_FACTOR)
+        position_value, d_pos = self._evaluate_position(self.EVAL_POS_FACTOR)
+        threat_value, d_threat = self._evaluate_threats(self.EVAL_THREAT_FACTOR)
+        total = sum(
+            [
+                kill_value,
+                ap_value,
+                position_value,
+                threat_value,
+            ]
+        )
+        d = " | ".join(
+            (d_pos, d_ap, d_kill, f"threats: {self.__format_eval_value(threat_value)} ")
+        )
         if threat_value:
-            d = f'{d}\n\t\t{d_threat}'
+            d = f"{d}\n\t\t{d_threat}"
         return total, d
 
-    def evaluate_position(self, weight=1):
+    def _evaluate_position(self, weight=1):
         # Consider the our position radius
-        radius_value = self.evaluate_tile_radius(self.pos) * weight
-        d = f'radius:  {self.__format_eval_value(radius_value)}'
+        radius_value = self._evaluate_tile_radius(self.pos) * weight
+        d = f"radius:  {self.__format_eval_value(radius_value)}"
         return radius_value, d
 
-    def evaluate_threats(self, weight=1):
+    def _evaluate_threats(self, weight=1):
         # Check how many possibilities there are to lethally push us from this tile.
         threat_value = 0
         ds = []
@@ -266,29 +327,35 @@ class CheckPoint:
             if count:
                 threat_value -= count * weight
                 ds.append(d)
-        d = ' ; '.join(ds)
+        d = " ; ".join(ds)
         return threat_value, d
 
     SPENT_AP_VALUE_FACTOR = -0.05
 
-    def evaluate_ap(self, weight=1):
+    def _evaluate_ap(self, weight=1):
         useful_ap = self.ap - max(0, self.ap - BaseBot.ap_regen)
         ap_spent = self.state.round_ap_spent[self.uid]
         useful_ap_value = useful_ap / BaseBot.max_ap * weight
         ap_spent_value = self.SPENT_AP_VALUE_FACTOR * ap_spent / BaseBot.max_ap * weight
         total_ap_value = useful_ap_value + ap_spent_value
-        d = f'ap: {self.__format_eval_value(total_ap_value)} ({useful_ap_value:.3f} + {ap_spent_value:.3f})'
+        d = (
+            f"ap: {self.__format_eval_value(total_ap_value)} "
+            f"({useful_ap_value:.3f} + {ap_spent_value:.3f})"
+        )
         return total_ap_value, d
 
-    def evaluate_kills(self, weight=1):
+    def _evaluate_kills(self, weight=1):
         if len(self.enemy_ids) == 0:
             if self.pos in self.doomed_tiles and len(self.alive_ids) > 1:
-                return 1_000, f'DRAW STATE'
-            return float('inf'), f'WINNING STATE'
+                return 1_000, "DRAW STATE"
+            return float("inf"), "WINNING STATE"
         kill_value = -len(self.enemy_ids) * weight
         dead = len(self.dead_enemy_ids)
         doomed = len(self.doomed_enemy_ids)
-        d = f'kills: {self.__format_eval_value(kill_value)} ({str(dead):>2} dead /{str(doomed):>2} doom / {len(self.all_enemy_ids)} total)'
+        d = (
+            f"kills: {self.__format_eval_value(kill_value)} ({str(dead):>2} dead "
+            f"/{str(doomed):>2} doom / {len(self.all_enemy_ids)} total)"
+        )
         return kill_value, d
 
     PIT1_THREAT = 1
@@ -300,9 +367,9 @@ class CheckPoint:
         """Quickly guess the evaulation of standing on tile at the end of our turn."""
         assert tile not in self.reposition_obstacles
         if tile in self.doomed_tiles:
-            return float('-inf'), 'doomed tile'
+            return float("-inf"), "doomed tile"
         # Consider the distance to the ring of death
-        radius_value = self.evaluate_tile_radius(tile)
+        radius_value = self._evaluate_tile_radius(tile)
         # We like being next to walls and tombstones
         neighbor_walls = len(set(tile.neighbors) & (self.state.walls | self.tombstones))
         # Beware of nearby enemies
@@ -310,70 +377,81 @@ class CheckPoint:
         enemy_threat = np.sum(enemy_distances <= self.MAX_ENEMY_THREAT_DIST)
         # Beware of nearby pits (only if near enemies)
         pit_threat = 0
+        threat_strs = ""
         if enemy_threat:
-            diags = set(tile+d for d in DIAGONALS)
-            pits_a = self.open_pits & set(tile.neighbors)
-            pits_2 = self.open_pits & set(tile.ring(2))
-            pits_s = pits_2 - diags
-            pits_d = pits_2 & diags
-            # Adjascent pits
-            for pit in list(pits_a):
-                if next(pit.straight_line(tile)) in self.reposition_obstacles:
-                    pits_a.remove(pit)
-            # Straight pits
-            for pit in list(pits_s):
-                sn = shared_neighbors(pit, tile)
-                assert len(sn) == 1
-                n = sn.pop()
-                start_blocked = next(n.straight_line(tile)) in self.reposition_obstacles
-                neighbor_blocked = n in self.reposition_obstacles
-                if any((start_blocked, neighbor_blocked)):
-                    pits_s.remove(pit)
-            # Diagonal pits
-            for pit in list(pits_d):
-                sn = shared_neighbors(pit, tile)
-                assert len(sn) == 2
-                for n in sn:
-                    neighbor_blocked = n in self.reposition_obstacles
-                    start_blocked = next(n.straight_line(tile)) in self.reposition_obstacles
-                    mid_blocked = next(pit.straight_line(n)) in self.reposition_obstacles
-                    if any((start_blocked, neighbor_blocked, mid_blocked)):
-                        pits_d.remove(pit)
-                        # TODO consider both diagonal options as threat
-                        break
-            pit_threat += self.PIT1_THREAT * len(pits_a)
-            pit_threat += self.PIT2S_THREAT * len(pits_s)
-            pit_threat += self.PIT2D_THREAT * len(pits_d)
+            pit_threat, threat_strs = self._get_pit_threat(tile)
         # Weight and sum values
         radius_value = radius_value * 10
         wall_value = neighbor_walls * 0.5
         pit_value = -pit_threat * enemy_threat
         total = sum((radius_value, wall_value, pit_value))
         pitstr = self.__format_eval_value(pit_value)
-        if pit_value:
-            a_str = ''.join(f'{p.xy}' for p in pits_a)
-            s_str = ''.join(f'{p.xy}' for p in pits_s)
-            d_str = ''.join(f'{p.xy}' for p in pits_d)
-            pitstr = f'{pitstr} {enemy_threat} E a:{a_str} s:{s_str} d:{d_str}'
-        debug_str = '\t| '.join([
-            f'radius: {self.__format_eval_value(radius_value)}',
-            f'wall neighbors: {self.__format_eval_value(wall_value)}',
-            f'pits: {pitstr}',
-            ])
+        pitstr = f"{pitstr} {enemy_threat} E {threat_strs}"
+        debug_str = "\t| ".join(
+            [
+                f"radius: {self.__format_eval_value(radius_value)}",
+                f"wall neighbors: {self.__format_eval_value(wall_value)}",
+                f"pits: {pitstr}",
+            ]
+        )
         return total, debug_str
 
-    def evaluate_tile_radius(self, tile):
+    def _get_pit_threat(self, tile):
+        diags = set(tile + d for d in DIAGONALS)
+        pits_a = self.open_pits & set(tile.neighbors)
+        pits_2 = self.open_pits & set(tile.ring(2))
+        pits_s = pits_2 - diags
+        pits_d = pits_2 & diags
+        # Adjascent pits
+        for pit in list(pits_a):
+            if next(pit.straight_line(tile)) in self.reposition_obstacles:
+                pits_a.remove(pit)
+        # Straight pits
+        for pit in list(pits_s):
+            sn = shared_neighbors(pit, tile)
+            assert len(sn) == 1
+            n = sn.pop()
+            start_blocked = next(n.straight_line(tile)) in self.reposition_obstacles
+            neighbor_blocked = n in self.reposition_obstacles
+            if any((start_blocked, neighbor_blocked)):
+                pits_s.remove(pit)
+        # Diagonal pits
+        for pit in list(pits_d):
+            sn = shared_neighbors(pit, tile)
+            assert len(sn) == 2
+            for n in sn:
+                neighbor_blocked = n in self.reposition_obstacles
+                start_blocked = next(n.straight_line(tile)) in self.reposition_obstacles
+                mid_blocked = next(pit.straight_line(n)) in self.reposition_obstacles
+                if any((start_blocked, neighbor_blocked, mid_blocked)):
+                    pits_d.remove(pit)
+                    # TODO consider both diagonal options as threat
+                    break
+        pit_threat = sum(
+            [
+                self.PIT1_THREAT * len(pits_a),
+                self.PIT2S_THREAT * len(pits_s),
+                self.PIT2D_THREAT * len(pits_d),
+            ]
+        )
+        a_str = "".join(f"{p.xy}" for p in pits_a)
+        s_str = "".join(f"{p.xy}" for p in pits_s)
+        d_str = "".join(f"{p.xy}" for p in pits_d)
+        pit_strs = f"a:{a_str} s:{s_str} d:{d_str}"
+        return pit_threat, pit_strs
+
+    def _evaluate_tile_radius(self, tile):
         if tile in self.doomed_tiles:
             return -1_000
         center_distance_ratio = center_distance(tile) / self.state.death_radius
         rod_distance_ratio = 1 - center_distance_ratio
-        return (rod_distance_ratio - center_distance_ratio)
+        return rod_distance_ratio - center_distance_ratio
 
     THREAT_IDLE_COST_FACTOR = 0.3
     THREAT_AP_COST_FACTOR = 0.3
 
     def __find_enemy_threat(self, enemy_id):
-        """Returns the weighted number of options enemy_id has to lethally push us from this state."""
+        """Weighted options enemy_id has to lethally push us from this state."""
         state = self.state.copy()
         start_step = state.step_count
         total_threat = 0
@@ -407,20 +485,24 @@ class CheckPoint:
                 total_threat += pthreat
                 origin = pseq.last_state.positions[enemy_id].xy
                 pit = pseq.last_state.positions[self.uid].xy
-                debug_str = f'{enemy_id}[{steps_to_turn_start}s+{extra_ap_cost}ap]{origin}->{pit} = {pthreat:.2f}'
+                debug_str = (
+                    f"{enemy_id}[{steps_to_turn_start}s+{extra_ap_cost}ap]"
+                    f"{origin}->{pit} = {pthreat:.2f}"
+                )
                 if DEBUG_VERBOSE:
-                    debug_str = f'{debug_str} {{s:{idle_cost:.2f}|ap:{ap_cost:.2f}}}'
+                    debug_str = f"{debug_str} {{s:{idle_cost:.2f}|ap:{ap_cost:.2f}}}"
                 d.append(debug_str)
-            # Don't count the next turn, we assume a threat on this turn is stronger than the next turn
+            # Don't count the next turn, we assume a threat on this turn is
+            # stronger than the next turn
             break
-        return total_threat, ' ; '.join(d)
+        return total_threat, " ; ".join(d)
 
     @staticmethod
     def __format_eval_value(v):
         return f'{f"{v:.3f}":>7}'
 
     # MOVEMENT
-    def get_path(self, target, prune_ap_distance=True):
+    def _get_path(self, target, prune_ap_distance=True):
         if target == self.pos:
             return []
         if target in self.obstacles:
@@ -429,13 +511,14 @@ class CheckPoint:
         if not enough_ap and prune_ap_distance:
             return None
         return a_star(
-            self.pos, target,
-            cost=self.pathfinder_cost,
-            get_neighbors=self.pathfinder_neighbors,
-            )
+            self.pos,
+            target,
+            cost=self._pathfinder_cost,
+            get_neighbors=self._pathfinder_neighbors,
+        )
 
-    def get_path_sequence(self, target, description=None):
-        path = self.get_path(target)
+    def _get_path_sequence(self, target, description=None):
+        path = self._get_path(target)
         if path is None:
             return None
         return self._path_to_sequence(path, description=description)
@@ -452,21 +535,22 @@ class CheckPoint:
                 if not allow_partial:
                     return None
                 if description is None:
-                    description = f'Path->{current.xy}->{path[-1].xy}'
+                    description = f"Path->{current.xy}->{path[-1].xy}"
                 break
             actions.append(acls(next_tile))
             current = next_tile
         if description is None:
-            description = f'Path->{current.xy}' if current != self.pos else f'No move'
+            description = f"Path->{current.xy}" if current != self.pos else "No move"
         return ActionSequence(
-            self.state, actions=actions, logger=self.logger, description=description)
+            self.state, actions=actions, logger=self.logger, description=description
+        )
 
-    def pathfinder_cost(self, origin, target):
+    def _pathfinder_cost(self, origin, target):
         dist = origin.get_distance(target)
         assert 1 <= dist <= 2
         return Move.ap if dist == 1 else Jump.ap
 
-    def pathfinder_neighbors(self, tile):
+    def _pathfinder_neighbors(self, tile):
         tiles = set(tile.range(2)) - self.obstacles - {tile}
         return tiles & self.map_tiles
 
@@ -510,8 +594,8 @@ class CheckPoint:
         assert pit in enemy.neighbors
         # Get to start position
         start_pos = next(pit.straight_line(enemy))
-        desc = f'Push->{pit.xy}'
-        aseq = self.get_path_sequence(start_pos, description=desc)
+        desc = f"Push->{pit.xy}"
+        aseq = self._get_path_sequence(start_pos, description=desc)
         if aseq is None:
             return None
         # Add push sequence
@@ -529,12 +613,11 @@ class CheckPoint:
         assert len(mid_points) == 1
         mid_point = mid_points.pop()
         # Check ap and sequence blockers
-        ap_cost = Push.ap * 2 + Move.ap
         vector = enemy - mid_point
         start_pos = enemy + vector
         if mid_point in self.obstacles:
             return None
-        aseq = self.get_path_sequence(start_pos, description=f'Push {enemy} -> {pit}')
+        aseq = self._get_path_sequence(start_pos, description=f"Push {enemy} -> {pit}")
         if aseq is None:
             return None
         legal = aseq.extend([Push(enemy), Move(enemy), Push(mid_point)])
@@ -553,7 +636,7 @@ class CheckPoint:
         mid_pos = next(pit.straight_line(neighbor))
         if {neighbor, mid_pos} & self.obstacles:
             return None
-        aseq = self.get_path_sequence(start_pos, description=f'Push {enemy} -> {pit}')
+        aseq = self._get_path_sequence(start_pos, description=f"Push {enemy} -> {pit}")
         if aseq is None:
             return None
         legal = aseq.extend([Push(enemy), Move(enemy), Move(mid_pos), Push(neighbor)])
@@ -562,19 +645,28 @@ class CheckPoint:
         return aseq
 
     def is_doomed(self, uid):
+        """If *uid* ended turn on a tile that will be outside of death radius."""
         alive = uid in self.alive_ids
         is_done = self.is_done_turn(uid)
         in_doomed_tile = self.state.positions[uid] in self.doomed_tiles
         return alive and is_done and in_doomed_tile
 
     def is_done_turn(self, uid):
+        """If *uid* ended their turn for this round."""
         return uid not in self.state.round_remaining_turns
 
 
 class ActionSequence:
-    def __init__(self, state, logger,
-            actions=None, description='No description',
-            ):
+    """A sequence of actions from a given state."""
+
+    def __init__(
+        self,
+        state,
+        logger,
+        actions=None,
+        description="No description",
+    ):
+        """Initialize the class."""
         self.description = description
         self.logger = logger
         self.states = [state]
@@ -583,45 +675,57 @@ class ActionSequence:
             self.extend(actions)
 
     def __len__(self):
+        """Len."""
         return len(self.__actions)
 
     def __repr__(self):
-        end = ' ends turn' if self.turn_end else ''
-        return f'<ActionSequence: -{str(self.ap):<3} AP{end} ({len(self)} actions) | {self.description}>'
+        """Repr."""
+        end = " ends turn" if self.turn_end else ""
+        return (
+            f"<ActionSequence: -{str(self.ap):<3} AP{end} ({len(self)} actions) "
+            f"| {self.description}>"
+        )
 
     def __add__(self, other_seq):
+        """Add."""
         return ActionSequence(
             self.initial_state,
             actions=[*self.actions, *other_seq.actions],
-            description=f'{self.description} + {other_seq.description}',
+            description=f"{self.description} + {other_seq.description}",
             logger=self.logger,
-            )
+        )
 
     @property
     def initial_state(self):
+        """The first state."""
         return self.states[0]
 
     @property
     def last_state(self):
+        """The last state."""
         return self.states[-1]
 
     @property
     def turn_end(self):
+        """If this sequence ends our turn."""
         diff_unit = self.initial_state.current_unit != self.last_state.current_unit
         return diff_unit
 
     @property
     def actions(self):
+        """List of actions."""
         return list(self.__actions)
 
     @property
     def ap(self):
+        """Total AP cost."""
         if len(self.__actions) == 0:
             return 0
         actions = (s.last_action for s in self.states[1:])
         return sum(a.ap for a in actions)
 
     def append(self, action):
+        """Append an action."""
         if self.turn_end or self.last_state.game_over:
             return
         if not self.last_state.check_legal_action(action=action):
@@ -632,31 +736,17 @@ class ActionSequence:
         return True
 
     def extend(self, actions):
+        """Extend actions."""
         for a in actions:
             if not self.append(a):
                 return False
         return True
 
-    def unlock(self):
-        self.__locked = False
-
-    def get_vfx(self):
-        uid = self.states[0].round_remaining_turns[0]
-        vfx = []
-        for i, action in enumerate(self.__actions):
-            my_pos = self.states[i].positions[uid]
-            if type(action) is Move:
-                aname = 'move'
-            elif type(action) is Jump:
-                aname = 'jump'
-            elif type(action) is Push:
-                aname = 'push'
-            vfx.append({'name': aname, 'hex': my_pos, 'direction': action.target})
-        return vfx
-
 
 class Bot(BaseBot):
-    SPRITE = 'fox'
+    """The base class for ninja bots."""
+
+    SPRITE = "fox"
     checkpoint_class = CheckPoint
     logging_enabled = True
     game_started = False
@@ -666,6 +756,7 @@ class Bot(BaseBot):
 
     @classmethod
     def add_friendly_uid(cls, state, uid):
+        """Record *uid* in state *state* as friendly."""
         state_hash_value = hash_state(state)
         if state_hash_value != cls.current_game_hash:
             cls.current_game_hash = state_hash_value
@@ -673,6 +764,7 @@ class Bot(BaseBot):
         cls.friendly_uids.append(uid)
 
     def setup(self, state):
+        """Overrides `api.bots.BaseBot.setup`."""
         if self.enable_cooperation:
             self.add_friendly_uid(state, self.id)
         self.timer = []
@@ -682,10 +774,14 @@ class Bot(BaseBot):
         self.turn_step = 0
 
     def update(self, state):
+        """Updates our internal state given a new game state."""
         self.game_started = True
         self.last_state = state
         if state.round_count > self.last_known_round:
-            self.logger(f'First step in round {state.round_count} (last round: {self.last_known_round})')
+            self.logger(
+                f"First step in round {state.round_count} "
+                f"(last round: {self.last_known_round})"
+            )
             self.last_known_round = state.round_count
             self.turn_step = 0
             self.current_sequence = []
@@ -693,19 +789,20 @@ class Bot(BaseBot):
             self.turn_step += 1
 
     def poll_action(self, state):
+        """Overrides `api.bots.BaseBot.poll_action`."""
         self.update(state)
         if not self.current_sequence:
-            self.logger(f'Searching sequences...')
-            aseq = self.get_sequence(state)
+            self.logger("Searching sequences...")
+            aseq = self._get_sequence(state)
             self.current_sequence = list(aseq.actions)
-            self.logger(f'Set new sequence {aseq}')
-        seq_str = '\n'.join(f'-> {a}' for a in self.current_sequence)
-        self.logger(f'Remaining sequence:\n{seq_str}')
-        self.logger('_'*30)
+            self.logger(f"Set new sequence {aseq}")
+        seq_str = "\n".join(f"-> {a}" for a in self.current_sequence)
+        self.logger(f"Remaining sequence:\n{seq_str}")
+        self.logger("_" * 30)
         action = self.current_sequence.pop(0)
         return action
 
-    def get_sequence(self, state):
+    def _get_sequence(self, state):
         cp = self.get_new_checkpoint(state, self.logger, self.friendly_uids)
         with self.time_allocation() as allotted_time:
             seqs = cp.get_sequences(allotted_time)
@@ -715,10 +812,12 @@ class Bot(BaseBot):
         return best_seq
 
     def get_new_checkpoint(self, *args, **kwargs):
+        """Get new `CheckPoint` based on our confirgured checkpoint type."""
         return self.checkpoint_class.get_new(*args, **kwargs)
 
     @contextmanager
     def time_allocation(self):
+        """Context manager to record our calculation time."""
         turn_count = len(self.timer)
         assert turn_count == self.last_state.round_count - 1
         target_mean = MEAN_CALC_TIME_MS * 0.9 - 300
@@ -731,21 +830,25 @@ class Bot(BaseBot):
         total_spent = np.sum(np.asarray(self.timer))
         allocated = target_mean * turn_count + target_mean - total_spent
         allocated = max(min_allocation, min(max_allocation, allocated))
-        self.logger(f'Allocated time on turn count {turn_count+1}: {allocated:.3f}')
-        self.logger(f'Mean and target: {current_mean:.3f} -> {target_mean:.3f}')
+        self.logger(f"Allocated time on turn count {turn_count+1}: {allocated:.3f}")
+        self.logger(f"Mean and target: {current_mean:.3f} -> {target_mean:.3f}")
         p = ping()
         yield allocated
         spent = pong(p)
         self.timer.append(spent)
 
     def gui_click_debug(self, hex):
+        """Overrides `api.bots.BaseBot.gui_click_debug`."""
         if self.game_started:
-            cp = self.get_new_checkpoint(self.last_state, self.logger, self.friendly_uids)
-            self.logger(f'EVAL state: {cp.evaluate()}')
+            cp = self.get_new_checkpoint(
+                self.last_state, self.logger, self.friendly_uids
+            )
+            self.logger(f"EVAL state: {cp.evaluate()}")
 
 
 def iter_state_to_turn(state, uid, only_before_uid=None, ignore_initial_state=True):
-    """
+    """Find a unit's next turn.
+
     Given a state, find the state of uid's next turn that is before
     `only_before_uid` by repeatedly applying Idle(). Return None if no such
     state is found. `ignore_initial_state` will Idle the first turn if it is
@@ -764,27 +867,33 @@ def iter_state_to_turn(state, uid, only_before_uid=None, ignore_initial_state=Tr
 
 
 def shared_neighbors(tile1, tile2):
+    """Find neighbors shared between *tile1* and *tile2*."""
     assert tile1.get_distance(tile2) == 2
     return set(tile1.neighbors) & set(tile2.neighbors)
 
 
 def hash_state(state):
-    return sum([
-        *(hash(h) for h in state.positions),
-        *(hash(h) for h in state.walls),
-        *(hash(h) for h in state.pits),
-        hash(state.death_radius),
-        hash(state.alive_mask.tostring()),
-        hash(state.ap.tostring()),
-        hash(str(state.round_ap_spent)),
-        hash(str(state.round_remaining_turns)),
-        hash(state.step_count),
-        hash(state.turn_count),
-        hash(state.round_count),
-        ])
+    """Hash of a state."""
+    return sum(
+        [
+            *(hash(h) for h in state.positions),
+            *(hash(h) for h in state.walls),
+            *(hash(h) for h in state.pits),
+            hash(state.death_radius),
+            hash(state.alive_mask.tostring()),
+            hash(state.ap.tostring()),
+            hash(str(state.round_ap_spent)),
+            hash(str(state.round_remaining_turns)),
+            hash(state.step_count),
+            hash(state.turn_count),
+            hash(state.round_count),
+        ]
+    )
 
 
 def a_star(origin, target, cost, get_neighbors):
+    """A* pathfinding."""
+
     def _get_full_path(node, came_from):
         full_path = [node]
         while node in came_from:
@@ -797,9 +906,9 @@ def a_star(origin, target, cost, get_neighbors):
 
     open_set = {origin}
     came_from = {}
-    partial_score = defaultdict(lambda: float('inf'))
+    partial_score = defaultdict(lambda: float("inf"))
     partial_score[origin] = 0
-    guess_score = defaultdict(lambda: float('inf'))
+    guess_score = defaultdict(lambda: float("inf"))
     guess_score[origin] = origin.get_distance(target)
 
     while open_set:
@@ -813,86 +922,98 @@ def a_star(origin, target, cost, get_neighbors):
             if tentative_partial_score < partial_score[neighbor]:
                 came_from[neighbor] = current
                 partial_score[neighbor] = tentative_partial_score
-                guess_score[neighbor] = tentative_partial_score + neighbor.get_distance(target)
+                guess_score[neighbor] = tentative_partial_score + neighbor.get_distance(
+                    target
+                )
                 if neighbor not in open_set:
                     open_set.add(neighbor)
     return None
 
 
 # Difficulty variations
-class CheckPointL1(CheckPoint):
+class _CheckPointL1(CheckPoint):
     EVALUATION_HANDICAP = 0.3
 
 
-class CheckPointL2(CheckPoint):
+class _CheckPointL2(CheckPoint):
     EVALUATION_HANDICAP = 0.6
 
 
-class CheckPointL3(CheckPoint):
+class _CheckPointL3(CheckPoint):
     EVALUATION_HANDICAP = 0.9
 
 
 # Behavior variations
-class CheckPointAggressive(CheckPoint):
+class _CheckPointAggressive(CheckPoint):
     EVAL_THREAT_FACTOR = 10
     EVAL_KILL_FACTOR = 25
 
 
-class CheckPointPacifist(CheckPoint):
+class _CheckPointPacifist(CheckPoint):
     EVAL_KILL_FACTOR = 0.01
 
 
-class CheckPointNoDoomed(CheckPoint):
-    CONSIDER_DOOMED = True
-
-
-class CheckPointCenterRush(CheckPoint):
+class _CheckPointCenterRush(CheckPoint):
     EVAL_POS_FACTOR = 3
     EVAL_AP_FACTOR = 0.01
 
 
 # Bot personas
 class BotBoss(Bot):
-    NAME = f'{BOT_NAME}-boss'
+    """Default (boss) bot."""
+
+    NAME = f"{BOT_NAME}-boss"
     COLOR_INDEX = 0
 
 
 class BotMaster(Bot):
-    NAME = f'{BOT_NAME}-hard'
+    """Master."""
+
+    NAME = f"{BOT_NAME}-master"
     COLOR_INDEX = 1
-    checkpoint_class = CheckPointL1
+    checkpoint_class = _CheckPointL1
 
 
 class BotHard(Bot):
-    NAME = f'{BOT_NAME}-medium'
+    """Hard."""
+
+    NAME = f"{BOT_NAME}-hard"
     COLOR_INDEX = 3
-    checkpoint_class = CheckPointL2
+    checkpoint_class = _CheckPointL2
 
 
 class BotEasy(Bot):
-    NAME = f'{BOT_NAME}-easy'
+    """Easy."""
+
+    NAME = f"{BOT_NAME}-easy"
     COLOR_INDEX = 5
-    checkpoint_class = CheckPointL3
+    checkpoint_class = _CheckPointL3
 
 
 class BotAggro(Bot):
+    """Aggresive."""
+
     TESTING_ONLY = True
-    NAME = f'{BOT_NAME}-aggro'
-    checkpoint_class = CheckPointAggressive
+    NAME = f"{BOT_NAME}-aggro"
+    checkpoint_class = _CheckPointAggressive
 
 
 class BotDefensive(Bot):
+    """Defensive."""
+
     TESTING_ONLY = True
-    NAME = f'{BOT_NAME}-def'
-    checkpoint_class = CheckPointPacifist
+    NAME = f"{BOT_NAME}-def"
+    checkpoint_class = _CheckPointPacifist
 
 
 class BotCooperator(Bot):
+    """Cooperator."""
+
     TESTING_ONLY = True
-    NAME = f'{BOT_NAME}-coop'
+    NAME = f"{BOT_NAME}-coop"
     COLOR_INDEX = 10
     enable_cooperation = True
-    checkpoint_class = CheckPointCenterRush
+    checkpoint_class = _CheckPointCenterRush
 
 
 BOTS = [
@@ -903,4 +1024,4 @@ BOTS = [
     BotAggro,
     BotDefensive,
     BotCooperator,
-    ]
+]
