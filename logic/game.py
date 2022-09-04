@@ -1,18 +1,17 @@
-"""
-Home of `logic.game.StandardGameAPI` - the standard implementation of `api.gui.GameAPI`.
+"""Home of `logic.game.StandardGameAPI`.
+
+The the standard implementation of `api.gui.GameAPI`.
 """
 from typing import Any, Union, Optional
-import random
-from util.settings import Settings
 from api.gui import GameAPI, InputWidget
 from gui import logger
 from logic.maps import MAPS, DEFAULT_MAP_NAME, get_map_state
 from logic.battle_manager import BattleManager
 from logic.map_editor import MapEditor
-from bots import BOTS, BaseBot, bot_getter, NotFairError
+from bots import BOTS, bot_getter, NotFairError
 
 
-BOT_SENDTO_PREFIX = '╠'
+BOT_SENDTO_PREFIX = "╠"
 BOTS_SORTED = sorted(BOTS.values(), key=lambda b: b.TESTING_ONLY)
 BOTS_NORMAL = [b for b in BOTS_SORTED if not b.TESTING_ONLY]
 BOTS_TESTING = [b for b in BOTS_SORTED if b.TESTING_ONLY]
@@ -23,33 +22,35 @@ class StandardGameAPI(GameAPI):
 
     See `StandardGameAPI.get_new_battle` on starting battles and the map editor.
     """
+
     def __init__(self, *args, **kwargs):
+        """Initialize the class."""
         super().__init__(*args, **kwargs)
         self.selected_bots = []
         self.menu_values = dict(
             editor=False,
             map=DEFAULT_MAP_NAME,
             show_selected=False,
-            show_filter='',
+            show_filter="",
             enable_testing=False,
             keep_fair=False,
             no_dummies=False,
             all_play=False,
         )
-        self.last_error = ''
+        self.last_error = ""
 
     @property
     def _bots_showing(self) -> list[type]:
         showing = []
         for bot in BOTS_SORTED:
-            if self.menu_values['show_selected']:
+            if self.menu_values["show_selected"]:
                 if bot in self.selected_bots:
                     showing.append(bot)
                 continue
-            if not self.menu_values['enable_testing'] and bot.TESTING_ONLY:
+            if not self.menu_values["enable_testing"] and bot.TESTING_ONLY:
                 continue
-            if self.menu_values['show_filter']:
-                if self.menu_values['show_filter'].lower() not in bot.NAME.lower():
+            if self.menu_values["show_filter"]:
+                if self.menu_values["show_filter"].lower() not in bot.NAME.lower():
                     continue
             showing.append(bot)
         return showing
@@ -58,10 +59,13 @@ class StandardGameAPI(GameAPI):
         widgets = []
         for bot in self._bots_showing:
             selected = bot in self.selected_bots
-            label = f'<TEST> {bot.NAME}' if bot.TESTING_ONLY else bot.NAME
+            label = f"<TEST> {bot.NAME}" if bot.TESTING_ONLY else bot.NAME
             iw = InputWidget(
-                label, 'toggle', default=selected,
-                sendto=f'{BOT_SENDTO_PREFIX}{bot.NAME}')
+                label,
+                "toggle",
+                default=selected,
+                sendto=f"{BOT_SENDTO_PREFIX}{bot.NAME}",
+            )
             widgets.append(iw)
         return widgets
 
@@ -78,7 +82,7 @@ class StandardGameAPI(GameAPI):
             self._toggle_bot(bot, set_as=False)
 
     def _toggle_bot(self, bot, set_as=None):
-        if not self.menu_values['enable_testing'] and bot.TESTING_ONLY:
+        if not self.menu_values["enable_testing"] and bot.TESTING_ONLY:
             set_as = False
         if set_as is not None:
             if set_as == (bot in self.selected_bots):
@@ -89,54 +93,95 @@ class StandardGameAPI(GameAPI):
             self.selected_bots.append(bot)
 
     def _get_battle_widgets(self) -> list[InputWidget]:
-        if self.menu_values['show_selected'] and len(self._bots_showing) == 0:
-            self.menu_values['show_selected'] = False
+        if self.menu_values["show_selected"] and len(self._bots_showing) == 0:
+            self.menu_values["show_selected"] = False
         bot_widgets = self._get_bot_widgets()
         return [
             # Map
-            InputWidget('Map Selection', 'divider'),
-            InputWidget('Map editor mode', 'toggle', sendto='editor'),
-            InputWidget('Map:', 'select', default=self.menu_values['map'], options=MAPS, sendto='map'),
+            InputWidget("Map Selection", "divider"),
+            InputWidget("Map editor mode", "toggle", sendto="editor"),
+            InputWidget(
+                "Map:",
+                "select",
+                default=self.menu_values["map"],
+                options=MAPS,
+                sendto="map",
+            ),
             # Bot settings
-            InputWidget('Bot Selection', 'divider'),
-            InputWidget('Add all', 'toggle', sendto='add_all'),
-            InputWidget('Remove all', 'toggle', sendto='remove_all'),
-            InputWidget('Filter bots:', 'text', default=self.menu_values['show_filter'], sendto='show_filter'),
-            InputWidget('Clear filter', 'toggle', sendto='clear_filter'),
-            InputWidget('Show selected only', 'toggle', default=self.menu_values['show_selected'], sendto='show_selected'),
-            InputWidget('Enable testing bots', 'toggle', default=self.menu_values['enable_testing'], sendto='enable_testing'),
+            InputWidget("Bot Selection", "divider"),
+            InputWidget("Add all", "toggle", sendto="add_all"),
+            InputWidget("Remove all", "toggle", sendto="remove_all"),
+            InputWidget(
+                "Filter bots:",
+                "text",
+                default=self.menu_values["show_filter"],
+                sendto="show_filter",
+            ),
+            InputWidget("Clear filter", "toggle", sendto="clear_filter"),
+            InputWidget(
+                "Show selected only",
+                "toggle",
+                default=self.menu_values["show_selected"],
+                sendto="show_selected",
+            ),
+            InputWidget(
+                "Enable testing bots",
+                "toggle",
+                default=self.menu_values["enable_testing"],
+                sendto="enable_testing",
+            ),
             # Competitive settings
-            InputWidget('Competitive Settings', 'spacer'),
-            InputWidget('All selected must play', 'toggle', default=self.menu_values['all_play'], sendto='all_play'),
-            InputWidget('Keep fair (equal numbers)', 'toggle', default=self.menu_values['keep_fair'], sendto='keep_fair'),
-            InputWidget('No dummies', 'toggle', default=self.menu_values['no_dummies'], sendto='no_dummies'),
+            InputWidget("Competitive Settings", "spacer"),
+            InputWidget(
+                "All selected must play",
+                "toggle",
+                default=self.menu_values["all_play"],
+                sendto="all_play",
+            ),
+            InputWidget(
+                "Keep fair (equal numbers)",
+                "toggle",
+                default=self.menu_values["keep_fair"],
+                sendto="keep_fair",
+            ),
+            InputWidget(
+                "No dummies",
+                "toggle",
+                default=self.menu_values["no_dummies"],
+                sendto="no_dummies",
+            ),
             # Bot toggles
-            InputWidget('Bots', 'divider'),
+            InputWidget("Bots", "divider"),
             *bot_widgets,
-            ]
+        ]
 
     def _get_editor_widgets(self) -> list[InputWidget]:
         return [
-            InputWidget('Map Selection', 'divider'),
-            InputWidget('Map editor mode', 'toggle', default=True, sendto='editor'),
-            InputWidget('Based on map:', 'select', default=self.menu_values['map'], options=MAPS, sendto='map'),
-            ]
+            InputWidget("Map Selection", "divider"),
+            InputWidget("Map editor mode", "toggle", default=True, sendto="editor"),
+            InputWidget(
+                "Based on map:",
+                "select",
+                default=self.menu_values["map"],
+                options=MAPS,
+                sendto="map",
+            ),
+        ]
 
     def get_menu_widgets(self) -> list[InputWidget]:
-        """
-        Returns a list of widgets for controlling how to start the next battle.
+        """Return a list of widgets for controlling how to start the next battle.
 
         Includes "Map editor mode" toggle, map selection, bot selection options.
 
         See: `api.gui.GameAPI.get_menu_widgets`.
         """
-        if self.menu_values['editor']:
+        if self.menu_values["editor"]:
             return self._get_editor_widgets()
         return self._get_battle_widgets()
 
     def handle_menu_widget(
-            self, widgets: list[str], menu_values: dict[str, Any]
-        ) -> bool:
+        self, widgets: list[str], menu_values: dict[str, Any]
+    ) -> bool:
         """Widgets are set based on battle/map editor modes.
 
         See: `api.gui.GameAPI.handle_menu_widget`.
@@ -147,77 +192,85 @@ class StandardGameAPI(GameAPI):
             self.menu_values[k] = menu_values[k]
         # Clear last error if user changed anything
         if widgets:
-            self.last_error = ''
+            self.last_error = ""
         # Do not recreate menu if user is typing text
-        if 'show_filter' in widgets and len(widgets) == 1:
+        if "show_filter" in widgets and len(widgets) == 1:
             return False
         # Clear filter text if necessary
-        clear_filter_widgets = {'clear_filter', 'show_selected'}
+        clear_filter_widgets = {"clear_filter", "show_selected"}
         if clear_filter_widgets & set(widgets):
-            self.menu_values['show_filter'] = ''
+            self.menu_values["show_filter"] = ""
         # Handle widget interactions
         for widget in widgets:
             logger(f'User set "{widget}" in main menu to: {menu_values[widget]}')
-            if widget == 'add_all':
+            if widget == "add_all":
                 self._add_showing()
-            elif widget == 'remove_all':
+            elif widget == "remove_all":
                 self._remove_showing()
-            elif widget == 'enable_testing' and not self.menu_values['enable_testing']:
+            elif widget == "enable_testing" and not self.menu_values["enable_testing"]:
                 self._remove_testing()
             elif widget.startswith(BOT_SENDTO_PREFIX):
-                bname = widget[len(BOT_SENDTO_PREFIX):]
+                bname = widget[len(BOT_SENDTO_PREFIX) :]
                 self._toggle_bot(BOTS[bname])
         return True
 
     def get_info_panel_text(self) -> str:
-        if self.menu_values['editor']:
-            return '\n'.join([
-                '[b][u]Map Editor[/u][/b]',
-                '',
-                'Press spacebar to start editing.',
-                '',
-                'Saved maps overwrite the "custom.json" map. Rename the file to save the custom map permanently (then restart the app to refresh).',
-                ])
-        map = self.menu_values['map']
+        """Overrides: `GameAPI.get_info_panel_text`."""
+        if self.menu_values["editor"]:
+            return "\n".join(
+                [
+                    "[b][u]Map Editor[/u][/b]",
+                    "",
+                    "Press spacebar to start editing.",
+                    "",
+                    'Saved maps overwrite the "custom.json" map. Rename the '
+                    "file to save the custom map permanently (then restart the "
+                    "app to refresh).",
+                ]
+            )
+        map = self.menu_values["map"]
         spawns = get_map_state(map).num_of_units
-        bots = [f'  » {b.NAME}' for b in self.selected_bots]
+        bots = [f"  » {b.NAME}" for b in self.selected_bots]
         max_bot_list = 15
         showing = self._bots_showing
         if len(self.selected_bots) > max_bot_list:
-            bots = bots[:max_bot_list-1]
+            bots = bots[: max_bot_list - 1]
             remaining = len(self.selected_bots) - max_bot_list + 1
-            bots.append(f'  ... and {remaining} more')
-        return '\n'.join([
-            '[b][u]New Battle[/u][/b]',
-            '',
-            f'[i]{self.last_error}[/i]',
-            '',
-            f'Map:      {map}',
-            f'Spawns:   {spawns}',
-            '',
-            f'Showing:  {len(showing)} bots',
-            f'[u]Selected: {len(self.selected_bots)} bots[/u]',
-            *bots,
-        ])
+            bots.append(f"  ... and {remaining} more")
+        return "\n".join(
+            [
+                "[b][u]New Battle[/u][/b]",
+                "",
+                f"[i]{self.last_error}[/i]",
+                "",
+                f"Map:      {map}",
+                f"Spawns:   {spawns}",
+                "",
+                f"Showing:  {len(showing)} bots",
+                f"[u]Selected: {len(self.selected_bots)} bots[/u]",
+                *bots,
+            ]
+        )
 
     def get_new_battle(
-            self, menu_values: dict[str, Any]
-        ) -> Optional[Union[BattleManager, MapEditor]]:
-        """
+        self, menu_values: dict[str, Any]
+    ) -> Optional[Union[BattleManager, MapEditor]]:
+        """Return a `api.gui.BattleAPI`.
+
         Returns a `logic.battle_manager.BattleManager` or None if it fails to
         create the battle, or a `logic.map_editor.MapEditor` if map editor
         mode was set in the main menu.
 
         See: `api.gui.GameAPI.get_new_battle`.
         """
-        map_name = menu_values['map']
-        if menu_values['editor']:
+        map_name = menu_values["map"]
+        if menu_values["editor"]:
             return MapEditor(load_map=map_name)
         # Parse arguments from menu values
         state = get_map_state(map_name)
-        keep_fair = menu_values['keep_fair']
-        no_dummies = menu_values['no_dummies']
-        all_play = menu_values['all_play']
+        keep_fair = menu_values["keep_fair"]
+        no_dummies = menu_values["no_dummies"]
+        all_play = menu_values["all_play"]
         # Collect bots
         selected_bot_names = [b.NAME for b in self.selected_bots]
         if not selected_bot_names:
@@ -229,16 +282,16 @@ class StandardGameAPI(GameAPI):
             keep_fair=keep_fair,
             no_dummies=no_dummies,
             all_play=all_play,
-            )
+        )
         # Make Battle
         try:
             return BattleManager(
                 initial_state=state,
                 bot_classes_getter=bots,
-                description=f'GUI battle @ {map_name}',
+                description=f"GUI battle @ {map_name}",
                 gui_mode=True,
-                )
+            )
         except NotFairError as e:
-            self.last_error = f'» {e}'
-            logger(f'Failed to create new battle: {e}')
+            self.last_error = f"» {e}"
+            logger(f"Failed to create new battle: {e}")
             return None

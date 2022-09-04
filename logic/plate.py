@@ -1,3 +1,4 @@
+"""Home of `Plate`."""
 from typing import Any, Optional
 import copy
 from util.hexagon import Hexagon, Hex
@@ -20,7 +21,8 @@ class Plate(Hexagon):
         pressure_reset: bool = False,
         targets: Optional[set[Hexagon]] = None,
     ):
-        """
+        """Initialize the class.
+
         Args:
             cube: The cube of the `util.hexagon.Hexagon`
             plate_type: One of `logic.PlateType`
@@ -42,12 +44,12 @@ class Plate(Hexagon):
             targets = set()
         self.targets: set[Hexagon] = targets
 
-    def with_new_hex(self, hex: Hexagon) -> 'Plate':
+    def with_new_hex(self, hex: Hexagon) -> "Plate":
         """Create an identical `Plate` but with a different *hex*."""
         return self._with_new_hex(hex, self)
 
     @classmethod
-    def _with_new_hex(cls, hex: Hexagon, plate: 'Plate') -> 'Plate':
+    def _with_new_hex(cls, hex: Hexagon, plate: "Plate") -> "Plate":
         """Create an identical `Plate` to *plate* but with a different *hex*."""
         return cls(
             hex.cube,
@@ -70,11 +72,11 @@ class Plate(Hexagon):
         }
 
     @classmethod
-    def from_exported(cls, data: dict) -> 'Plate':
+    def from_exported(cls, data: dict) -> "Plate":
         """Get a Plate from `Plate.export` dictionary."""
         plate_type = getattr(PlateType, data["plate_type"])
         hex = Hex(*data["xy"])
-        targets = {Hex(*xy) for xy in data['targets']}
+        targets = {Hex(*xy) for xy in data["targets"]}
         return cls(
             cube=hex.cube,
             plate_type=plate_type,
@@ -85,12 +87,15 @@ class Plate(Hexagon):
         )
 
     def __eq__(self, other: Any) -> bool:
+        """Equality."""
         if isinstance(other, Hexagon):
             return self.cube == other.cube
         return False
 
     def __hash__(self):
+        """Hash."""
         return hash(self.cube)
 
     def __repr__(self):
-        return f'<Plate {self.xy} {self.plate_type.name}>'
+        """Repr."""
+        return f"<Plate {self.xy} {self.plate_type.name}>"

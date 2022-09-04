@@ -1,25 +1,30 @@
-"""
-Manages user settings.
+"""Manages user settings.
 
 The settings file is located at `util.PROJ_DIR` as *settings.json*.
 
-To restore a setting to it's default value, simply delete the line from the settings file. To restore all settings to defaults, simply delete the settings file.
+To restore a setting to it's default value, simply delete the line from the
+settings file. To restore all settings to defaults, simply delete the settings
+file.
 
-If the file *.deletesettings* is found at `util.PROJ_DIR`, the settings file will be deleted at the start of every execution.
+If the file *.deletesettings* is found at `util.PROJ_DIR`, the settings file
+will be deleted at the start of every execution.
 """
 from typing import Any
 import json
-from util import PROJ_DIR, file_load, file_dump
+from util import PROJ_DIR
+from util.file import file_load, file_dump
 
 
-CLEAR_SETTINGS = (PROJ_DIR / '.deletesettings').is_file()
-SETTINGS_FILE = PROJ_DIR / 'settings.json'
+CLEAR_SETTINGS = (PROJ_DIR / ".deletesettings").is_file()
+SETTINGS_FILE = PROJ_DIR / "settings.json"
 
 
 class Settings:
+    """Settings manager class.
+
+    .. todo:: Remove `Settings` class and use functions and module-level variables.
     """
-    .. todo:: Remove `Settings` class and just use functions and module-level variables.
-    """
+
     _user_settings = {}
     if CLEAR_SETTINGS and SETTINGS_FILE.is_file():
         SETTINGS_FILE.unlink()

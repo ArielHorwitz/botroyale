@@ -1,5 +1,4 @@
-"""
-A command line interface for running functions that don't require the GUI.
+"""A command line interface for running functions that don't require the GUI.
 
 Uses `input` and `print` to interface with the user.
 """
@@ -7,19 +6,20 @@ from collections import Counter
 from api.time_test import timing_test
 from logic.maps import MAPS, get_map_state
 from logic.battle_manager import BattleManager
-from bots import BOTS, BaseBot, bot_getter
+from bots import BOTS, bot_getter
 
 
 # Thresholds of bot calculation times for the competitive timing test
 COMP_SAMPLE_SIZE = 10
 COMP_MAX_MS = 10_000
 COMP_MEAN_MS = 5_000
-COMP_FAIL_CONDITIONS = f'Fail conditions: mean > {COMP_MEAN_MS:,} ms ; max > {COMP_MAX_MS:,} ms'
+COMP_FAIL_CONDITIONS = (
+    f"Fail conditions: mean > {COMP_MEAN_MS:,} ms ; max > {COMP_MAX_MS:,} ms"
+)
 
 
 def run_competitive_timing_test():
-    """Runs the competitive timing test. Prints the names of the bots that fail
-    the test."""
+    """Run the competitive timing test, print the names of the bots that fail."""
     map_name = query_map_name()
     bot_classes = query_bot_classes()
     results = timing_test(
@@ -29,23 +29,25 @@ def run_competitive_timing_test():
         verbose_results=False,
         shuffle_bots=True,
         disable_logging=True,
-        )
+    )
     fail_mean = [bn for bn, tr in results.items() if tr.mean > COMP_MEAN_MS]
     fail_max = [bn for bn, tr in results.items() if tr.max > COMP_MAX_MS]
     fail_names = set(fail_max) | set(fail_mean)
-    print(f'\n\n{COMP_FAIL_CONDITIONS}\n')
+    print(f"\n\n{COMP_FAIL_CONDITIONS}\n")
     if fail_names:
-        fail_names_str = '\n'.join(f'- {f}' for f in fail_names)
-        print(f'FAILED:\n{fail_names_str}')
+        fail_names_str = "\n".join(f"- {f}" for f in fail_names)
+        print(f"FAILED:\n{fail_names_str}")
     else:
-        print('No fails.')
-    print('\n')
+        print("No fails.")
+    print("\n")
 
 
 def run_regular_timing_test():
-    """Runs a timing test. Continuously prints the results (mean and max
-    calculation time) of each bot."""
-    ucount = input('\nNumber of battles to play (leave blank for 10,000): ')
+    """Run a timing test.
+
+    Continuously prints the results (mean and max calculation time) of each bot.
+    """
+    ucount = input("\nNumber of battles to play (leave blank for 10,000): ")
     battle_count = int(ucount) if ucount else 10_000
     assert battle_count > 0
     map_name = query_map_name()
@@ -55,16 +57,20 @@ def run_regular_timing_test():
 
 def run_winrates():
     """Plays many battles, and continuously prints the winrates of each bot."""
+
     def print_summary():
-        print('\n')
-        print(f'           ----------------------------------')
-        print(f'               Winrates ({battles_played:,} battles total)')
-        print(f'           ----------------------------------')
+        print("\n")
+        print("           ----------------------------------")
+        print(f"               Winrates ({battles_played:,} battles total)")
+        print("           ----------------------------------")
         if battles_played <= 0:
-            print(f'Waiting for results of the first game...')
+            print("Waiting for results of the first game...")
             return
         for bot, wins in counter.most_common():
-            print(f'{bot:>20}: {f"{wins/battles_played*100:.2f}":>7} % ({str(wins):<4} wins)')
+            print(
+                f'{bot:>20}: {f"{wins/battles_played*100:.2f}":>7} % '
+                f"({str(wins):<4} wins)"
+            )
 
     counter = Counter()
     battles_played = 0
@@ -75,17 +81,17 @@ def run_winrates():
         selection=bot_selection,
         all_play=True,
         include_testing=True,
-        )
+    )
     while True:
         battle = BattleManager(
             initial_state=initial_state,
             bot_classes_getter=get_bots,
-            description=f'winrates #{battles_played+1} @ {map_name}',
+            description=f"winrates #{battles_played+1} @ {map_name}",
             enable_logging=False,
             enable_bot_logging=False,
         )
         print_summary()
-        print(f'\nPlaying battle : {battle.description}\n')
+        print(f"\nPlaying battle : {battle.description}\n")
         winner, losers = play_complete(battle)
         print(battle.get_info_panel_text())
         counter[winner] += 1
@@ -97,12 +103,16 @@ def run_winrates():
 
 def query_map_name() -> str:
     """Queries the user in console for a map name."""
-    print('\n'.join([
-        f'Available maps:',
-        *(f'- {i}. {m}' for i, m in enumerate(MAPS)),
-        ]))
+    print(
+        "\n".join(
+            [
+                "Available maps:",
+                *(f"- {i}. {m}" for i, m in enumerate(MAPS)),
+            ]
+        )
+    )
     while True:
-        idx = input('Select map number: ')
+        idx = input("Select map number: ")
         try:
             idx = int(idx)
             assert 0 <= idx < len(MAPS)
@@ -110,45 +120,51 @@ def query_map_name() -> str:
         except (ValueError, AssertionError):
             print(f'"{idx}" is not an option.')
     map = MAPS[idx]
-    print(f'Selected: {map}')
+    print(f"Selected: {map}")
     return map
+
+
+def _query_user(available_names, selected_names):
+    names = []
+    for i, bn in enumerate(available_names):
+        in_prefix = "++" if bn in selected_names else "--"
+        names.append(f"{str(i):>3}. {in_prefix} {bn}")
+        names_str = "\n".join(names)
+    print("Bots:\nLegend: -- available ++ selected")
+    print(names_str)
+    # print('Enter one of the following:')
+    print("\nBot selection:")
+    print(
+        ">  leave blank to finish (if none selected, will select all "
+        "non-testing bots)"
+    )
+    print(">  number to add/remove a bot by number")
+    print('>  "a" to add all bots')
+    print('>  "r" to remove all bots')
+    r = input(">> ")
+    print("")
+    return r
 
 
 def query_bot_classes() -> list[type]:
     """Queries the user in console for bots. Returns a list of bot classes."""
-    def query_user():
-        names = []
-        for i, bn in enumerate(available_bots):
-            in_prefix = '++' if bn in selected_names else '--'
-            names.append(f'{str(i):>3}. {in_prefix} {bn}')
-            names_str = '\n'.join(names)
-        print(f'Bots:\nLegend: -- available ++ selected')
-        print(names_str)
-        # print('Enter one of the following:')
-        print('\nBot selection:')
-        print('>  leave blank to finish (if none selected, will select all non-testing bots)')
-        print('>  number to add/remove a bot by number')
-        print('>  "a" to add all bots')
-        print('>  "r" to remove all bots')
-        r = input('>> ')
-        print('')
-        return r
-
     bot_cls_list = [bot_cls for bot_cls in BOTS.values()]
     sorted_bots = sorted(bot_cls_list, key=lambda botcls: botcls.TESTING_ONLY)
     available_bots = [bot_cls.NAME for bot_cls in sorted_bots]
-    available_bots_non_testing = [bot_cls.NAME for bot_cls in sorted_bots if not bot_cls.TESTING_ONLY]
+    available_bots_non_testing = [
+        bot_cls.NAME for bot_cls in sorted_bots if not bot_cls.TESTING_ONLY
+    ]
     selected_names = []
 
     # Collect bots
     while True:
-        uinput = query_user()
-        if uinput == '':
+        uinput = _query_user(available_bots, selected_names)
+        if uinput == "":
             break
-        if uinput == 'a':  # Add all
+        if uinput == "a":  # Add all
             selected_names = [a for a in available_bots]
             continue
-        if uinput == 'r':  # Remove all
+        if uinput == "r":  # Remove all
             selected_names = []
             continue
         # Convert to index
@@ -171,12 +187,18 @@ def query_bot_classes() -> list[type]:
 
 
 def play_complete(battle: BattleManager) -> tuple[str, list[str]]:
-    """Plays a battle to completion and returns a winner name and a list of
-    losers' names."""
+    """Play a battle to completion.
+
+    Args:
+        battle: The `logic.battle_manager.BattleManager` instance.
+
+    Returns:
+        Tuple of (winner name, list of loser names).
+    """
     battle.play_all(print_progress=True)
     assert battle.state.game_over
     winner_id = battle.state.winner
-    winner = battle.bots[winner_id].name if winner_id is not None else 'draw'
+    winner = battle.bots[winner_id].name if winner_id is not None else "draw"
     losers = [battle.bots[loser_id].name for loser_id in battle.losers]
     return winner, losers
 
@@ -184,17 +206,21 @@ def play_complete(battle: BattleManager) -> tuple[str, list[str]]:
 def run():
     """Queries the user for a function to run."""
     while True:
-        print('\n'.join([
-            '\n\n',
-            'Select operation:',
-            '1. Winrates',
-            '2. Bot timer tests',
-            '3. Bot timer tests for competition',
-            'q. Quit CLI',
-            '',
-        ]))
-        selection = input('Enter selection: ')
-        if selection == 'q':
+        print(
+            "\n".join(
+                [
+                    "\n\n",
+                    "Select operation:",
+                    "1. Winrates",
+                    "2. Bot timer tests",
+                    "3. Bot timer tests for competition",
+                    "q. Quit CLI",
+                    "",
+                ]
+            )
+        )
+        selection = input("Enter selection: ")
+        if selection == "q":
             return
         selection = int(selection)
         assert 1 <= selection <= 3

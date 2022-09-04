@@ -1,3 +1,1 @@
-"""
-Specifications and functions for interfacing different parts of the program.
-"""
+"""Specifications and functions for interfacing different parts of the program."""

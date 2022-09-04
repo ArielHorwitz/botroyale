@@ -1,7 +1,5 @@
-"""
-Home of the `logic.battle.Battle` class.
-"""
-from typing import Union, Optional, Sequence, Callable
+"""Home of the `logic.battle.Battle` class."""
+from typing import Optional, Sequence, Callable
 import sys
 import traceback
 import numpy as np
@@ -9,31 +7,33 @@ from api.logging import Logger, logger as glogger
 from api.bots import BaseBot
 from api.actions import Action
 from bots import get_bot_classes
-from logic.maps import get_map_state, DEFAULT_MAP_NAME
+from logic.maps import get_map_state
 from logic.state import State
 from util.time import pingpong
-from util.settings import Settings
 
 
-LINEBR = '='*75
+LINEBR = "=" * 75
 
 
 class Battle:
     """Manages the states and bots of a single battle.
 
-    It creates the bots and polls them for an action on their turn, and remembers a history of states as well as the current state.
+    It creates the bots and polls them for an action on their turn, and
+    remembers a history of states as well as the current state.
     """
 
-    def __init__(self,
-            initial_state: Optional[State] = None,
-            bot_classes_getter: Callable[[int], Sequence[type]] = get_bot_classes,
-            description: str = 'No description set',
-            enable_logging: bool = True,
-            enable_bot_logging: bool = True,
-            only_bot_turn_states: bool = True,
-            threshold_bot_block_seconds: float = 20.0,
-            ):
-        """
+    def __init__(
+        self,
+        initial_state: Optional[State] = None,
+        bot_classes_getter: Callable[[int], Sequence[type]] = get_bot_classes,
+        description: str = "No description set",
+        enable_logging: bool = True,
+        enable_bot_logging: bool = True,
+        only_bot_turn_states: bool = True,
+        threshold_bot_block_seconds: float = 20.0,
+    ):
+        """Initialize the class.
+
         Args:
             initial_state: The first state of the battle. If initial_state is
                 not provided, it will be generated using the map generator based
@@ -46,10 +46,11 @@ class Battle:
 
             description: A description of the battle.
 
-            enable_logging: Passing False will disable battle logs.
+            enable_logging: Passing False will disable battle logs. Not
+                including bots.
 
             enable_bot_logging: Passing False will disable the logger while
-                `Battle._get_bot_action` is called.
+                bots are called.
 
             only_bot_turn_states: Determines whether to skip `State.end_of_round`
                 states and other states that are not expecting an action from a
@@ -61,9 +62,6 @@ class Battle:
 
             threshold_bot_block_seconds: Threshold of calculation time for bots
                 to trigger a warning in the log.
-
-        .. admonition:: New in v1.1
-            Added *enable_bot_logging* argument.
         """
         self.enable_logging: bool = enable_logging
         """Enable logging of the battle itself."""
@@ -86,7 +84,9 @@ class Battle:
         with Logger.set_logging_temp(enable_logging):
             bot_classes = bot_classes_getter(bot_count)
         assert len(bot_classes) == bot_count
-        self.bots: tuple[BaseBot, ...] = tuple(bcls(i) for i, bcls in enumerate(bot_classes))
+        self.bots: tuple[BaseBot, ...] = tuple(
+            bcls(i) for i, bcls in enumerate(bot_classes)
+        )
         """Tuple of bot instances."""
         # Allow bots to prepare
         with Logger.set_logging_temp(enable_bot_logging):
@@ -106,14 +106,15 @@ class Battle:
         return self.__current_state
 
     @property
-    def previous_state(self) -> Union[State, None]:
-        """The last state before the current one (or None if currently at first state)."""
+    def previous_state(self) -> Optional[State]:
+        """The state before the current one (or None if currently at first state)."""
         if self.history_size <= 1:
             return None
-        return self.history[self.history_size-2]
+        return self.history[self.history_size - 2]
 
     @property
     def history_size(self):
+        """Size of state history."""
         return len(self.history)
 
     # Play
@@ -123,22 +124,22 @@ class Battle:
         self.log_state(state)
         if state.end_of_round:
             new_state = state.increment_round()
-            self.logger(f'Death radius: {new_state.death_radius}')
+            self.logger(f"Death radius: {new_state.death_radius}")
         else:
             unit_id = state.current_unit
             action = self._get_bot_action(unit_id, state)
             if action is not None:
                 # Bot returned an action, apply.
-                self.logger(f'Applying {action} to state')
+                self.logger(f"Applying {action} to state")
                 if self.__only_bot_turn_states:
                     new_state = state.apply_action(action)
                 else:
                     new_state = state.apply_action_no_round_increment(action)
                     if not new_state.is_last_action_legal:
-                        self.logger(f'ILLEGAL: {action}')
+                        self.logger(f"ILLEGAL: {action}")
             else:
                 # Bot failed to return an action, kill.
-                self.logger(f'Killing {self.bots[unit_id]}...')
+                self.logger(f"Killing {self.bots[unit_id]}...")
                 if self.__only_bot_turn_states:
                     new_state = state.apply_kill_unit()
                 else:
@@ -159,14 +160,16 @@ class Battle:
 
         Args:
             disable_logging: Disable logging globally while playing.
-            print_progress: Disable logging globally while playing and print a progress bar to console.
+            print_progress: Disable logging globally while playing and print a
+                progress bar to console.
         """
+
         def print_progress_bar():
             rc = self.state.round_count
-            done = '█' * rc
-            remaining = '░' * (self.state.death_radius - 1)
-            pbar = f'{done}{remaining}  ({rc} / {rc+self.state.death_radius-1} rounds)'
-            print(f'\r{pbar}', end='')
+            done = "█" * rc
+            remaining = "░" * (self.state.death_radius - 1)
+            pbar = f"{done}{remaining}  ({rc} / {rc+self.state.death_radius-1} rounds)"
+            print(f"\r{pbar}", end="")
 
         if print_progress:
             disable_logging = True
@@ -179,7 +182,7 @@ class Battle:
                 if print_progress and self.state.round_count > last_rc:
                     print_progress_bar()
         if print_progress:
-            print('')
+            print("")
 
     def _get_bot_action(self, unit_id: int, state: State) -> Optional[Action]:
         """Call the bot's `api.bots.BaseBot.poll_action` to get their action.
@@ -194,48 +197,60 @@ class Battle:
         """
         state = state.copy()
         bot = self.bots[unit_id]
-        pingpong_desc = f'{bot} poll_action (step {state.step_count})'
+        pingpong_desc = f"{bot} poll_action (step {state.step_count})"
+
         def add_bot_time(elapsed):
             self.bot_timer.add_time(unit_id, elapsed)
+
         with pingpong(pingpong_desc, logger=self.logger, return_elapsed=add_bot_time):
             try:
                 with Logger.set_logging_temp(self.enable_bot_logging):
                     action = bot.poll_action(state)
                 assert isinstance(action, Action)
             except Exception as e:
-                formatted_exc = ''.join(traceback.format_exception(*sys.exc_info()))
-                self.logger(f'CRASH {bot}: {e}\n\n{formatted_exc}')
+                formatted_exc = "".join(traceback.format_exception(*sys.exc_info()))
+                self.logger(f"CRASH {bot}: {e}\n\n{formatted_exc}")
                 return None
         self.logger(LINEBR)
-        self.logger(f'Received action: {action}')
+        self.logger(f"Received action: {action}")
         ttime = self.bot_timer.get_time(unit_id)
         if ttime > self.__threshold_bot_block_ms:
-            self.logger(f'BLOCK TIME WARNING : {bot} has taken {ttime/1000:.2f} seconds this turn')
+            self.logger(
+                f"BLOCK TIME WARNING : {bot} has taken {ttime/1000:.2f} "
+                "seconds this turn"
+            )
         return action
 
     # Logging
     def logger(self, text: str):
+        """Logger for the battle."""
         if self.enable_logging:
             glogger(text)
 
     def log_state(self, state: State):
         """Log a quick summary of the current state."""
-        self.logger('\n'.join([
-            LINEBR,
-            ' '.join([
-                f'Step: {str(state.step_count):^4}',
-                f'Turn: {str(state.turn_count):^4}',
-                f'Round: {str(state.round_count):^3}',
-                '|',
-                f'{self.get_state_str(state)}',
-                ]),
-            LINEBR,
-        ]))
+        self.logger(
+            "\n".join(
+                [
+                    LINEBR,
+                    " ".join(
+                        [
+                            f"Step: {str(state.step_count):^4}",
+                            f"Turn: {str(state.turn_count):^4}",
+                            f"Round: {str(state.round_count):^3}",
+                            "|",
+                            f"{self.get_state_str(state)}",
+                        ]
+                    ),
+                    LINEBR,
+                ]
+            )
+        )
 
     def get_state_str(self, state: State) -> str:
         """A string representation of the type of state (bot turn / end of round)."""
         if state.end_of_round:
-            return 'end of round'
+            return "end of round"
         assert state.current_unit is not None
         return f"{self.bots[state.current_unit].gui_label}'s turn"
 
@@ -245,12 +260,12 @@ class Battle:
 
     # Miscallaneous
     @property
-    def winner(self) -> Union[int, None]:
+    def winner(self) -> Optional[int]:
         """Returns `logic.state.State.winner` of the current state of battle."""
         return self.state.winner
 
     @property
-    def losers(self) -> Union[list[int], None]:
+    def losers(self) -> Optional[list[int]]:
         """Returns a list of unit ids that did not win, or None if game isn't over."""
         if self.state.game_over:
             return [b.id for b in self.bots if b.id != self.winner]
@@ -258,9 +273,10 @@ class Battle:
 
 
 class TurnTimer:
-    """Keeps track of calculation times for multiple bots over the course of multiple turns."""
+    """Records calculation times for multiple bots over multiple turns."""
 
     def __init__(self, num_of_units: int):
+        """Initialize the class."""
         self.num_of_units: int = num_of_units
         self.round_timers: np.ndarray = np.zeros((1, num_of_units), dtype=np.float64)
 
@@ -268,7 +284,8 @@ class TurnTimer:
     def all_times(self) -> np.ndarray:
         """Return the full table of times (numpy array). Not a copy.
 
-        The ndarray shape will be (num_of_rounds, num_of_units), such that every element in the array represents the time that unit has in that round.
+        The ndarray shape will be (num_of_rounds, num_of_units), such that every
+        element in the array represents the time that unit has in that round.
         """
         return self.round_timers
 

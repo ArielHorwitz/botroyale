@@ -1,7 +1,14 @@
-"""
-Actions used by bots and game mechanics.
+"""Actions used by bots and game mechanics.
 
-See: `api.bots.BaseBot.poll_action`, `logic.state.State.apply_action`, `logic.state.State.check_legal_action`.
+See also: `api.bots.BaseBot.poll_action`, `logic.state.State.apply_action`,
+`logic.state.State.check_legal_action`.
+
+Currently available actions:
+
+- Idle (*0 AP*): do nothing and end our turn.
+- Move (*20 AP*): move to an adjascent tile.
+- Push (*30 AP*): push a unit from an adjascent tile to the tile behind it.
+- Jump (*45 AP*): move to a tile at a distance of 2.
 """
 from util.hexagon import Hexagon
 
@@ -19,7 +26,8 @@ class Action:
     """The AP cost of the action."""
 
     def __repr__(self):
-        return f'<{self.__class__.__name__}>'
+        """Repr."""
+        return f"<{self.__class__.__name__}>"
 
 
 class Move(Action):
@@ -28,11 +36,17 @@ class Move(Action):
     ap = 20
 
     def __init__(self, target_tile: Hexagon):
+        """Initialize the class.
+
+        Args:
+            target_tile: Target of the action.
+        """
         assert isinstance(target_tile, Hexagon)
         self.target = target_tile
 
     def __repr__(self):
-        return f'<{self.__class__.__name__}: {self.target.x}, {self.target.y}>'
+        """Repr."""
+        return f"<{self.__class__.__name__}: {self.target.x}, {self.target.y}>"
 
 
 class Push(Move):

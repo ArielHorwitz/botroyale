@@ -1,5 +1,6 @@
-"""
-Home of the `logic.state.State` class.
+"""Home of the `logic.state.State` class.
+
+Defines the gameplay mechanics and logic.
 """
 from typing import Optional, Sequence, NamedTuple
 from numpy.typing import NDArray
@@ -9,7 +10,6 @@ import copy
 from util.hexagon import Hexagon, ORIGIN
 from logic.plate import Plate, PlateType
 from logic.prng import PRNG
-from api.logging import logger as glogger
 from api.actions import MAX_AP, REGEN_AP, ALL_ACTIONS, Action, Idle, Move, Jump, Push
 
 # Assert AP is always an integer, this is assumed by the round order tiebreaker
@@ -22,6 +22,7 @@ NEXT_SEED_ITERATIONS = 100
 
 class Effect(NamedTuple):
     """Represents an in-game effect. Usually the result of an action."""
+
     name: str
     """The name of the effect, should match the names in `assets/vfx`."""
     origin: Hexagon
@@ -32,20 +33,26 @@ class Effect(NamedTuple):
 
 class OrderError(Exception):
     """Raised when something is done in the wrong order."""
+
     pass
 
 
 class State:
     """The State object represents a point in time of a battle.
 
-    Under most normal circumstances, a state should not be initialized directly. Usually, the only relevant methods are `State.check_legal_action` and `State.apply_action`. Given an existing State, these two methods will be all one needs in order to play an entire battle.
+    Under most normal circumstances, a state should not be initialized directly.
+    Usually, the only relevant methods are `State.check_legal_action` and
+    `State.apply_action`. Given an existing State, these two methods will be all
+    one needs in order to play an entire battle.
 
-    The `State.apply_action` method will return the new state given after applying an
-    action. The returned state will always be on a unit's turn (unless it is
-    `State.game_over`), allowing you to repeatedly apply actions until game over.
+    The `State.apply_action` method will return the new state given after
+    applying an action. The returned state will always be on a unit's turn
+    (unless it is `State.game_over`), allowing you to repeatedly apply actions
+    until game over.
 
     ### List attributes
-    Many attributes of state are lists of values: one for each unit. For these attribtes, the index is by `api.bots.BaseBot.id`.
+    Many attributes of state are lists of values: one for each unit. For these
+    attribtes, the index is by `api.bots.BaseBot.id`.
 
     ### Maps (initial states)
     To create an initial state (also known as a map), it is highly recommended
@@ -58,32 +65,40 @@ class State:
 
     ### Round incrementation
     For a more manual approach to applying actions, one can use
-    `State.apply_action_no_round_increment`. This method is similar to `State.apply_action`
-    but does not increment rounds automatically, allowing one to see states
-    between turns (end_of_round), where the effects of a new round are applied.
-    This requires using the method `State.increment_round` in order to play an entire
-    battle.
+    `State.apply_action_no_round_increment`. This method is similar to
+    `State.apply_action` but does not increment rounds automatically, allowing
+    one to see states between turns (end_of_round), where the effects of a new
+    round are applied. This requires using the method `State.increment_round`
+    in order to play an entire battle.
     """
-    def __init__(self,
-            death_radius: int,
-            positions: Optional[list[Hexagon]] = None,
-            pits: Optional[set[Hexagon]] = None,
-            walls: Optional[set[Hexagon]] = None,
-            plates: Optional[set[Plate]] = None,
-            alive_mask: Optional[NDArray[np.bool_]] = None,
-            ap: Optional[NDArray[np.int_]] = None,
-            round_ap_spent: Optional[list[int]] = None,
-            round_remaining_turns: Optional[list[int]] = None,
-            round_done_turns: Optional[list[int]] = None,
-            casualties: Optional[list[int]] = None,
-            step_count: int = 0,
-            turn_count: int = 0,
-            round_count: int = 0,
-            last_action: Optional[Action] = None,
-            is_last_action_legal: bool = False,
-            effects: Optional[list[Effect]] = None,
-            seed: Optional[int] = None,
-            ):
+
+    # We ignore C901 ("too complex") error. The "complexity" arises from there
+    # being many if statements to set default values to None parameters.
+    def __init__(  # noqa: C901
+        self,
+        death_radius: int,
+        positions: Optional[list[Hexagon]] = None,
+        pits: Optional[set[Hexagon]] = None,
+        walls: Optional[set[Hexagon]] = None,
+        plates: Optional[set[Plate]] = None,
+        alive_mask: Optional[NDArray[np.bool_]] = None,
+        ap: Optional[NDArray[np.int_]] = None,
+        round_ap_spent: Optional[list[int]] = None,
+        round_remaining_turns: Optional[list[int]] = None,
+        round_done_turns: Optional[list[int]] = None,
+        casualties: Optional[list[int]] = None,
+        step_count: int = 0,
+        turn_count: int = 0,
+        round_count: int = 0,
+        last_action: Optional[Action] = None,
+        is_last_action_legal: bool = False,
+        effects: Optional[list[Effect]] = None,
+        seed: Optional[int] = None,
+    ):
+        """Initialize the class.
+
+        This is normally not required unless you are creating maps.
+        """
         # Units
         if positions is None:
             positions = []
@@ -108,7 +123,9 @@ class State:
         self.round_remaining_turns: list[int] = round_remaining_turns
         """List of uids that still have not ended their turn this round.
 
-        The first uid in this list is the unit in turn (`State.current_unit`). If the list is empty, it is nobody's turn (see: `State.end_of_round`)."""
+        The first uid in this list is the unit in turn (`State.current_unit`).
+        If the list is empty, it is nobody's turn (see: `State.end_of_round`).
+        """
         if round_done_turns is None:
             round_done_turns = [i for i in range(self.num_of_units)]
         self.round_done_turns: list[int] = round_done_turns
@@ -122,7 +139,8 @@ class State:
         self.death_radius: int = death_radius
         """The radius of the "ring of death".
 
-        This radius determines at what distance from `util.hexagon.ORIGIN` would a unit die.
+        This radius determines at what distance from `util.hexagon.ORIGIN`
+        would a unit die.
         """
         if pits is None:
             pits = set()
@@ -141,7 +159,8 @@ class State:
         self.step_count: int = step_count
         """A step is the smallest unit of in-game time.
 
-        A single action in a turn is a step. "End of round" states are also a step (see: `State.end_of_round`).
+        A single action in a turn is a step. "End of round" states are also a
+        step (see: `State.end_of_round`).
         """
         self.turn_count: int = turn_count
         """Total number of turns taken."""
@@ -172,7 +191,9 @@ class State:
 
     # User methods - return new states
     # check_legal_action "unit" argument is being deprecated.
-    def check_legal_action(self, unit: None = None, action: Optional[Action] = None) -> bool:
+    def check_legal_action(
+        self, unit: None = None, action: Optional[Action] = None
+    ) -> bool:
         """If applying *action* to this state is legal.
 
         .. warning:: Signature Change
@@ -188,19 +209,24 @@ class State:
         # After deprecation, the action argument will be a normal positional
         # argument expecting an Action.
         if action is None:
-            raise ValueError(f'Must provide an action.')
+            raise ValueError("Must provide an action.")
         assert isinstance(action, Action)
         # Check if user is still using the unit argument and warn if so.
         if unit is not None:
-            warn(f'State.check_legal_action signature will change. Please see documentation.')
+            warn(
+                "State.check_legal_action signature will change. "
+                "Please see documentation."
+            )
         if isinstance(action, Idle):
             return True
         return self._check_legal_action(action)
 
-    def apply_action(self, action: Action) -> 'State':
+    def apply_action(self, action: Action) -> "State":
         """Return the state resulting from applying *action* to this state.
 
-        This is a high-level method that will increment the round if necessary, ensuring that the resulting state will always be on a unit's turn (at least if the resulting state is not a game over).
+        This is a high-level method that will increment the round if necessary,
+        ensuring that the resulting state will always be on a unit's turn (at
+        least if the resulting state is not a game over).
 
         For a more manual approach, use `State.apply_action_no_round_increment`.
         """
@@ -209,16 +235,21 @@ class State:
             new_state._next_round()
         return new_state
 
-    def apply_action_no_round_increment(self, action: Action) -> 'State':
+    def apply_action_no_round_increment(self, action: Action) -> "State":
         """Return the state resulting from applying *action* to this state.
 
-        This will include `State.end_of_round` states, where it is no unit's turn. Most users will prefer to use `State.apply_action` as it does not reach "end of round" states and does not require using `State.increment_round`.
+        This will include `State.end_of_round` states, where it is no unit's
+        turn. Most users will prefer to use `State.apply_action` as it does not
+        reach "end of round" states and does not require using
+        `State.increment_round`.
         """
         assert isinstance(action, Action)
         if self.game_over:
-            raise OrderError(f'Game over, no more actions allowed')
+            raise OrderError("Game over, no more actions allowed")
         if self.end_of_round:
-            raise OrderError(f'Cannot apply action, round is over: use `State.increment_round`.')
+            raise OrderError(
+                "Cannot apply action, round is over: use `State.increment_round`."
+            )
         # Create a copy and apply changes on it in place
         new_state = self.copy(copy_last_action=False)
         if isinstance(action, Idle):
@@ -230,30 +261,31 @@ class State:
         else:
             new_state.is_last_action_legal = False
             new_state._next_turn()
-            new_state._add_effect('illegal', self.positions[self.current_unit])
+            new_state._add_effect("illegal", self.positions[self.current_unit])
         new_state.last_action = action
         new_state.step_count += 1
         return new_state
 
-    def increment_round(self) -> 'State':
+    def increment_round(self) -> "State":
         """Return the state resulting from starting the next round.
 
         Can only be used on `State.end_of_round` states.
         """
         if self.game_over:
-            raise OrderError(f'Game over, no more rounds')
+            raise OrderError("Game over, no more rounds")
         if not self.end_of_round:
-            raise OrderError('Not the end of round')
+            raise OrderError("Not the end of round")
         # Create a copy and apply changes on it in place
         new_state = self.copy(copy_last_action=False)
         new_state._next_round()
         return new_state
 
-    def copy(self, copy_last_action: bool = True) -> 'State':
+    def copy(self, copy_last_action: bool = True) -> "State":
         """Return a copy of the state.
 
-        If copy_last_action is True, the copy will include information about
-        the last_action: last_action, is_last_action_legal, and effects."""
+        If *copy_last_action* is True, the copy will include information about
+        the last_action: last_action, is_last_action_legal, and effects.
+        """
         if copy_last_action:
             last_action = self.last_action
             is_last_action_legal = self.is_last_action_legal
@@ -281,7 +313,7 @@ class State:
             is_last_action_legal=is_last_action_legal,
             effects=effects,
             seed=self.seed,
-            )
+        )
 
     def apply_kill_unit(self):
         """Return the state resulting from killing the `State.current_unit`.
@@ -307,23 +339,30 @@ class State:
             A new `State` after the current unit dies on their turn.
         """
         if self.game_over:
-            raise OrderError(f'Game over, cannot kill')
+            raise OrderError("Game over, cannot kill")
         if self.end_of_round:
-            raise OrderError(f'Cannot apply kill, round is over: use `State.increment_round`.')
+            raise OrderError(
+                "Cannot apply kill, round is over: use `State.increment_round`."
+            )
         current = self.current_unit
         new_state = self.copy(copy_last_action=False)
         new_state._next_turn()
         new_state._apply_mortality(force_kill=[current])
-        new_state._add_effect('kill', self.positions[current])
+        new_state._add_effect("kill", self.positions[current])
         new_state.step_count += 1
         return new_state
 
     # Properties
     @property
     def current_unit(self) -> Optional[int]:
-        """The uid of the current unit in turn, or None if the current state is `State.end_of_round` (and there is no unit in turn).
+        """The uid of the current unit in turn.
 
-        .. caution:: A statement in Python will equate to `False` if it is either `None` (no unit in turn in this case) or `0` (unit #0 in turn in this case).
+        Will return None if the current state is `State.end_of_round` (and there
+        is no unit in turn).
+
+        .. caution:: A statement in Python will equate to `False` if it is
+            either `None` (no unit in turn in this case) or `0` (unit #0 in turn
+            in this case).
 
         Hence, do **not** use like this:
         ```python
@@ -348,10 +387,13 @@ class State:
 
     @property
     def winner(self) -> Optional[int]:
-        """The uid of the winning unit, or None if it is a draw or it is not yet `State.game_over`.
+        """The uid of the winning unit.
+
+        Will return None if it is a draw or it is not yet `State.game_over`.
 
         .. tip:: Check `State.game_over` before checking `State.winner`.
-        .. caution:: A statement in Python will equate to `False` if it is either `None` (draw in this case) or `0` (unit #0 won in this case).
+        .. caution:: A statement in Python will equate to `False` if it is
+            either `None` (draw in this case) or `0` (unit #0 won in this case).
 
         Hence, do **not** use like this:
         ```python
@@ -377,14 +419,18 @@ class State:
     def next_round_order(self) -> list[int]:
         """List of uids sorted by the order of turns in the next round.
 
-        This assumes no more AP is spent for the rest of the round. The round order is sorted by AP spent and uses `logic.prng.PRNG` as tiebreaker."""
+        This assumes no more AP is spent for the rest of the round. The round
+        order is sorted by AP spent and uses `logic.prng.PRNG` as tiebreaker.
+        """
         return self._get_round_order()
 
     @property
     def end_of_round(self) -> bool:
         """If it is currently the end of round and no unit is in turn.
 
-        This indicates that the method `State.increment_round` should be used before trying to apply an action."""
+        This indicates that the method `State.increment_round` should be used
+        before trying to apply an action.
+        """
         return len(self.round_remaining_turns) == 0
 
     @property
@@ -427,7 +473,7 @@ class State:
             return self._check_legal_jump(action.target)
         elif type(action) is Push:
             return self._check_legal_push(action.target)
-        raise TypeError(f'Unknown action: {action}')
+        raise TypeError(f"Unknown action: {action}")
 
     def _check_legal_move(self, target: Hexagon) -> bool:
         if not self._check_unit_distance(target, 1):
@@ -444,7 +490,7 @@ class State:
         if not self._check_unit_distance(target, 1):
             return False
         # Target must contain a unit
-        if not target in self.positions:
+        if target not in self.positions:
             return False
         # Must push to a tile that can be moved on to
         push_end = next(self.positions[self.current_unit].straight_line(target))
@@ -474,27 +520,23 @@ class State:
         target = action.target
         if type(action) is Move:
             self._reposition_unit(unit, target)
-            self._add_effect('move', unit_pos, target)
+            self._add_effect("move", unit_pos, target)
         elif type(action) is Jump:
             self._reposition_unit(unit, target)
-            self._add_effect('jump', unit_pos, target)
+            self._add_effect("jump", unit_pos, target)
         elif type(action) is Push:
             opp_id = self.positions.index(target)
             push_target = next(unit_pos.straight_line(target))
             self._reposition_unit(opp_id, push_target)
-            self._add_effect('push', unit_pos, target)
+            self._add_effect("push", unit_pos, target)
         else:
-            raise TypeError(f'Unkown action: {action}')
+            raise TypeError(f"Unkown action: {action}")
         self.ap[unit] -= action.ap
         self.round_ap_spent[unit] += action.ap
         self._apply_mortality()
 
     def _reposition_unit(self, uid: int, target: Hexagon):
-        """
-        moves a unit to target and resolves the effect of movement
-        :param uid: unit id
-        :param target: hex to move to
-        """
+        """Moves a unit to target and resolves the effect of movement."""
         self.positions[uid] = target
         self._try_increase_pressure(target)
 
@@ -522,10 +564,7 @@ class State:
         self.seed = self._get_next_seed()
 
     def _decrement_death_radius(self, delta: int):
-        """
-        change the death radius
-        :param delta: amount to decrement from death radius, (>0)
-        """
+        """Shrink the death radius."""
         assert delta > 0
         for radius in range(self.death_radius - delta, self.death_radius):
             ring_hex = set(ORIGIN.ring(radius))
@@ -535,8 +574,11 @@ class State:
         self.death_radius -= delta
 
     def _get_next_seed(self) -> int:
-        """Derives the next round's seed. We simply take the seed value from
-        several iterations ahead of the current seed value."""
+        """Derives the next round's seed.
+
+        We simply take the seed value from several iterations ahead of the
+        current seed value.
+        """
         rng = PRNG(self.seed)
         rng.iterate(NEXT_SEED_ITERATIONS)
         return rng.seed
@@ -546,20 +588,19 @@ class State:
 
         The round order is sorted by AP spent and uses the PRNG as tiebreaker.
         We assume AP spent is an integer so we use numbers between 0 and 1
-        for tiebreakers."""
+        for tiebreakers.
+        """
         live_uids = np.flatnonzero(self.alive_mask)
         tiebreakers = PRNG(self.seed).generate_list(self.num_of_units)
-        return sorted(live_uids,
-            key=lambda uid: self.round_ap_spent[uid] + tiebreakers[uid])
+        return sorted(
+            live_uids, key=lambda uid: self.round_ap_spent[uid] + tiebreakers[uid]
+        )
 
     def _apply_mortality(self, force_kill: Optional[Sequence[int]] = None):
-        """Checks if any live units are supposed to be dead, and kills them in
-        place. Should be called any time positions, pits, or death_radius change.
+        """Check if any live units are supposed to be dead, and kill them in place.
 
         Units die if they are standing on a pit or beyond the death_radius.
-
-        Args:
-            force_kill: A sequence of uids to kill.
+        Should be called any time positions, pits, or death_radius change.
         """
         if force_kill is None:
             force_kill = []
@@ -573,16 +614,20 @@ class State:
                 self.casualties[uid] = self.step_count
                 if uid in self.round_remaining_turns:
                     self.round_remaining_turns.remove(uid)
-                self._add_effect('death', pos)
+                self._add_effect("death", pos)
 
     def _add_effect(self, name: str, origin: Hexagon, target: Optional[Hexagon] = None):
-        """Adds an effect to the effect list in place. This is used to record
-        the effects of the last action."""
-        self.effects.append(Effect(
-            name=name,
-            origin=origin,
-            target=target,
-        ))
+        """Adds an effect to the effect list in place.
+
+        This is used to record the effects of the last action.
+        """
+        self.effects.append(
+            Effect(
+                name=name,
+                origin=origin,
+                target=target,
+            )
+        )
 
     def _try_increase_pressure(self, target: Hexagon):
         """Increase pressure of the plate if exists at *target* and handle effects."""
@@ -601,7 +646,10 @@ class State:
                 self.plates.remove(plate)
 
     def _apply_plate_effect(self, plate: Plate):
-        """Apply the effects of *plate* pressure popping. this may change the map including the *plate*"""
+        """Apply the effects of *plate* pressure popping.
+
+        .. warning:: This may change the map including the *plate* itself.
+        """
         assert plate in self.plates
         # Apply the actual effect
         if plate.plate_type is PlateType.DEATH_RADIUS_TRAP:

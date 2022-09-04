@@ -1,5 +1,4 @@
-"""
-LCG (linear congruential generator)
+"""LCG (linear congruential generator).
 
 https://en.wikipedia.org/wiki/Linear_congruential_generator
 
@@ -7,7 +6,7 @@ We implement a very transparent and simple pseudo-rng, so that other
 implementations may easily mimic it. It is designed for state logic and
 should not be used directly.
 """
-from typing import Optional, Generator
+from typing import Optional
 import random
 
 
@@ -61,7 +60,9 @@ class PRNG:
     assert next(rng) == next(rng_copy)
     ```
     """
+
     def __init__(self, seed: Optional[int] = None):
+        """Initialize the class."""
         if seed is None:
             seed = self.get_random_seed()
         assert isinstance(seed, int)
@@ -93,21 +94,23 @@ class PRNG:
     @staticmethod
     def get_random_seed() -> int:
         """A random seed that is valid as `PRNG.seed`."""
-        return random.randint(0, MOD-1)
+        return random.randint(0, MOD - 1)
 
-    def copy(self) -> 'PRNG':
+    def copy(self) -> "PRNG":
         """A copy of *self* with the same `PRNG.seed`."""
         return self._do_copy(self)
 
     @classmethod
-    def _do_copy(cls, original: 'PRNG') -> 'PRNG':
+    def _do_copy(cls, original: "PRNG") -> "PRNG":
         return cls(original.seed)
 
     # Python generator protocol
-    def __iter__(self) -> 'PRNG':
+    def __iter__(self) -> "PRNG":
+        """Iter."""
         return self
 
     def __next__(self) -> float:
+        """Next."""
         self.__current_seed = (self.__current_seed * MUL + INC) % MOD
         self.__current_value = self.__current_seed / MOD
         return self.__current_value

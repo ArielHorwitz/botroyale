@@ -1,66 +1,67 @@
-"""
-Home of `logic.battle_manager.BattleManager`.
-"""
+"""Home of `logic.battle_manager.BattleManager`."""
 from typing import Optional, Literal
 from logic.battle import Battle
-
-from collections import deque
-from api.gui import BattleAPI, Tile, VFX, Control, ControlMenu
+from api.gui import BattleAPI, Tile, Control, ControlMenu
 from util.time import ping, pong
 from util.settings import Settings
 from util.hexagon import Hex, Hexagon
 from logic.state import State
-from logic.plate import Plate
 from logic import UNIT_COLORS, get_tile_info, get_tile_info_unit
 
 
-STEP_RATE = Settings.get('logic._step_rate_cap', 2)
-STEP_RATES = Settings.get('logic.|step_rates', [1, 2, 3, 5, 60])
-LOGIC_DEBUG = Settings.get('logging.battle', True)
+STEP_RATE = Settings.get("logic._step_rate_cap", 2)
+STEP_RATES = Settings.get("logic.|step_rates", [1, 2, 3, 5, 60])
+LOGIC_DEBUG = Settings.get("logging.battle", True)
 MAP_CENTER = Hex(0, 0)
 
 
-PanelMode = Literal['turns', 'timers']
+PanelMode = Literal["turns", "timers"]
 
 
 class BattleManager(Battle, BattleAPI):
     """An interface between `logic.battle.Battle` and `api.gui.BattleAPI`.
 
-    Provides methods for parsing, formatting, and displaying information about the battle, as well as GUI-related controls and display getters.
+    Provides methods for parsing, formatting, and displaying information about
+    the battle, as well as GUI-related controls and display getters.
 
-    While it can be used as an extension of `logic.battle.Battle`, this class can behave surprisingly different than the base class. This is because it keeps track of a replay index, allowing to "look at" past states. Therefore it is recommended to be familiar with `BattleManager.set_replay_index`.
+    While it can be used as an extension of `logic.battle.Battle`, this class
+    can behave surprisingly different than the base class. This is because it
+    keeps track of a replay index, allowing to "look at" past states. Therefore
+    it is recommended to be familiar with `BattleManager.set_replay_index`.
     """
+
     show_coords = False
-    """Whether to show coordinates on the tilemap."""
     step_interval_ms = 1000 / STEP_RATE
-    """Time between steps for `BattleManager.autoplay` in ms."""
 
     def __init__(self, gui_mode: Optional[bool] = False, **kwargs):
-        """
+        """Initialize the class.
+
         Args:
             kwargs: Keyword arguments for `logic.battle.Battle.__init__`
             gui_mode: If True, will set arguments appropriate for the GUI.
         """
         if gui_mode:
-            kwargs['only_bot_turn_states'] = False
-            kwargs['enable_logging'] = LOGIC_DEBUG
+            kwargs["only_bot_turn_states"] = False
+            kwargs["enable_logging"] = LOGIC_DEBUG
         Battle.__init__(self, **kwargs)
         BattleAPI.__init__(self)
         self.__replay_index = 0
         self.autoplay: bool = False
-        """Determines whether to automatically play the game while the `BattleManager.update` method is called."""
         self.__last_step = ping()
-        self.unit_colors = [UNIT_COLORS[bot.COLOR_INDEX % len(UNIT_COLORS)] for bot in self.bots]
+        self.unit_colors = [
+            UNIT_COLORS[bot.COLOR_INDEX % len(UNIT_COLORS)] for bot in self.bots
+        ]
         self.unit_sprites = [bot.SPRITE for bot in self.bots]
-        self.__panel_mode: PanelMode = 'turns'
+        self.__panel_mode: PanelMode = "turns"
 
     # Replay
-    def set_replay_index(self,
-                         index: Optional[int] = None,
-                         index_delta: Optional[int] = None,
-                         apply_vfx: bool = True,
-                         disable_autoplay: bool = True,
-                         ):
+    def set_replay_index(
+        self,
+        index: Optional[int] = None,
+        index_delta: Optional[int] = None,
+        apply_vfx: bool = True,
+        disable_autoplay: bool = True,
+    ):
         """Set the state index of the replay.
 
         Will play missing states until *index* is reached or the game is over.
@@ -107,7 +108,9 @@ class BattleManager(Battle, BattleAPI):
     def replay_index(self) -> int:
         """The state in history we are looking at.
 
-        Methods that use state information will look at the state in `BattleManager.replay_index` rather than the last state."""
+        Methods that use state information will look at the state in
+        `BattleManager.replay_index` rather than the last state.
+        """
         return self.__replay_index
 
     @property
@@ -116,7 +119,10 @@ class BattleManager(Battle, BattleAPI):
         return self.history[self.replay_index]
 
     def play_all(self, *args, **kwargs):
-        """Overrides the `logic.battle.Battle.play_all` in order to set the `BattleManager.replay_index` to the last state."""
+        """Overrides the parent method in order to set the replay_index.
+
+        See: `BattleManager.replay_index`.
+        """
         super().play_all(*args, **kwargs)
         self.set_replay_index()
 
@@ -136,7 +142,10 @@ class BattleManager(Battle, BattleAPI):
             self.set_replay_index(index_delta=delta)
 
     def preplay(self):
-        """Play the entire battle, then set the `BattleManager.replay_index` to the start."""
+        """Play the entire battle, then set the replay index to the start.
+
+        See: `BattleManager.replay_index`.
+        """
         self.play_all()
         self.flush_vfx()
         self.set_replay_index(0)
@@ -148,20 +157,22 @@ class BattleManager(Battle, BattleAPI):
             state_index = self.replay_index
 
         strs = [
-            f'{self._get_status_str(state_index)}',
-            '',
-            ]
-        if self.__panel_mode == 'turns':
-            strs.extend([
-                f'{self._get_turn_order_str(state_index)}',
-                '',
-                f'{self._get_last_action_str(state_index)}',
-            ])
-        elif self.__panel_mode == 'timers':
-            strs.append(f'{self.get_timer_str()}')
+            f"{self._get_status_str(state_index)}",
+            "",
+        ]
+        if self.__panel_mode == "turns":
+            strs.extend(
+                [
+                    f"{self._get_turn_order_str(state_index)}",
+                    "",
+                    f"{self._get_last_action_str(state_index)}",
+                ]
+            )
+        elif self.__panel_mode == "timers":
+            strs.append(f"{self.get_timer_str()}")
         else:
-            raise ValueError(f'Unknown panel mode: {self.__panel_mode}')
-        return '\n'.join(strs)
+            raise ValueError(f"Unknown panel mode: {self.__panel_mode}")
+        return "\n".join(strs)
 
     def get_timer_str(self) -> str:
         """Multiline string of bot calculation times.
@@ -172,93 +183,111 @@ class BattleManager(Battle, BattleAPI):
         is updated in place on each new state.
         """
         strs = [
-            '      Bot Calculation Times (ms)',
-            '--------------------------------------',
-            '       Bot             Mean      Max',
-            '',
+            "      Bot Calculation Times (ms)",
+            "--------------------------------------",
+            "       Bot             Mean      Max",
+            "",
         ]
         if self.replay_mode:
-            strs.insert(0, 'Times are not live!\n\n')
+            strs.insert(0, "Times are not live!\n\n")
         for bot in self.bots:
             mean_block_time = self.bot_timer.mean(bot.id)
             max_block_time = self.bot_timer.max(bot.id)
-            strs.append(''.join([
-                f'{bot.gui_label:<20}',
-                f'{f"{mean_block_time:,.1f}":>8} ',
-                f'{f"{max_block_time:,.1f}":>8}',
-                ]))
-        return '\n'.join(strs)
+            strs.append(
+                "".join(
+                    [
+                        f"{bot.gui_label:<20}",
+                        f'{f"{mean_block_time:,.1f}":>8} ',
+                        f'{f"{max_block_time:,.1f}":>8}',
+                    ]
+                )
+            )
+        return "\n".join(strs)
 
     def _get_status_str(self, state_index: int) -> str:
         state = self.history[state_index]
-        autoplay = 'Playing' if self.autoplay else 'Paused'
-        status = f'{autoplay} <= {1000 / self.step_interval_ms:.2f} steps/s'
-        win_str = ''
+        autoplay = "Playing" if self.autoplay else "Paused"
+        status = f"{autoplay} <= {1000 / self.step_interval_ms:.2f} steps/s"
         if state.game_over:
-            winner_str = 'draw!'
+            winner_str = "draw!"
             winner_id = state.winner
             if winner_id is not None:
                 winner = self.bots[winner_id]
-                winner_str = f'{winner.gui_label} won!'
-            status = f'GAME OVER : {winner_str}'
-        return '\n'.join([
-            status,
-            '',
-            f'Step:{state.step_count:^5}Turn:{state.turn_count:^4}Round:{state.round_count:^3}RoD: {state.death_radius:>2}',
-        ])
+                winner_str = f"{winner.gui_label} won!"
+            status = f"GAME OVER : {winner_str}"
+        return "\n".join(
+            [
+                status,
+                "",
+                f"Step:{state.step_count:^5}Turn:{state.turn_count:^4}"
+                f"Round:{state.round_count:^3}RoD: {state.death_radius:>2}",
+            ]
+        )
 
     def _get_last_action_str(self, state_index: int) -> str:
         state = self.history[state_index]
         if state.step_count == 0:
-            last_step_str = '[i]New game[/i]'
-            last_action_str = f'[i]Started new game[/i]'
+            last_step_str = "[i]New game[/i]"
+            last_action_str = "[i]Started new game[/i]"
         else:
-            last_state = self.history[state_index-1]
-            last_step_str = f'[i]{self.get_state_str(last_state).capitalize()}[/i]'
+            last_state = self.history[state_index - 1]
+            last_step_str = f"[i]{self.get_state_str(last_state).capitalize()}[/i]"
             if last_state.end_of_round:
-                last_action_str = f'[i]Started round {state.round_count}[/i]'
+                last_action_str = f"[i]Started round {state.round_count}[/i]"
             else:
-                last_action_str = f'{state.last_action}'
+                last_action_str = f"{state.last_action}"
                 if not state.is_last_action_legal:
-                    last_action_str = f'[i]ILLEGAL[/i] {last_action_str}'
-        return '\n'.join([
-            f'Last step:   {last_step_str}',
-            f'Last action: {last_action_str}',
-        ])
+                    last_action_str = f"[i]ILLEGAL[/i] {last_action_str}"
+        return "\n".join(
+            [
+                f"Last step:   {last_step_str}",
+                f"Last action: {last_action_str}",
+            ]
+        )
 
     def _get_turn_order_str(self, state_index: int) -> str:
         state = self.history[state_index]
         unit_strs = [
-            '____________ Current turn ____________',
+            "____________ Current turn ____________",
         ]
         if state.current_unit is None:
-            r = f'{state.round_count:>2} -> {state.round_count+1:>2}'
-            unit_strs.append(f'            NEW ROUND {r}')
+            r = f"{state.round_count:>2} -> {state.round_count+1:>2}"
+            unit_strs.append(f"            NEW ROUND {r}")
         else:
-            unit_strs.append(f'{self.get_unit_str(state.current_unit, state_index)}')
-            unit_strs.append('\n________ Next turns in round _________')
-        unit_strs.extend(self.get_unit_str(unit_id, state_index) for unit_id in state.round_remaining_turns[1:])
-        unit_strs.append('\n________ Awaiting next round _________')
-        unit_strs.extend(self.get_unit_str(unit_id, state_index) for unit_id in state.next_round_order if unit_id in state.round_done_turns)
-        unit_strs.append('\n______________ Dead __________________')
-        unit_strs.extend(self.get_unit_str(unit_id, state_index) for unit_id in reversed(state.death_order))
-        return '\n'.join(unit_strs)
+            unit_strs.append(f"{self.get_unit_str(state.current_unit, state_index)}")
+            unit_strs.append("\n________ Next turns in round _________")
+        unit_strs.extend(
+            self.get_unit_str(unit_id, state_index)
+            for unit_id in state.round_remaining_turns[1:]
+        )
+        unit_strs.append("\n________ Awaiting next round _________")
+        unit_strs.extend(
+            self.get_unit_str(unit_id, state_index)
+            for unit_id in state.next_round_order
+            if unit_id in state.round_done_turns
+        )
+        unit_strs.append("\n______________ Dead __________________")
+        unit_strs.extend(
+            self.get_unit_str(unit_id, state_index)
+            for unit_id in reversed(state.death_order)
+        )
+        return "\n".join(unit_strs)
 
     def get_unit_str(self, unit_id: int, state_index: Optional[int] = None) -> str:
         """A single line string with info on a unit."""
         state = self.replay_state if state_index is None else self.history[state_index]
         bot = self.bots[unit_id]
-        name_label = f'{bot.gui_label[:20]:<20}'
+        name_label = f"{bot.gui_label[:20]:<20}"
         alive = state.alive_mask[unit_id]
         if not alive:
-            return f'[s]{name_label}[/s] died @ step #{state.casualties[unit_id]:^4}'
+            return f"[s]{name_label}[/s] died @ step #{state.casualties[unit_id]:^4}"
         ap = round(state.ap[unit_id])
         ap_spent = round(state.round_ap_spent[unit_id])
-        return f'{name_label}  {ap:>3} AP {ap_spent:>3} used'
+        return f"{name_label}  {ap:>3} AP {ap_spent:>3} used"
 
     # Other
     def toggle_autoplay(self, set_to: Optional[bool] = None):
-        """Toggles `BattleManager.autoplay`."""
+        """Toggles autoplay."""
         if self.replay_state.game_over:
             self.autoplay = False
             return
@@ -266,13 +295,13 @@ class BattleManager(Battle, BattleAPI):
             set_to = not self.autoplay
         self.autoplay = set_to
         self.__last_step = ping()
-        self.logger(f'Auto playing...' if self.autoplay else f'Paused autoplay...')
+        self.logger("Auto playing..." if self.autoplay else "Paused autoplay...")
 
     def set_step_rate(self, step_rate: float):
-        """The step_rate determines how many steps to play at most per second
-        during autoplay.
+        """Determines how many steps to play at most per second during autoplay.
 
-        In practice, this will be limited by FPS and blocking time of bots."""
+        In practice, this will be limited by FPS and blocking time of bots.
+        """
         assert 0 < step_rate
         self.step_interval_ms = 1000 / step_rate
         self.__last_step = ping()
@@ -293,10 +322,10 @@ class BattleManager(Battle, BattleAPI):
         current_uid = self.replay_state.current_unit
         if current_uid is not None:
             pos = self.replay_state.positions[current_uid]
-            self.add_vfx('highlight', pos, steps=1)
+            self.add_vfx("highlight", pos, steps=1)
 
     def toggle_coords(self, set_to: Optional[bool] = None):
-        """Toggle whether to show coordinates on tiles (for `BattleManager.get_gui_tile_info`)."""
+        """Toggle whether to show coordinates on tiles."""
         if set_to is None:
             set_to = not self.show_coords
         self.show_coords = set_to
@@ -304,8 +333,8 @@ class BattleManager(Battle, BattleAPI):
     def set_panel_mode(self, set_to: Optional[PanelMode] = None):
         """Sets the info panel mode. One of: 'turns', 'timers'. Default: 'turns'."""
         if set_to is None:
-            set_to = 'turns'
-        assert set_to in ['turns', 'timers']
+            set_to = "turns"
+        assert set_to in ["turns", "timers"]
         self.__panel_mode = set_to
 
     # GUI API
@@ -332,32 +361,54 @@ class BattleManager(Battle, BattleAPI):
         return self.replay_state.step_count
 
     def get_controls(self) -> ControlMenu:
-        """Returns `api.gui.Control`s for playing, autoplaying, setting replay index, and more.
+        """Return controls for playing, autoplaying, replay index, and more.
 
         Overrides: `api.gui.BattleAPI.get_controls`.
         """
         return {
-            'Battle': [
-                Control('Autoplay', self.toggle_autoplay, 'spacebar'),
-                Control('Preplay <!!!>', self.preplay, '^+ p'),
-                *[Control(f'Set speed {r}', lambda r=r: self.set_step_rate(r), f'{i + 1}') for i, r in
-                  enumerate(STEP_RATES[:5])],
+            "Battle": [
+                Control("Autoplay", self.toggle_autoplay, "spacebar"),
+                Control("Preplay <!!!>", self.preplay, "^+ p"),
+                *[
+                    Control(
+                        f"Set speed {r}", lambda r=r: self.set_step_rate(r), f"{i + 1}"
+                    )
+                    for i, r in enumerate(STEP_RATES[:5])
+                ],
             ],
-            'Replay': [
-                Control('Battle start', lambda: self.set_replay_index(0), '^+ left'),
-                Control('Battle end <!!!>', lambda: self.play_all(), '^+ right'),
-                Control('Live', lambda: self.set_replay_index(), '^ l'),
-                Control('Next step', lambda: self.set_replay_index(index_delta=1), 'right'),
-                Control('Prev step', lambda: self.set_replay_index(index_delta=-1), 'left'),
-                Control('+10 steps', lambda: self.set_replay_index(index_delta=10), '+ right'),
-                Control('-10 steps', lambda: self.set_replay_index(index_delta=-10), '+ left'),
-                Control('Next round', lambda: self.set_to_next_round(), '^ right'),
-                Control('Prev round', lambda: self.set_to_next_round(backwards=True), '^ left'),
+            "Replay": [
+                Control("Battle start", lambda: self.set_replay_index(0), "^+ left"),
+                Control("Battle end <!!!>", lambda: self.play_all(), "^+ right"),
+                Control("Live", lambda: self.set_replay_index(), "^ l"),
+                Control(
+                    "Next step", lambda: self.set_replay_index(index_delta=1), "right"
+                ),
+                Control(
+                    "Prev step", lambda: self.set_replay_index(index_delta=-1), "left"
+                ),
+                Control(
+                    "+10 steps",
+                    lambda: self.set_replay_index(index_delta=10),
+                    "+ right",
+                ),
+                Control(
+                    "-10 steps",
+                    lambda: self.set_replay_index(index_delta=-10),
+                    "+ left",
+                ),
+                Control("Next round", lambda: self.set_to_next_round(), "^ right"),
+                Control(
+                    "Prev round",
+                    lambda: self.set_to_next_round(backwards=True),
+                    "^ left",
+                ),
             ],
-            'Display': [
-                Control('Turn order', lambda: self.set_panel_mode('turns'), '^ o'),
-                Control('Calculation timers', lambda: self.set_panel_mode('timers'), '^ p'),
-                Control('Map coordinates', self.toggle_coords, '^+ d'),
+            "Display": [
+                Control("Turn order", lambda: self.set_panel_mode("turns"), "^ o"),
+                Control(
+                    "Calculation timers", lambda: self.set_panel_mode("timers"), "^ p"
+                ),
+                Control("Map coordinates", self.toggle_coords, "^+ d"),
             ],
         }
 
@@ -373,7 +424,9 @@ class BattleManager(Battle, BattleAPI):
         return self.get_info_str(self.replay_index)
 
     def get_info_panel_color(self) -> tuple[float, float, float]:
-        """Green-ish color when live, blue-ish color when in `BattleManager.replay_mode`.
+        """Green-ish color when live, blue-ish color when in replay mode.
+
+        See: `BattleManager.replay_mode`.
 
         Overrides: `api.gui.BattleAPI.get_info_panel_color`.
         """
@@ -385,7 +438,9 @@ class BattleManager(Battle, BattleAPI):
 
     # Tile map
     def get_gui_tile_info(self, hex: Hexagon) -> Tile:
-        """Returns a `api.gui.Tile` for *hex* at the current `BattleManager.replay_state`.
+        """Return a `api.gui.Tile` for *hex* at the current replay state.
+
+        See: `BattleManager.replay_state`
 
         Overrides: `api.gui.BattleAPI.get_gui_tile_info`.
         """
@@ -400,7 +455,7 @@ class BattleManager(Battle, BattleAPI):
         )
 
         if self.show_coords:
-            text = f'{hex.x},{hex.y}'
+            text = f"{hex.x},{hex.y}"
 
         return Tile(
             tile=tile,
@@ -426,25 +481,25 @@ class BattleManager(Battle, BattleAPI):
         Overrides: `api.gui.BattleAPI.handle_hex_click`.
         """
         click = f"{mods} {button}"
-        self.logger(f'Clicked {click} on: {hex}')
+        self.logger(f"Clicked {click} on: {hex}")
         # Normal click and Control click: info
-        if mods == '' or mods == '^':
-            if button == 'left':
+        if mods == "" or mods == "^":
+            if button == "left":
                 # Show targets of a plate
                 p = self.replay_state.get_plate(hex)
                 if p:
                     for t in p.targets:
-                        self.add_vfx(f'highlight', t, steps=1)
+                        self.add_vfx("highlight", t, steps=1)
         # Shift click: mark
-        elif mods == '+':
-            vfx = {'right': 'red', 'middle': 'blue'}.get(button, 'green')
-            self.add_vfx(f'mark-{vfx}', hex, steps=1)
+        elif mods == "+":
+            vfx = {"right": "red", "middle": "blue"}.get(button, "green")
+            self.add_vfx(f"mark-{vfx}", hex, steps=1)
         # Alt click: bot debug
-        elif click == '! left':
+        elif click == "! left":
             if hex in self.replay_state.positions:
                 unit_id = self.replay_state.positions.index(hex)
                 vfx_seq = self.bots[unit_id].gui_click(hex, button)
                 if vfx_seq is not None:
                     for vfx_kwargs in vfx_seq:
-                        vfx_kwargs['steps'] = 1
+                        vfx_kwargs["steps"] = 1
                         self.add_vfx(**vfx_kwargs)

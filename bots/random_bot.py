@@ -1,17 +1,20 @@
-# Maintainer: ninja
+"""Random bots."""
 import random
 import time
 from api.bots import BaseBot, center_distance
-from api.actions import Move, Push, Jump
+from api.actions import Move, Jump
 
 
 class RandomBot(BaseBot):
-    NAME = 'random'
+    """A bot that randomly chooses their next action."""
+
+    NAME = "random"
     TESTING_ONLY = True
     COLOR_INDEX = 5
-    SPRITE = 'ellipse'
+    SPRITE = "ellipse"
 
     def poll_action(self, state):
+        """Overrides `bots.BaseBot.poll_action`."""
         pos = state.positions[self.id]
         action = self.get_target(pos)
         attempts = 5
@@ -21,30 +24,41 @@ class RandomBot(BaseBot):
         return action
 
     def safe_target(self, target, state):
-        return all([
-            target not in state.pits,
-            center_distance(target) < state.death_radius,
-            ])
+        """Checks if the target is "safe" to move to."""
+        return all(
+            [
+                target not in state.pits,
+                center_distance(target) < state.death_radius,
+            ]
+        )
 
     def get_target(self, pos):
-        return random.choice([
-            Move(random.choice(pos.neighbors)),
-            Jump(random.choice(pos.ring(radius=2))),
-        ])
+        """Return a random target to move to."""
+        return random.choice(
+            [
+                Move(random.choice(pos.neighbors)),
+                Jump(random.choice(pos.ring(radius=2))),
+            ]
+        )
 
 
 class SleeperBot(RandomBot):
+    """A bot that takes several seconds to poll for action."""
+
     NAME = "sleeper"
     TESTING_ONLY = True
     sleep_time = 3
 
     def poll_action(self, state):
+        """Overrides `bots.BaseBot.poll_action`."""
         time.sleep(self.sleep_time)
         return super().poll_action(state)
 
 
 class SnoozerBot(SleeperBot):
-    NAME = 'snoozer'
+    """A bot that takes a significant fraction of a seconds to poll for action."""
+
+    NAME = "snoozer"
     sleep_time = 0.2
 
 

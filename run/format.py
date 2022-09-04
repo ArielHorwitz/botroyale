@@ -12,5 +12,5 @@ def run():
 
     See `util.code.format_source_code`.
     """
-    string_normalization = 'nostring' not in MAIN_ARGS.opargs
+    string_normalization = "nostring" not in MAIN_ARGS.opargs
     format_source_code(string_normalization=string_normalization)

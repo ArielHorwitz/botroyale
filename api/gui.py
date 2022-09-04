@@ -1,9 +1,17 @@
-"""
-A collection of classes used by the GUI.
+"""A collection of classes used by the GUI.
 
-All classes in this module are the object types that the GUI will request when calling certain methods of `api.gui.GameAPI` and `api.gui.BattleAPI`.
+All classes in this module are the object types that the GUI will request when
+calling certain methods of `api.gui.GameAPI` and `api.gui.BattleAPI`.
 """
-from typing import Optional, Union, Literal, Sequence, NamedTuple, Any, Callable
+from typing import (
+    Optional,
+    Union,
+    Literal,
+    Sequence,
+    NamedTuple,
+    Any,
+    Callable,
+)
 from collections import deque
 from itertools import chain
 from dataclasses import dataclass, asdict as dataclass_asdict
@@ -16,13 +24,17 @@ PALETTE = (
     (0.68, 0.85, 0.88),  # dark cyan
     (0.62, 0.63, 0.76),  # purple blue
     (0.24, 0.32, 0.48),  # dark blue
-    (0.86, 0.60, 0.35),   # orange
-    )
-PALETTE_BG = tuple(tuple(_/2 for _ in c) for c in PALETTE)
+    (0.86, 0.60, 0.35),  # orange
+)
+PALETTE_BG = tuple(tuple(_ / 2 for _ in c) for c in PALETTE)
 
 
 class Control(NamedTuple):
-    """Represents a control the user may use to invoke a callback (by button or hotkey)."""
+    """Represents a control the user may use to invoke a callback.
+
+    Used for buttons and hotkeys.
+    """
+
     label: str
     """Name of the control function (e.g. 'Start new battle')."""
     callback: Callable[[], None]
@@ -35,7 +47,9 @@ class Control(NamedTuple):
 
     `f'{key}'` or `f'{mods} {key}'`
 
-    Where *key* is the keyboard character and *mods* is a string with a combination of `'^'` for control, `'+'` for shift, `'!'` for alt, and `'#'` for super (winkey).
+    Where *key* is the keyboard character and *mods* is a string with a
+    combination of `'^'` for control, `'+'` for shift, `'!'` for alt, and
+    `'#'` for super (winkey).
 
     E.g.
 
@@ -54,8 +68,10 @@ ControlMenu = dict[str, list[Control]]
 
 
 class ControlMenu_:
-    """
-    A type alias for `dict[str, list[Control]]` - a dictionary mapping a menu name to a list of `Control` objects for that menu.
+    """A type alias for `dict[str, list[Control]]`.
+
+    Represents a dictionary mapping a menu name to a list of `Control` objects
+    for that menu.
 
     See also: `combine_control_menus`.
 
@@ -73,14 +89,17 @@ class ControlMenu_:
         }
     ```
 
-    Documented under `ControlMenu_` instead of `ControlMenu` because assigning docstrings to nested type aliases will break the docs.
+    .. admonition:: Note
+        Documented under `ControlMenu_` instead of `ControlMenu` because assigning
+            docstrings to nested type aliases will break the docs.
     """
 
 
-def combine_control_menus(control_menu1: ControlMenu, control_menu2: ControlMenu) -> ControlMenu:
-    """Returns a ControlMenu with items from *control_menu1* and *control_menu2*.
-
-    See `ControlMenu_`."""
+def combine_control_menus(
+    control_menu1: ControlMenu,
+    control_menu2: ControlMenu,
+) -> ControlMenu:
+    """Return a `ControlMenu_` with items from *control_menu1* and *control_menu2*."""
     new_control_menu = {}
     for menu_name, controls in chain(control_menu1.items(), control_menu2.items()):
         if menu_name in new_control_menu:
@@ -92,8 +111,7 @@ def combine_control_menus(control_menu1: ControlMenu, control_menu2: ControlMenu
 
 @dataclass
 class InputWidget:
-    """
-    Represents an input widget in the GUI.
+    """Represents an input widget in the GUI.
 
     Widget types include:
 
@@ -104,9 +122,10 @@ class InputWidget:
     * 'slider' - a slider (float value)
     * 'divider' - like *spacer* but creates a new section
     """
+
     label: str
     """Text to place near the widget."""
-    type: Literal['spacer', 'toggle', 'text', 'select', 'slider', 'divider']
+    type: Literal["spacer", "toggle", "text", "select", "slider", "divider"]
     """Type of widget."""
     default: Any = None
     """Starting value of the widget (default: None)"""
@@ -121,20 +140,21 @@ class InputWidget:
     """List of strings, required only by "select" widgets."""
 
     def __post_init__(self):
-        if self.type == 'select':
+        """Initialize the dataclass."""
+        if self.type == "select":
             assert self.options
 
         if self.sendto is None:
             self.sendto = self.label
 
         if self.default is None:
-            if self.type == 'toggle':
+            if self.type == "toggle":
                 self.default = False
-            elif self.type == 'text':
-                self.default = ''
-            elif self.type == 'select':
+            elif self.type == "text":
+                self.default = ""
+            elif self.type == "select":
                 self.default = self.options[0]
-            elif self.type == 'slider':
+            elif self.type == "slider":
                 self.default = 0.0
 
 
@@ -157,6 +177,7 @@ class Tile:
 @dataclass
 class VFX:
     """Represents a visual effect to be drawn on the tilemap."""
+
     name: str
     """Name of vfx image (with .png extension)"""
     hex: Hexagon
@@ -171,17 +192,19 @@ class VFX:
     """"real-time time after which the vfx expires"""
 
     def asdict(self):
+        """Equivalent to passing self to `dataclasses.dataclass_asdict`."""
         return dataclass_asdict(self)
 
 
 class BattleAPI:
-    """
-    Base class for the API between the GUI's main menu and the logic.
+    """Base class for the API between the GUI's main menu and the logic.
 
-    Used to draw and control the battle. Battles are created using the `GameAPI.get_new_battle` method, which returns a `BattleAPI` object.
+    Used to draw and control the battle. Battles are created using the
+    `GameAPI.get_new_battle` method, which returns a `BattleAPI` object.
     """
 
     def __init__(self):
+        """Initialize the class."""
         self.__vfx_queue = deque()
         self.__clear_vfx_flag = False
 
@@ -195,16 +218,21 @@ class BattleAPI:
         return 0
 
     def get_controls(self) -> ControlMenu:
-        """Returns a ControlMenu (dictionary of menu names and Control lists) for buttons and hotkeys in GUI."""
-        return {'Battle': [
-            Control('Foo', lambda: glogger('foo'), 'f'),
-            Control('Bar', lambda: glogger('bar'), 'b'),
-            ]}
+        """Returns a `ControlMenu_` for buttons and hotkeys in GUI."""
+        return {
+            "Battle": [
+                Control("Foo", lambda: glogger("foo"), "f"),
+                Control("Bar", lambda: glogger("bar"), "b"),
+            ]
+        }
 
     # Info panel
     def get_info_panel_text(self) -> str:
-        """Multiline stringt to display in the info panel (e.g. summary of the current game state)."""
-        return 'Panel text placeholder'
+        """Multiline string to display in the info panel.
+
+        Used for displaying a summary of the current game state.
+        """
+        return "Panel text placeholder"
 
     def get_info_panel_color(self) -> tuple[float, float, float]:
         """Color of the info panel in GUI."""
@@ -212,21 +240,23 @@ class BattleAPI:
 
     # Tile map
     def get_gui_tile_info(self, hex: Hexagon) -> Tile:
-        """Called by the GUI for every hex currently visible on the map to determine what to draw."""
+        """Returns a `Tile` representing how to display *hex* in the GUI.
+
+        Called by the GUI for every hex currently visible on the map.
+        """
         return Tile(
             bg=(0.1, 0.1, 0.1),
             color=(0.25, 0.25, 0.25),
-            sprite='hex',
-            text='' if hex != ORIGIN else 'Origin',
-            )
+            sprite="hex",
+            text="" if hex != ORIGIN else "Origin",
+        )
 
     def get_map_size_hint(self) -> Union[int, float]:
         """The radius of the map size for the GUI to display."""
         return 5
 
     def handle_hex_click(self, hex: Hexagon, button: str, mods: str):
-        """
-        Called when a tile is clicked on in the GUI.
+        """Called when a tile is clicked on in the GUI.
 
         Args:
             hex: The hex that was clicked.
@@ -239,27 +269,26 @@ class BattleAPI:
                 - `!` alt
                 - `#` meta ("win" key)
                 - `^+` control + shift
-
-        .. admonition:: New in v1.1
-            Added the *mods* argument
         """
-        glogger(f'Clicked {button} on: {hex}')
-        if button == 'left':
-            vfx = 'mark-green'
-        elif button == 'right':
-            vfx = 'mark-red'
+        glogger(f"Clicked {button} on: {hex}")
+        if button == "left":
+            vfx = "mark-green"
+        elif button == "right":
+            vfx = "mark-red"
         else:
-            vfx = 'mark-blue'
+            vfx = "mark-blue"
         self.add_vfx(vfx, hex)
 
     # VFX
-    def add_vfx(self, name: str, hex: Hexagon,
-            direction: Optional[Hexagon] = None,
-            steps: int = 1,
-            expire_seconds: Optional[float] = None,
-            ):
-        """
-        Add a single vfx to the queue.
+    def add_vfx(
+        self,
+        name: str,
+        hex: Hexagon,
+        direction: Optional[Hexagon] = None,
+        steps: int = 1,
+        expire_seconds: Optional[float] = None,
+    ):
+        """Add a single vfx to the queue.
 
         See `VFX` for details on the arguments.
         """
@@ -269,17 +298,24 @@ class BattleAPI:
             assert isinstance(direction, Hexagon)
         start_step = self.get_time()
         expire_step = start_step + steps
-        self.__vfx_queue.append(VFX(
-            name, hex, direction,
-            start_step, expire_step, expire_seconds,
-            ))
+        self.__vfx_queue.append(
+            VFX(
+                name,
+                hex,
+                direction,
+                start_step,
+                expire_step,
+                expire_seconds,
+            )
+        )
 
     def clear_vfx_flag(self) -> bool:
-        """
-        Called by the GUI to check if existing VFX need to be cleared.
+        """Called by the GUI to check if existing VFX need to be cleared.
 
         Returns:
-            False, unless the flag has been raised (by calling `BattleAPI.clear_vfx` with `clear_existing=True`) -- in which case this method will drop the flag and return True.
+            False, unless the flag has been raised (by calling
+                `BattleAPI.clear_vfx` with `clear_existing=True`) -- in which
+                case this method will drop the flag and return True.
         """
         if self.__clear_vfx_flag:
             self.__clear_vfx_flag = False
@@ -306,64 +342,57 @@ class BattleAPI:
 
 
 class GameAPI:
-    """
-    Base class for the API between the GUI's main menu and the logic.
+    """Base class for the API between the GUI's main menu and the logic.
 
     Used to populate the main menu and start battles. Battles are created using
     the `GameAPI.get_new_battle` method, which returns a `BattleAPI` object.
     """
 
     def get_new_battle(self, menu_values: dict[str, Any]) -> Union[BattleAPI, None]:
-        """
-        Called by the GUI when the user requests to start a new battle.
+        """Called by the GUI when the user requests to start a new battle.
 
         Args:
-            menu_values: Dictionary that maps each InputWidget's `sendto` name to the widget's value. See `GameAPI.get_menu_widgets` and `InputWidget`.
+            menu_values: Dictionary that maps each InputWidget's `sendto` name
+                to the widget's value. See `GameAPI.get_menu_widgets` and
+                `InputWidget`.
 
         Returns:
             `BattleAPI` (or None if we decide not to start a new battle).
         """
         return BattleAPI()
 
-    def get_menu_title(self) -> str:
-        """Returns the string to be displayed in the menu info panel.
-
-        .. deprecated: 1.0. Please use `GameAPI.get_info_panel_text`.
-        """
-        return self.get_info_panel_text()
-
     def get_info_panel_text(self) -> str:
         """Returns the string to be displayed in the menu info panel."""
-        return 'Main Menu'
+        return "Main Menu"
 
     def get_menu_widgets(self) -> list[InputWidget]:
-        """Returns a list of InputWidgets to populate the main menu. The values
-        of these widgets are passed to get_new_battle."""
+        """Returns a list of InputWidgets to populate the main menu.
+
+        The values of these widgets are passed to get_new_battle.
+        """
         return []
 
     def get_controls(self) -> ControlMenu:
-        """Returns a ControlMenu (dictionary of menu names and Control lists)
-        for buttons and hotkeys in GUI."""
+        """Returns a `ControlMenu_` for buttons and hotkeys in GUI."""
         return {}
 
     def handle_menu_widget(
-            self, widgets: list[str], menu_values: dict[str, Any]
-        ) -> bool:
-        """Called by the GUI when the user interacts with the `InputWidget`s
-        with `sendto` names of *widgets*.
+        self,
+        widgets: list[str],
+        menu_values: dict[str, Any],
+    ) -> bool:
+        """Called by the GUI when the user interacts with `InputWidget`s.
 
         This will be called without arguments if the user refreshes the menu.
 
         Args:
             widgets: The `sendto` names of the widgets that were interacted with.
-            menu_values: Dictionary that maps each InputWidget's `sendto` name to the widget's value. See `GameAPI.get_menu_widgets` and `InputWidget`.
+            menu_values: Dictionary that maps each InputWidget's `sendto` name
+                to the widget's value. See `GameAPI.get_menu_widgets` and
+                `InputWidget`.
 
         Returns:
-            True if we wish the GUI to reset the main menu, by calling `GameAPI.get_info_panel_text` and `GameAPI.get_menu_widgets`.
+            True if we wish the GUI to reset the main menu, by calling
+                `GameAPI.get_info_panel_text` and `GameAPI.get_menu_widgets`.
         """
         return False
-
-
-__pdoc__ = {
-    'VFX.asdict': False,
-    }

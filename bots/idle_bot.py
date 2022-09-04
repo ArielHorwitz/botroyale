@@ -1,20 +1,26 @@
+"""Idle bots."""
 # Maintainer: ninja
 from bots import BaseBot
 from api.actions import Idle
 
 
 class IdleBot(BaseBot):
-    NAME = 'idle'
+    """A bot that does nothing."""
+
+    NAME = "idle"
     TESTING_ONLY = True
     COLOR_INDEX = 7
-    SPRITE = 'ellipse'
+    SPRITE = "ellipse"
 
     def poll_action(self, state):
+        """Overrides `bots.BaseBot.poll_action`."""
         return Idle()
 
 
 class DummyBot(IdleBot):
-    NAME = 'dummy'
+    """A bot that does nothing."""
+
+    NAME = "dummy"
 
 
 BOTS = [IdleBot, DummyBot]

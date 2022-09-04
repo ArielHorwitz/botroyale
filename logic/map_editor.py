@@ -1,28 +1,30 @@
-"""
-Home of `logic.map_editor.MapEditor`.
-"""
+"""Home of `logic.map_editor.MapEditor`."""
 from enum import IntEnum
-from typing import Optional, Any, Literal
-from collections import deque
+from typing import Optional
 from logic.plate import Plate, PlateType
-from util.hexagon import Hexagon, ORIGIN
+from util.hexagon import Hexagon
 from logic.maps import MapCreator
 from api.gui import (
-    GameAPI as BaseGameAPI, BattleAPI,
-    Tile, VFX, InputWidget, Control, ControlMenu,
-    )
+    BattleAPI,
+    Tile,
+    Control,
+    ControlMenu,
+)
 from logic import get_tile_info, get_tile_info_unit, PLATE_RESET_COLOR
 
 
 __pdoc__ = {}
-BrushType = IntEnum('BrushType', [
-    'SPAWN',
-    'PIT',
-    'WALL',
-    *[p.name for p in PlateType],
-])
-__pdoc__['BrushType'] = False
-BRUSH_HOTKEYS = 'qweasdzxc'
+BrushType = IntEnum(
+    "BrushType",
+    [
+        "SPAWN",
+        "PIT",
+        "WALL",
+        *[p.name for p in PlateType],
+    ],
+)
+__pdoc__["BrushType"] = False
+BRUSH_HOTKEYS = "qweasdzxc"
 BRUSH_COLORS = {
     BrushType.PIT: (0.1, 0.1, 0.1),
     BrushType.WALL: (0.3, 0.3, 0.3),
@@ -40,17 +42,20 @@ class MapEditor(MapCreator, BattleAPI):
     """
 
     """See: `logic.battle_manager.BattleManager.UNIT_COLORS`"""
-    HELP_STR = '\n'.join([
-        'Left click to use brush, right click to erase.',
-        '',
-        'Use middle mouse or press "z", "x", and "c"',
-        'to switch brushes.',
-        '',
-        'Mirror Mode mirrors every click, such that the',
-        'map may be fair and symmetrical.',
-        ])
+    HELP_STR = "\n".join(
+        [
+            "Left click to use brush, right click to erase.",
+            "",
+            'Use middle mouse or press "z", "x", and "c"',
+            "to switch brushes.",
+            "",
+            "Mirror Mode mirrors every click, such that the",
+            "map may be fair and symmetrical.",
+        ]
+    )
 
     def __init__(self, load_map: Optional[str] = None):
+        """Initialize the class."""
         BattleAPI.__init__(self)
         MapCreator.__init__(self, mirror_mode=6)
         if load_map is not None:
@@ -69,31 +74,39 @@ class MapEditor(MapCreator, BattleAPI):
         elif self.brush == BrushType.SPAWN:
             self.add_spawn(hex)
         elif self.brush == BrushType.DEATH_RADIUS_TRAP:
-            self.add_plate(Plate(
-                hex.cube,
-                plate_type=PlateType.DEATH_RADIUS_TRAP,
-                pressure=self.plate_pressure,
-                pressure_reset=self.plate_pressure_reset,
-                targets=self.selected_tiles,
-            ))
+            self.add_plate(
+                Plate(
+                    hex.cube,
+                    plate_type=PlateType.DEATH_RADIUS_TRAP,
+                    pressure=self.plate_pressure,
+                    pressure_reset=self.plate_pressure_reset,
+                    targets=self.selected_tiles,
+                )
+            )
         elif self.brush == BrushType.PIT_TRAP:
-            self.add_plate(Plate(
-                hex.cube,
-                plate_type=PlateType.PIT_TRAP,
-                pressure=self.plate_pressure,
-                pressure_reset=self.plate_pressure_reset,
-                targets=self.selected_tiles if len(self.selected_tiles) > 0 else {hex},
-            ))
+            self.add_plate(
+                Plate(
+                    hex.cube,
+                    plate_type=PlateType.PIT_TRAP,
+                    pressure=self.plate_pressure,
+                    pressure_reset=self.plate_pressure_reset,
+                    targets=self.selected_tiles
+                    if len(self.selected_tiles) > 0
+                    else {hex},
+                )
+            )
         elif self.brush == BrushType.WALL_TRAP:
-            self.add_plate(Plate(
-                hex.cube,
-                plate_type=PlateType.WALL_TRAP,
-                pressure=self.plate_pressure,
-                pressure_reset=self.plate_pressure_reset,
-                targets=self.selected_tiles,
-            ))
+            self.add_plate(
+                Plate(
+                    hex.cube,
+                    plate_type=PlateType.WALL_TRAP,
+                    pressure=self.plate_pressure,
+                    pressure_reset=self.plate_pressure_reset,
+                    targets=self.selected_tiles,
+                )
+            )
         else:
-            raise ValueError(f'Unknown brush type: {self.brush}')
+            raise ValueError(f"Unknown brush type: {self.brush}")
         self._clear_selected()
 
     def _set_brush(self, set_as: BrushType):
@@ -122,7 +135,7 @@ class MapEditor(MapCreator, BattleAPI):
     def _reset_selected_vfx(self):
         self.clear_vfx()
         for h in self.selected_tiles:
-            self.add_vfx('highlight', h)
+            self.add_vfx("highlight", h)
 
     def _add_pressure(self, delta=1):
         self.plate_pressure += delta
@@ -137,11 +150,13 @@ class MapEditor(MapCreator, BattleAPI):
         self.show_coords = not self.show_coords
 
     def clear_all(self):
+        """Overrides parent method to clear selected tiles as well."""
         super().clear_all()
         self._clear_selected()
 
     # GUI API
     def update(self):
+        """Called by the GUI every frame."""
         assert self.state.round_count == 0
         assert self.state.end_of_round
         if self.state.game_over:
@@ -156,15 +171,23 @@ class MapEditor(MapCreator, BattleAPI):
         Overrides: `api.gui.BattleAPI.get_controls`.
         """
         return {
-            'Editor': [
-                Control('Increase death radius', lambda: self.increment_death_radius(1), '+ ='),
-                Control('Decrease death radius', lambda: self.increment_death_radius(-1), '+ -'),
-                Control('Clear selected', self._clear_selected, '^ c'),
-                Control('Clear all', self.clear_all, '^+ c'),
-                Control('Save', self.save, '^+ s'),
-                Control('Load', self.load, '^+ l'),
-                ],
-            'Brush': [
+            "Editor": [
+                Control(
+                    "Increase death radius",
+                    lambda: self.increment_death_radius(1),
+                    "+ =",
+                ),
+                Control(
+                    "Decrease death radius",
+                    lambda: self.increment_death_radius(-1),
+                    "+ -",
+                ),
+                Control("Clear selected", self._clear_selected, "^ c"),
+                Control("Clear all", self.clear_all, "^+ c"),
+                Control("Save", self.save, "^+ s"),
+                Control("Load", self.load, "^+ l"),
+            ],
+            "Brush": [
                 *[
                     Control(
                         bt.name.capitalize(),
@@ -173,55 +196,60 @@ class MapEditor(MapCreator, BattleAPI):
                     )
                     for i, bt in enumerate(BrushType)
                 ],
-                Control('Toggle brush', lambda: self._toggle_brush(), 'tab'),
-                Control('Add pressure', lambda: self._add_pressure(), 'r'),
-                Control('Reduce pressure', lambda: self._add_pressure(-1), 'f'),
-                Control('Toggle pressure reset', lambda: self._toggle_pressure_reset(), 'v'),
-                ],
-            'Mirror Mode': [
-                Control('Mirror off', lambda: self.set_mirror_mode(1), '1'),
-                Control('Mirror 2', lambda: self.set_mirror_mode(2), '2'),
-                Control('Mirror 3', lambda: self.set_mirror_mode(3), '3'),
-                Control('Mirror 6', lambda: self.set_mirror_mode(6), '4'),
-                ],
-            'Debug': [
-                Control('Map coordinates', self._toggle_coords, '^+ d'),
-                ],
-            }
+                Control("Toggle brush", lambda: self._toggle_brush(), "tab"),
+                Control("Add pressure", lambda: self._add_pressure(), "r"),
+                Control("Reduce pressure", lambda: self._add_pressure(-1), "f"),
+                Control(
+                    "Toggle pressure reset", lambda: self._toggle_pressure_reset(), "v"
+                ),
+            ],
+            "Mirror Mode": [
+                Control("Mirror off", lambda: self.set_mirror_mode(1), "1"),
+                Control("Mirror 2", lambda: self.set_mirror_mode(2), "2"),
+                Control("Mirror 3", lambda: self.set_mirror_mode(3), "3"),
+                Control("Mirror 6", lambda: self.set_mirror_mode(6), "4"),
+            ],
+            "Debug": [
+                Control("Map coordinates", self._toggle_coords, "^+ d"),
+            ],
+        }
 
     def get_info_panel_text(self) -> str:
         """Multiline summary of the map at the current state.
 
         Overrides: `api.gui.BattleAPI.get_info_panel_text`.
         """
-        valid_str = 'Valid map'
+        valid_str = "Valid map"
         if not self.check_valid():
-            valid_str = 'INVALID MAP'
-        return '\n'.join([
-            '___ Map Editor ___',
-            f'{valid_str}¹',
-            '\n',
-            f'Brush:           {self.brush.name.capitalize()}  × {self.mirror_mode} mirrors',
-            f'Selected tiles:  {len(self.selected_tiles)}',
-            '\n',
-            f'Plate pressure:  {self.plate_pressure}',
-            f'Pressure reset:  {self.plate_pressure_reset}',
-            '\n',
-            f'Death radius²    {self.state.death_radius-1}',
-            f'Map size         {self.state.death_radius-2}',
-            f'Spawns (units)   {len(self.state.positions)}',
-            f'Pits             {len(self.state.pits)}',
-            f'Walls            {len(self.state.walls)}',
-            f'Plates           {len(self.state.plates)}',
-            '\n',
-            '¹ "Invalid" usually indicates that a spawn',
-            '       is unfair. Can still be exported.',
-            '² Death radius is shown as on round 1',
-            '\n',
-            '___ Quick Help ___',
-            '',
-            self.HELP_STR,
-            ])
+            valid_str = "INVALID MAP"
+        return "\n".join(
+            [
+                "___ Map Editor ___",
+                f"{valid_str}¹",
+                "\n",
+                f"Brush:           {self.brush.name.capitalize()}  × "
+                f"{self.mirror_mode} mirrors",
+                f"Selected tiles:  {len(self.selected_tiles)}",
+                "\n",
+                f"Plate pressure:  {self.plate_pressure}",
+                f"Pressure reset:  {self.plate_pressure_reset}",
+                "\n",
+                f"Death radius²    {self.state.death_radius-1}",
+                f"Map size         {self.state.death_radius-2}",
+                f"Spawns (units)   {len(self.state.positions)}",
+                f"Pits             {len(self.state.pits)}",
+                f"Walls            {len(self.state.walls)}",
+                f"Plates           {len(self.state.plates)}",
+                "\n",
+                '¹ "Invalid" usually indicates that a spawn',
+                "       is unfair. Can still be exported.",
+                "² Death radius is shown as on round 1",
+                "\n",
+                "___ Quick Help ___",
+                "",
+                self.HELP_STR,
+            ]
+        )
 
     def get_info_panel_color(self) -> tuple[float, float, float]:
         """Color based on the current `MapCreator.brush`.
@@ -244,7 +272,7 @@ class MapEditor(MapCreator, BattleAPI):
         sprite, color, text = get_tile_info_unit(hex, state)
 
         if self.show_coords:
-            text = f'{hex.x},{hex.y}'
+            text = f"{hex.x},{hex.y}"
 
         return Tile(
             tile=tile,
@@ -257,11 +285,12 @@ class MapEditor(MapCreator, BattleAPI):
     def get_map_size_hint(self) -> float:
         """Tracks the `logic.state.State.death_radius`.
 
-        The death radius is subtracted by one (and a bit) to "skip" the 0th round and show it as it is in round 1.
+        The death radius is subtracted by one (and a bit) to "skip" the 0th
+        round and show it as it is in round 1.
 
         Overrides: `api.gui.BattleAPI.get_map_size_hint`.
         """
-        return self.state.death_radius-1.5
+        return self.state.death_radius - 1.5
 
     def handle_hex_click(self, hex: Hexagon, button: str, mods: str):
         """Handles a tile being clicked on in the tilemap.
@@ -269,20 +298,20 @@ class MapEditor(MapCreator, BattleAPI):
         Overrides: `api.gui.BattleAPI.handle_hex_click`.
         """
         # Normal click: modify
-        if mods == '':
-            if button == 'left':
+        if mods == "":
+            if button == "left":
                 self._apply_brush(hex)
-            elif button == 'right':
+            elif button == "right":
                 self.clear_contents(hex, mirrored=True)
         # Control click: info
-        elif mods == '^':
-            if button == 'left':
+        elif mods == "^":
+            if button == "left":
                 # Show targets of a plate
                 p = self.state.get_plate(hex)
                 if p:
                     for t in p.targets:
-                        self.add_vfx(f'highlight', t, steps=1)
+                        self.add_vfx("highlight", t, steps=1)
         # Shift click: select
-        elif mods == '+':
-            if button == 'left':
+        elif mods == "+":
+            if button == "left":
                 self._toggle_selected(hex)
