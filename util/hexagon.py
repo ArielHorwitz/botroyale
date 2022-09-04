@@ -132,17 +132,19 @@ class Hexagon:
     # Operations
     def __add__(self, other: 'Hexagon') -> 'Hexagon':
         """Cube addition of hexagons. Can be used like vectors."""
-        assert type(other) is type(self)
+        if not isinstance(other, type(self)):
+            raise ValueError(f"Cannot add {type(other)} with {type(self)}")
         return Hexagon(self.q+other.q, self.r+other.r, self.s+other.s)
 
     def __sub__(self, other: 'Hexagon') -> 'Hexagon':
         """Cube subtraction of hexagons. Can be used like vectors."""
-        assert type(other) is type(self)
+        if not isinstance(other, type(self)):
+            raise ValueError(f"Cannot subtract {type(other)} with {type(self)}")
         return Hexagon(self.q-other.q, self.r-other.r, self.s-other.s)
 
     def __eq__(self, other: 'Hexagon') -> bool:
         """Returns if self and other share coordinates."""
-        if not type(other) is type(self):
+        if not isinstance(other, type(self)):
             return False
         return self.cube == other.cube
 
