@@ -1,0 +1,33 @@
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "botroyale"
+version = "0.0.1"
+readme = "README.md"
+requires-python = ">=3.9"
+classifiers = [
+  "Requires-Python: >=3.9",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.9",
+  "Topic :: Games/Entertainment :: Turn Based Strategy",
+  "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+dependencies = [
+  "Kivy==2.1.0",
+  "numpy==1.22.4",
+]
+
+[project.optional-dependencies]
+dev = [
+  "pdoc3==0.10.0",
+  "black==22.6.0",
+  "flake8==5.0.4",
+]
+
+[tool.setuptools]
+packages = ["botroyale"]
+
+[project.scripts]
+botroyale = "botroyale.run:run_script"

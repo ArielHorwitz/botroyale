@@ -1,7 +1,7 @@
 # Bot Royale
 A battle royale for bots.
 
-![Preview GIF](assets/preview.gif)
+![Preview GIF](botroyale/assets/preview.gif)
 
 <br>
 
@@ -15,32 +15,30 @@ A battle royale for bots.
 
 It is recommended to use a [virtual environment](https://docs.python.org/3/tutorial/venv.html). Once activated, install the requirements:
 
-`pip install -r requirements.txt`
+`pip install botroyale`
 
 <br>
 
 ## Run
 The main script:
-
-`python main.py`
+```bash
+botroyale
+```
 
 Will choose which module to import and run based on the first command line argument. The default is `gui`. To see other options:
-
-`python main.py --list`
+```bash
+botroyale --list
+```
 
 For example:
-
-`python main.py cli`
+```bash
+botroyale cli
+```
 
 <br>
 
 ## Guides and Documentation
-To view the docs locally (which include guides), run:
-
-`python main.py docs`
-
-This will create the docs from source if missing, and then open them in the default browser. If you wish to force recreating the docs, run:
-
-`python main.py makedocs`
-
-The docs expect the project folder to be a valid python package name (if you are unsure, name your project folder "botroyale").
+To create and view the docs locally (which include guides), run:
+```bash
+botroyale docs
+```

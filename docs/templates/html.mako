@@ -283,17 +283,17 @@
   functions = module.functions(sort=sort_identifiers)
   submodules = module.submodules()
   supermodule = module.supermodule
+  rel_count = module.name.count(".") - int(not module.is_package)
+  path_to_root = "../" * rel_count
   %>
   <nav id="sidebar">
 
     ## <%include file="logo.mako"/>
     ## Insert logo and link to root
-    <%! from util import PROJ_DIR %>
-    <%! from run.makedocs import OUTPUT_DIR %>
-    <p><a href="${OUTPUT_DIR}/index.html">
-    <img src="${PROJ_DIR}/icon.png"/>
+    <p><a href="${path_to_root}index.html">
+    <b><u>Bot Royale Documentation</u></b>
     <br><br>
-    <b><u>Bot Royale Documentation</b></u>
+    <img src="${path_to_root}/icon.png"/>
     </a></p>
 
     % if google_search_query:

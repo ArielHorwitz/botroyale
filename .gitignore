@@ -3,21 +3,13 @@
 venv/
 __pycache__
 .idea
-
-
-# Docs
-/docs/*
-!/docs/templates
-!/docs/guides
-/guides/
-
-
-# Custom user data
-settings.json
-.deletesettings
-logic/maps/custom*
-*.psd
+*.egg-info/
 
 
 # Convenient development temp folder
 dev/
+
+# Documentation is generated locally
+docs/botroyale/
+docs/README.md
+botroyale/guides/

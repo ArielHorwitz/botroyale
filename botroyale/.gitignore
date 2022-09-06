@@ -1,0 +1,12 @@
+
+# Docs
+/docs/*
+!/docs/templates
+!/docs/guides
+/guides/
+
+
+# Custom user data
+settings.json
+.deletesettings
+logic/maps/custom*
