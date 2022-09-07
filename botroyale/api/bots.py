@@ -1,4 +1,4 @@
-"""Home of `api.bots.BaseBot`, the base class for all bots."""
+"""Home of `botroyale.api.bots.BaseBot`, the base class for all bots."""
 from typing import NamedTuple, Union
 import copy
 from botroyale.util.hexagon import Hexagon, ORIGIN
@@ -12,7 +12,7 @@ VFXArgsList = list[VFXArgs]
 
 
 CENTER: Hexagon = ORIGIN
-"""Map center. Alias for `util.hexagon.ORIGIN`."""
+"""Map center. Alias for `botroyale.util.hexagon.ORIGIN`."""
 
 
 def center_distance(hex: Hexagon) -> int:
@@ -23,10 +23,10 @@ def center_distance(hex: Hexagon) -> int:
 class BaseBot:
     """The base class for all bots.
 
-    Should be initialized by a `logic.battle.Battle`. The `BaseBot.setup` method
+    Should be initialized by a `botroyale.logic.battle.Battle`. The `BaseBot.setup` method
     is to be used by the bot to do any startup procedures.
 
-    The `logic.battle.Battle` will call `BaseBot.poll_action` as long as it is
+    The `botroyale.logic.battle.Battle` will call `BaseBot.poll_action` as long as it is
     the bot's turn, and is how the bots actually play.
     """
 
@@ -39,7 +39,7 @@ class BaseBot:
     """Marks the bot class as a test bot. Indicates that it should not be used
     by default."""
     COLOR_INDEX: int = 0
-    """The color (as an index) of the bot class. See `logic.UNIT_COLORS`."""
+    """The color (as an index) of the bot class. See `botroyale.logic.UNIT_COLORS`."""
     logging_enabled: bool = True
     """Enables `BaseBot.logger`."""
     max_ap: int = 100
@@ -90,7 +90,7 @@ class BaseBot:
         return self.get_action(wi)
 
     def gui_click(self, hex: Hexagon, button: str) -> VFXArgsList:
-        """Called by `api.gui.BattleAPI` subclasses when we are clicked on in the GUI.
+        """Called by `botroyale.api.gui.BattleAPI` subclasses when we are clicked on in the GUI.
 
         Left click: will call `BaseBot.gui_click_debug`.
 
@@ -98,7 +98,7 @@ class BaseBot:
 
         Right click: will toggle `BaseBot.logging_enabled` for this bot instance.
 
-        See `logic.battle_manager.BattleManager.handle_hex_click`.
+        See `botroyale.logic.battle_manager.BattleManager.handle_hex_click`.
 
         Args:
             hex: The hex on which the unit was clicked.
@@ -106,7 +106,7 @@ class BaseBot:
                 one of: *left*, *right*, *middle*, *mouse1*, *mouse2*, etc.
 
         Returns:
-            None, or a list of dictionaries of vfx keyword arguments. See `api.gui.VFX`.
+            None, or a list of dictionaries of vfx keyword arguments. See `botroyale.api.gui.VFX`.
         """
         if button == "left":
             return self.gui_click_debug(hex)
@@ -132,7 +132,7 @@ class BaseBot:
             hex: The hex on which we were clicked.
 
         Returns:
-            None, or a list of dictionaries of vfx keyword arguments. See `api.gui.VFX`.
+            None, or a list of dictionaries of vfx keyword arguments. See `botroyale.api.gui.VFX`.
         """
         return [
             {"name": "mark-blue", "hex": hex},
@@ -145,7 +145,7 @@ class BaseBot:
             hex: The hex on which we were clicked.
 
         Returns:
-            None, or a list of dictionaries of vfx keyword arguments. See `api.gui.VFX`.
+            None, or a list of dictionaries of vfx keyword arguments. See `botroyale.api.gui.VFX`.
         """
         return [
             {"name": "mark-blue", "hex": hex},
@@ -172,7 +172,7 @@ class BaseBot:
 
 # Backward compatibility
 class world_info(NamedTuple):
-    """Will be removed in v2.0. Replaced by `logic.state.State`."""
+    """Will be removed in v2.0. Replaced by `botroyale.logic.state.State`."""
 
     positions: list
     walls: set

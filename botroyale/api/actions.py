@@ -1,7 +1,7 @@
 """Actions used by bots and game mechanics.
 
-See also: `api.bots.BaseBot.poll_action`, `logic.state.State.apply_action`,
-`logic.state.State.check_legal_action`.
+See also: `botroyale.api.bots.BaseBot.poll_action`, `botroyale.logic.state.State.apply_action`,
+`botroyale.logic.state.State.check_legal_action`.
 
 Currently available actions:
 

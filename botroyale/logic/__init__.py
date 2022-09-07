@@ -6,7 +6,7 @@ from botroyale.util.hexagon import ORIGIN, Hexagon
 
 
 class PlateType(IntEnum):
-    """Enumerator for types of pressure plates. See: `logic.plate.Plate`."""
+    """Enumerator for types of pressure plates. See: `botroyale.logic.plate.Plate`."""
 
     DEATH_RADIUS_TRAP = enum_auto()
     """Contracts the death radius."""

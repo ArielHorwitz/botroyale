@@ -190,7 +190,7 @@ def play_complete(battle: BattleManager) -> tuple[str, list[str]]:
     """Play a battle to completion.
 
     Args:
-        battle: The `logic.battle_manager.BattleManager` instance.
+        battle: The `botroyale.logic.battle_manager.BattleManager` instance.
 
     Returns:
         Tuple of (winner name, list of loser names).

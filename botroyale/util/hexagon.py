@@ -1,4 +1,4 @@
-"""Home of the `util.hexagon.Hexagon` class and related constants."""
+"""Home of the `botroyale.util.hexagon.Hexagon` class and related constants."""
 from typing import Sequence, Generator
 import math
 import functools

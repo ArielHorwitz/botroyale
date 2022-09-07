@@ -26,11 +26,11 @@ BOT = MyBot
 We should have a new bot that can join games. To test, we simply run the game and make sure to include our new bot ("testing new bot" is their name) by clicking on them in the main menu under "Include" and starting a new battle.
 
 ## Actions
-Our new bot isn't doing anything - it is using the `botroyale.api.actions.Idle` action every time. The idle action ends our turn. Let's make our bot use the `api.actions.Move` action.
+Our new bot isn't doing anything - it is using the `botroyale.api.actions.Idle` action every time. The idle action ends our turn. Let's make our bot use the `botroyale.api.actions.Move` action.
 
-The `api.actions.Move` action takes a *target* parameter (of type `util.hexagon.Hexagon`). The *target* is where we want to move to. We also know that Move only allows moving 1 distance away. So we must find our target hex that is 1 distance away from us. This is done very easily with `botroyale.util.hexagon.Hexagon.neighbors`.
+The `botroyale.api.actions.Move` action takes a *target* parameter (of type `botroyale.util.hexagon.Hexagon`). The *target* is where we want to move to. We also know that Move only allows moving 1 distance away. So we must find our target hex that is 1 distance away from us. This is done very easily with `botroyale.util.hexagon.Hexagon.neighbors`.
 
-Let's adjust the code in `poll_action` (we need to import `api.actions.Move` and python's `random` for this to work):
+Let's adjust the code in `poll_action` (we need to import `botroyale.api.actions.Move` and python's `random` for this to work):
 
 ```python
 def poll_action(self, state):
@@ -46,11 +46,11 @@ def poll_action(self, state):
 
 Now our bot will move to a random direction every time. However it is also showing some glaring issues: it may kill itself by moving outside the ring of death or onto a pit, and it always ends it's turn with an illegal action.
 
-> Illegal actions have no penalty except that they end the turn (as if `api.actions.Idle` was used).
+> Illegal actions have no penalty except that they end the turn (as if `botroyale.api.actions.Idle` was used).
 
 
 ## Inspecting the state object
-Let's fix some of these issues. First we will avoid suicide by checking the ring of death and pits with a new `check_safe` function that we will write. Then we will avoid illegal moves by using the `logic.state.State.check_legal_action()` method. We will import `api.bots.center_distance` to check our distance from the center of the map.
+Let's fix some of these issues. First we will avoid suicide by checking the ring of death and pits with a new `check_safe` function that we will write. Then we will avoid illegal moves by using the `botroyale.logic.state.State.check_legal_action()` method. We will import `botroyale.api.bots.center_distance` to check our distance from the center of the map.
 
 
 ```python
@@ -88,10 +88,10 @@ Now when we run the game, our bot doesn't suicide and does legal actions only. I
 ## Final notes
 In this guide we learned how to write a simple bot that can play and is aware of the game state. It is highly recommended to study the following docs for developing bots:
 
-- `logic.state.State` objects are used to represent the state of the game.
-- `util.hexagon.Hexagon` objects are used to represent any sort of position or location.
-- `api.actions` are the actions we can take on our turn.
-- `api.bots` to learn about our Bot's base class.
+- `botroyale.logic.state.State` objects are used to represent the state of the game.
+- `botroyale.util.hexagon.Hexagon` objects are used to represent any sort of position or location.
+- `botroyale.api.actions` are the actions we can take on our turn.
+- `botroyale.api.bots` to learn about our Bot's base class.
 
 > If the docs are confusing or wrong, *please* raise an issue on github.
 

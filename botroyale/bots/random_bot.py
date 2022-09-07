@@ -14,7 +14,7 @@ class RandomBot(BaseBot):
     SPRITE = "ellipse"
 
     def poll_action(self, state):
-        """Overrides `bots.BaseBot.poll_action`."""
+        """Overrides `botroyale.bots.BaseBot.poll_action`."""
         pos = state.positions[self.id]
         action = self.get_target(pos)
         attempts = 5
@@ -50,7 +50,7 @@ class SleeperBot(RandomBot):
     sleep_time = 3
 
     def poll_action(self, state):
-        """Overrides `bots.BaseBot.poll_action`."""
+        """Overrides `botroyale.bots.BaseBot.poll_action`."""
         time.sleep(self.sleep_time)
         return super().poll_action(state)
 

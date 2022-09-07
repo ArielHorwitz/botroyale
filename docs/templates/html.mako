@@ -293,7 +293,7 @@
     <p><a href="${path_to_root}index.html">
     <b><u>Bot Royale Documentation</u></b>
     <br><br>
-    <img src="${path_to_root}/icon.png"/>
+    <img src="${path_to_root}icon.png"/>
     </a></p>
 
     % if google_search_query:
@@ -307,7 +307,7 @@
       <%include file="_lunr_search.inc.mako"/>
     % endif
 
-    ## <h1>Index</h1>
+    <h3>${module.name}</h3>
     ${extract_toc(module.docstring) if extract_module_toc_into_sidebar else ''}
     <ul id="index">
     % if supermodule:

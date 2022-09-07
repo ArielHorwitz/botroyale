@@ -3,63 +3,117 @@
 Uses `pdoc3` library to automatically read source code and produce HTML
 documentation. Will delete the output folder and recreate docs.
 """
+from typing import Optional
 import shutil
+import os
+import warnings
+from pathlib import Path
 from pdoc import Module, Context, tpl_lookup, link_inheritance
-from botroyale.util.file import file_dump, file_load, popen_path
+from botroyale.util.file import file_dump, file_load, popen_path, get_usr_dir
 from botroyale.util import PROJ_DIR, PACKAGE_DIR, VERSION
 
 
-DOCS_ROOT = PROJ_DIR / "docs"
-PACKAGE_OUTPUT_DIR = DOCS_ROOT / "botroyale"
-GUIDE_PACKAGE_DIR = PACKAGE_DIR / "guides"
-TEMPLATE_DIR = DOCS_ROOT / "templates"
-INDEX_FILE = PACKAGE_OUTPUT_DIR / "index.html"
+DOCS_DIR = PROJ_DIR / "docs"
+TEMPLATE_DIR = DOCS_DIR / "templates"
+USER_DIR = "botroyale"
 
 
-def open_docs(force_remake: bool = False):
+def open_docs(
+    output_dir: Optional[os.PathLike] = None,
+    force_remake: bool = False,
+):
     """Opens the docs in default browser, using `botroyale.util.file.popen_path`."""
-    if not INDEX_FILE.is_file() or force_remake:
+    output_dir = _get_output_dir(output_dir)
+    index_file = output_dir / "botroyale" / "index.html"
+    if not index_file.is_file() or force_remake:
         make_docs()
-    popen_path(INDEX_FILE)
+    popen_path(index_file)
 
 
-def make_docs(dry_run: bool = False):
+def make_docs(output_dir: Optional[os.PathLike] = None):
     """Clear and create the docs."""
     print("Clearing existing docs...")
-    if PACKAGE_OUTPUT_DIR.is_dir():
-        if dry_run:
-            print(f"Would delete recursively: {PACKAGE_OUTPUT_DIR}")
-            print(f"Would delete recursively: {GUIDE_PACKAGE_DIR}")
-        else:
-            shutil.rmtree(PACKAGE_OUTPUT_DIR)
-            shutil.rmtree(GUIDE_PACKAGE_DIR)
+    output_dir = _get_output_dir(output_dir)
+    if output_dir.is_dir():
+        shutil.rmtree(output_dir)
     print("Preparing docs...")
     tpl_lookup.directories.insert(0, str(TEMPLATE_DIR))
-    _generate_guides(dry_run)
-    _generate_fixed_readme(dry_run)
+    _copy_assets(output_dir)
+    _write_guides(output_dir)
     print("Building docs...")
-    context = Context()
-    root_package = Module(".", context=context)
-    link_inheritance(context)
+    doc_root = _get_root_package_doc()
     print("Writing new docs...")
-    for mod in _recursive_mods(root_package):
-        html = mod.html()
-        file_path = _module_path(mod)
-        if dry_run:
-            print(f"Would write html at: {file_path}")
-        else:
-            _write_html(file_path, html)
-    if dry_run:
-        print("Use dry_run=False to apply changes.")
+    _write_html(doc_root, output_dir)
+    print("Make docs done.")
+
+
+def test_docs():
+    """If making the docs raises no warnings."""
+    with warnings.catch_warnings(record=True) as warning_catcher:
+        make_docs()
+    if len(warning_catcher) > 0:
+        print(f"Found {len(warning_catcher)} warnings:")
+        for warning in warning_catcher:
+            print(f"  {warning.message}")
+        return False
+    print("Documentation built sucessfully.")
+    return True
+
+
+def _get_output_dir(output_dir: Optional[os.PathLike]) -> Path:
+    if output_dir is None:
+        output_dir = get_usr_dir("docs")
     else:
-        print("Make docs done.")
+        output_dir /= "docs"
+    return output_dir
 
 
-def _module_path(mod):
+def _copy_assets(output_dir):
+    new_package_dir = output_dir / "botroyale"
+    new_package_dir.mkdir(parents=True, exist_ok=True)
+    # Copy icon
+    shutil.copy(
+        PACKAGE_DIR / "icon.png",
+        new_package_dir / "icon.png",
+    )
+    # Copy preview gif
+    shutil.copy(
+        PACKAGE_DIR / "assets" / "preview.gif",
+        new_package_dir / "preview.gif",
+    )
+
+
+def _write_guides(output_dir):
+    # TODO: make an html index for the guides, not just copying the md files
+    new_guides_dir = output_dir / "botroyale"
+    new_guides_dir.mkdir(parents=True, exist_ok=True)
+    # Copy guides
+    shutil.copytree(
+        DOCS_DIR / "guides",
+        new_guides_dir / "guides",
+    )
+
+
+def _get_root_package_doc():
+    context = Context()
+    root_package = Module("botroyale", context=context)
+    link_inheritance(context)
+    return root_package
+
+
+def _write_html(doc_root, output_dir):
+    for mod in _recursive_mods(doc_root):
+        html = mod.html()
+        file_path = output_dir / _module_relative_path(mod)
+        file_path.parent.mkdir(parents=True, exist_ok=True)
+        file_dump(file_path, html)
+
+
+def _module_relative_path(mod):
     full_module_name = mod.name
     module_parts = full_module_name.split(".")
     module_name = module_parts[-1]
-    file_path = DOCS_ROOT
+    file_path = Path()
     for n in module_parts[:-1]:
         file_path /= n
     if mod.is_package:
@@ -68,11 +122,6 @@ def _module_path(mod):
     else:
         file_path /= f"{module_name}.html"
     return file_path
-
-
-def _write_html(file_path, html):
-    file_path.parent.mkdir(parents=True, exist_ok=True)
-    file_dump(file_path, html)
 
 
 def _recursive_mods(mod):
@@ -96,13 +145,10 @@ def _generate_fixed_readme(dry_run: bool = False):
     - Fix assets folder relative link to absolute link
     """
     readme_path = PROJ_DIR / "README.md"
-    fixed_readme_path = DOCS_ROOT / "README.md"
     # Add version and link to guides up top
     added_lines = "\n".join(
         [
             f"Documentation built on `v{VERSION}`.\n",
-            "Check out the [guides](guides/index.html) for many resources, "
-            "from beginner to advanced.\n",
         ]
     )
     fixed_readme = f"{added_lines}\n{file_load(readme_path)}"
@@ -110,34 +156,4 @@ def _generate_fixed_readme(dry_run: bool = False):
     fixed_assets_path = PACKAGE_DIR / "assets"
     oldstr, newstr = "botroyale/assets/", f"{str(fixed_assets_path)}/"
     fixed_readme = fixed_readme.replace(oldstr, newstr)
-    if dry_run:
-        print(f"Would fix readme to: {fixed_readme_path}")
-    else:
-        file_dump(fixed_readme_path, fixed_readme)
-
-
-def _generate_guides(dry_run: bool = False):
-    """Generate a module with a `..inclue::guide.md` for the guides."""
-    sources = DOCS_ROOT / "guides"
-    GUIDE_PACKAGE_DIR.mkdir(parents=True, exist_ok=True)
-    root_guide = GUIDE_PACKAGE_DIR / "__init__.py"
-    if dry_run:
-        print(f"Would write guide module: {root_guide}")
-    else:
-        file_dump(root_guide, '"""A collection of guides."""')
-    for md in _recursive_guides(sources):
-        rel_path = md.relative_to(sources).parent
-        mod = GUIDE_PACKAGE_DIR / rel_path / f"{md.stem}.py"
-        if dry_run:
-            print(f"Would write guide module: {mod}")
-        else:
-            mod.parent.mkdir(parents=True, exist_ok=True)
-            file_dump(mod, f'""".. include:: {md}"""')
-
-
-def _recursive_guides(source):
-    for child in source.iterdir():
-        if child.is_file():
-            yield child
-        elif child.is_dir():
-            yield from _recursive_guides(child)
+    return fixed_readme

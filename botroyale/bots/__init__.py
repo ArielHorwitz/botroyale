@@ -1,7 +1,7 @@
 """Home of the bots.
 
 Submodules of this package (not shown here) contain the bot classes (subclasses
-of `api.bots.BaseBot`).
+of `botroyale.api.bots.BaseBot`).
 """
 from typing import Optional, Sequence, Callable
 import random
@@ -38,7 +38,7 @@ def get_bot_classes(
         selection: List of bot names to select from (will select from all bots
             if no selection provided).
         ignore: List of bot names to remove from *selection*.
-        include_testing: Include bots marked as `api.bots.BaseBot.TESTING_ONLY`.
+        include_testing: Include bots marked as `botroyale.api.bots.BaseBot.TESTING_ONLY`.
         keep_fair: Ensure an equal number of slots for each bot, filling
             remaining slots with dummy bots.
         no_dummies: When *keep_fair* is true, ensure that no dummy bots are

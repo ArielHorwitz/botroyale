@@ -1,9 +1,7 @@
 # Bot Royale
 A battle royale for bots.
 
-![Preview GIF](botroyale/assets/preview.gif)
-
-<br>
+![Preview GIF](/botroyale/assets/preview.gif)
 
 ## Requirements
 - [Python 3.9+](https://www.python.org/)
@@ -13,11 +11,9 @@ A battle royale for bots.
 - [black](https://github.com/psf/black) for code formatting (optional)
 - [flake8](https://flake8.pycqa.org/) for code quality analysis (optional)
 
-It is recommended to use a [virtual environment](https://docs.python.org/3/tutorial/venv.html). Once activated, install the requirements:
+It is recommended to use a [virtual environment](https://docs.python.org/3/tutorial/venv.html). Once activated, install botroyale:
 
 `pip install botroyale`
-
-<br>
 
 ## Run
 The main script:
@@ -34,8 +30,6 @@ For example:
 ```bash
 botroyale cli
 ```
-
-<br>
 
 ## Guides and Documentation
 To create and view the docs locally (which include guides), run:

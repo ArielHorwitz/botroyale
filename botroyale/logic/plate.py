@@ -9,7 +9,7 @@ class Plate(Hexagon):
     """Pressure Plate.
 
     Plates will be equal to and hash like all other instances of
-    `util.hexagon.Hexagon` subclasses if their cube is equal.
+    `botroyale.util.hexagon.Hexagon` subclasses if their cube is equal.
     """
 
     def __init__(
@@ -24,12 +24,12 @@ class Plate(Hexagon):
         """Initialize the class.
 
         Args:
-            cube: The cube of the `util.hexagon.Hexagon`
-            plate_type: One of `logic.PlateType`
+            cube: The cube of the `botroyale.util.hexagon.Hexagon`
+            plate_type: One of `botroyale.logic.PlateType`
             pressure: Negative integer
             min_pressure: Negative integer
             pressure_reset: If the pressure resets after popping
-            targets: A set of `util.hexagon.Hexagon` that the plate targets
+            targets: A set of `botroyale.util.hexagon.Hexagon` that the plate targets
         """
         super().__init__(*cube)
         self.plate_type: PlateType = plate_type

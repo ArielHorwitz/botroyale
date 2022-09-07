@@ -1,4 +1,4 @@
-"""Home of `logic.battle_manager.BattleManager`."""
+"""Home of `botroyale.logic.battle_manager.BattleManager`."""
 from typing import Optional, Literal
 from botroyale.logic.battle import Battle
 from botroyale.api.gui import BattleAPI, Tile, Control, ControlMenu
@@ -19,12 +19,12 @@ PanelMode = Literal["turns", "timers"]
 
 
 class BattleManager(Battle, BattleAPI):
-    """An interface between `logic.battle.Battle` and `api.gui.BattleAPI`.
+    """An interface between `botroyale.logic.battle.Battle` and `botroyale.api.gui.BattleAPI`.
 
     Provides methods for parsing, formatting, and displaying information about
     the battle, as well as GUI-related controls and display getters.
 
-    While it can be used as an extension of `logic.battle.Battle`, this class
+    While it can be used as an extension of `botroyale.logic.battle.Battle`, this class
     can behave surprisingly different than the base class. This is because it
     keeps track of a replay index, allowing to "look at" past states. Therefore
     it is recommended to be familiar with `BattleManager.set_replay_index`.
@@ -37,7 +37,7 @@ class BattleManager(Battle, BattleAPI):
         """Initialize the class.
 
         Args:
-            kwargs: Keyword arguments for `logic.battle.Battle.__init__`
+            kwargs: Keyword arguments for `botroyale.logic.battle.Battle.__init__`
             gui_mode: If True, will set arguments appropriate for the GUI.
         """
         if gui_mode:
@@ -131,7 +131,7 @@ class BattleManager(Battle, BattleAPI):
 
         If backwards is set, it will search for a previous state.
 
-        See: `logic.state.State.end_of_round`.
+        See: `botroyale.logic.state.State.end_of_round`.
         """
         delta = 1 if not backwards else -1
         if self.replay_state.end_of_round:
@@ -179,7 +179,7 @@ class BattleManager(Battle, BattleAPI):
 
         Unlike other methods in this class, the result of this method does not
         consider `BattleManager.replay_mode`. The times shown are updated to the
-        latest state in the battle. This is because `logic.battle.Battle.bot_timer`
+        latest state in the battle. This is because `botroyale.logic.battle.Battle.bot_timer`
         is updated in place on each new state.
         """
         strs = [
@@ -341,7 +341,7 @@ class BattleManager(Battle, BattleAPI):
     def update(self):
         """Performs autoplay.
 
-        Overrides: `api.gui.BattleAPI.update`.
+        Overrides: `botroyale.api.gui.BattleAPI.update`.
         """
         if self.replay_state.game_over:
             self.autoplay = False
@@ -356,14 +356,14 @@ class BattleManager(Battle, BattleAPI):
     def get_time(self) -> int:
         """Step count.
 
-        Overrides: `api.gui.BattleAPI.get_time`.
+        Overrides: `botroyale.api.gui.BattleAPI.get_time`.
         """
         return self.replay_state.step_count
 
     def get_controls(self) -> ControlMenu:
         """Return controls for playing, autoplaying, replay index, and more.
 
-        Overrides: `api.gui.BattleAPI.get_controls`.
+        Overrides: `botroyale.api.gui.BattleAPI.get_controls`.
         """
         return {
             "Battle": [
@@ -416,7 +416,7 @@ class BattleManager(Battle, BattleAPI):
     def get_info_panel_text(self) -> str:
         """Multiline summary of the game at the current `BattleManager.replay_index`.
 
-        Overrides: `api.gui.BattleAPI.get_info_panel_text`.
+        Overrides: `botroyale.api.gui.BattleAPI.get_info_panel_text`.
 
         Returns:
             Return value of `BattleManager.get_info_str`.
@@ -428,7 +428,7 @@ class BattleManager(Battle, BattleAPI):
 
         See: `BattleManager.replay_mode`.
 
-        Overrides: `api.gui.BattleAPI.get_info_panel_color`.
+        Overrides: `botroyale.api.gui.BattleAPI.get_info_panel_color`.
         """
         if self.replay_mode:
             # Blue-ish
@@ -438,11 +438,11 @@ class BattleManager(Battle, BattleAPI):
 
     # Tile map
     def get_gui_tile_info(self, hex: Hexagon) -> Tile:
-        """Return a `api.gui.Tile` for *hex* at the current replay state.
+        """Return a `botroyale.api.gui.Tile` for *hex* at the current replay state.
 
         See: `BattleManager.replay_state`
 
-        Overrides: `api.gui.BattleAPI.get_gui_tile_info`.
+        Overrides: `botroyale.api.gui.BattleAPI.get_gui_tile_info`.
         """
         state = self.replay_state
 
@@ -466,9 +466,9 @@ class BattleManager(Battle, BattleAPI):
         )
 
     def get_map_size_hint(self) -> int:
-        """Tracks the `logic.state.State.death_radius` at `BattleManager.replay_index`.
+        """Tracks the `botroyale.logic.state.State.death_radius` at `BattleManager.replay_index`.
 
-        Overrides: `api.gui.BattleAPI.get_map_size_hint`.
+        Overrides: `botroyale.api.gui.BattleAPI.get_map_size_hint`.
         """
         death_radius = self.replay_state.death_radius
         if self.replay_state.round_count == 0:
@@ -478,7 +478,7 @@ class BattleManager(Battle, BattleAPI):
     def handle_hex_click(self, hex: Hexagon, button: str, mods: str):
         """Handles a tile being clicked on in the tilemap.
 
-        Overrides: `api.gui.BattleAPI.handle_hex_click`.
+        Overrides: `botroyale.api.gui.BattleAPI.handle_hex_click`.
         """
         click = f"{mods} {button}"
         self.logger(f"Clicked {click} on: {hex}")
