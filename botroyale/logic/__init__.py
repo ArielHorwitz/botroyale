@@ -18,6 +18,7 @@ class PlateType(IntEnum):
     """Turns tiles into pits."""
     WALL_TRAP = enum_auto()
     """Turns tiles into walls."""
+    ERASE_TRAP = enum_auto()
 
 
 UNIT_COLORS = settings.get("gui.tilemap.colors.units")
