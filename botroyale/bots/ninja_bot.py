@@ -764,7 +764,7 @@ class Bot(BaseBot):
         cls.friendly_uids.append(uid)
 
     def setup(self, state):
-        """Overrides `api.bots.BaseBot.setup`."""
+        """Overrides `botroyale.api.bots.BaseBot.setup`."""
         if self.enable_cooperation:
             self.add_friendly_uid(state, self.id)
         self.timer = []
@@ -789,7 +789,7 @@ class Bot(BaseBot):
             self.turn_step += 1
 
     def poll_action(self, state):
-        """Overrides `api.bots.BaseBot.poll_action`."""
+        """Overrides `botroyale.api.bots.BaseBot.poll_action`."""
         self.update(state)
         if not self.current_sequence:
             self.logger("Searching sequences...")
@@ -838,7 +838,7 @@ class Bot(BaseBot):
         self.timer.append(spent)
 
     def gui_click_debug(self, hex):
-        """Overrides `api.bots.BaseBot.gui_click_debug`."""
+        """Overrides `botroyale.api.bots.BaseBot.gui_click_debug`."""
         if self.game_started:
             cp = self.get_new_checkpoint(
                 self.last_state, self.logger, self.friendly_uids

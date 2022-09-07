@@ -1,7 +1,7 @@
 """Maps (initial states for battle).
 
-It is recommended to use `logic.maps.get_map_state` in order to "initialize" a
-`logic.state.State` object.
+It is recommended to use `botroyale.logic.maps.get_map_state` in order to "initialize" a
+`botroyale.logic.state.State` object.
 """
 from typing import Optional
 import json
@@ -27,13 +27,13 @@ def _find_maps() -> list[str]:
 
 
 MAP_DIR: Path = PACKAGE_DIR / "logic" / "maps"
-"""Directory where maps are stored on disk. ( `util.PACKAGE_DIR`/logic/maps )"""
+"""Directory where maps are stored on disk. ( `botroyale.util.PACKAGE_DIR`/logic/maps )"""
 if not MAP_DIR.is_dir():
     MAP_DIR.mkdir(parents=True, exist_ok=True)
 DEFAULT_STATE: State = State(death_radius=12)
-"""A `logic.state.State` object representing a default, "empty" map.
+"""A `botroyale.logic.state.State` object representing a default, "empty" map.
 
-Should be copied (`logic.state.State.copy`) before use.
+Should be copied (`botroyale.logic.state.State.copy`) before use.
 """
 DEFAULT_MAP_NAME: str = Settings.get("logic.default_map", "danger")
 """Default map name as configured in settings."""

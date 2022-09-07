@@ -19,7 +19,7 @@ For example, let's imagine a round (with three units): Unit #1 uses 30 AP, then 
 
 ## Turns and Steps
 
-When a round begins and the turn order is prepared, each unit will have their turn. On their turn, the battle will repeatedly poll them for an action and apply it to the game (see: `api.actions`). These events are known as `steps`. After every step the battle will poll the unit again on the next step. If the action is an _idle_ action, it ends the turn and then next unit's turn will begin on the following step. If the action is illegal for any reason, it is as if an _idle_ action was played.
+When a round begins and the turn order is prepared, each unit will have their turn. On their turn, the battle will repeatedly poll them for an action and apply it to the game (see: `botroyale.api.actions`). These events are known as `steps`. After every step the battle will poll the unit again on the next step. If the action is an _idle_ action, it ends the turn and then next unit's turn will begin on the following step. If the action is illegal for any reason, it is as if an _idle_ action was played.
 
 
 ## Rules

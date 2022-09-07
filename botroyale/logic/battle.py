@@ -1,4 +1,4 @@
-"""Home of the `logic.battle.Battle` class."""
+"""Home of the `botroyale.logic.battle.Battle` class."""
 from typing import Optional, Sequence, Callable
 import sys
 import traceback
@@ -41,7 +41,7 @@ class Battle:
 
             bot_classes_getter: A function that takes an integer and returns
                 that many bots classes. If bot_classes_getter is not provided,
-                the default `bots.get_bot_classes` will be used that is based on
+                the default `botroyale.bots.get_bot_classes` will be used that is based on
                 configured settings.
 
             description: A description of the battle.
@@ -185,14 +185,14 @@ class Battle:
             print("")
 
     def _get_bot_action(self, unit_id: int, state: State) -> Optional[Action]:
-        """Call the bot's `api.bots.BaseBot.poll_action` to get their action.
+        """Call the bot's `botroyale.api.bots.BaseBot.poll_action` to get their action.
 
         Args:
             unit_id: uid of the unit
             state: current state of the battle
 
         Returns:
-            `api.actions.Action` if *poll_action* is successful.
+            `botroyale.api.actions.Action` if *poll_action* is successful.
             None if there was an exception.
         """
         state = state.copy()
@@ -261,7 +261,7 @@ class Battle:
     # Miscallaneous
     @property
     def winner(self) -> Optional[int]:
-        """Returns `logic.state.State.winner` of the current state of battle."""
+        """Returns `botroyale.logic.state.State.winner` of the current state of battle."""
         return self.state.winner
 
     @property

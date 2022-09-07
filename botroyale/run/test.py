@@ -4,7 +4,7 @@ This module is intended for developers that wish to contribute source code. The
 `run` function will run and ensure the code passes all standard tests, and is
 compliant with the project's automated requirements.
 
-See: `util.code`.
+See: `botroyale.util.code`.
 """
 from botroyale.util import MAIN_ARGS
 from botroyale.util.code import STANDARD_TEST_SUITE

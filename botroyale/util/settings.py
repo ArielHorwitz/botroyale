@@ -1,12 +1,12 @@
 """Manages user settings.
 
-The settings file is located at `util.PACKAGE_DIR` as *settings.json*.
+The settings file is located at `botroyale.util.PACKAGE_DIR` as *settings.json*.
 
 To restore a setting to it's default value, simply delete the line from the
 settings file. To restore all settings to defaults, simply delete the settings
 file.
 
-If the file *.deletesettings* is found at `util.PACKAGE_DIR`, the settings file
+If the file *.deletesettings* is found at `botroyale.util.PACKAGE_DIR`, the settings file
 will be deleted at the start of every execution.
 """
 from typing import Any

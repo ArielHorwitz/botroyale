@@ -19,7 +19,7 @@ but without string normalization. `format_source_code` will automatically format
 the source code to comply with the `check_format`.
 
 ### Documentation generator
-`check_docs` generates the documentation using `run.makedocs` to catch
+`check_docs` generates the documentation using `botroyale.run.makedocs` to catch
 warnings.
 """
 from typing import Optional, Callable
@@ -73,7 +73,7 @@ def check_code_static() -> bool:
 def check_docs() -> bool:
     """Generate the docs and check no warnings were raised.
 
-    See `run.makedocs`.
+    See `botroyale.run.makedocs`.
 
     Returns:
         True if the docs were generated without warnings.

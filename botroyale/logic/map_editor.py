@@ -1,4 +1,4 @@
-"""Home of `logic.map_editor.MapEditor`."""
+"""Home of `botroyale.logic.map_editor.MapEditor`."""
 from enum import IntEnum
 from typing import Optional
 from botroyale.logic.plate import Plate, PlateType
@@ -36,12 +36,12 @@ MIN_PRESSURE = -5
 
 
 class MapEditor(MapCreator, BattleAPI):
-    """An interface between `logic.maps.MapCreator` and `api.gui.BattleAPI`.
+    """An interface between `botroyale.logic.maps.MapCreator` and `botroyale.api.gui.BattleAPI`.
 
     Enables interactive map editing in the GUI.
     """
 
-    """See: `logic.battle_manager.BattleManager.UNIT_COLORS`"""
+    """See: `botroyale.logic.battle_manager.BattleManager.UNIT_COLORS`"""
     HELP_STR = "\n".join(
         [
             "Left click to use brush, right click to erase.",
@@ -166,9 +166,9 @@ class MapEditor(MapCreator, BattleAPI):
             self.first_round_state = self.state.increment_round()
 
     def get_controls(self) -> ControlMenu:
-        """Returns `api.gui.Control`s for map editing tools.
+        """Returns `botroyale.api.gui.Control`s for map editing tools.
 
-        Overrides: `api.gui.BattleAPI.get_controls`.
+        Overrides: `botroyale.api.gui.BattleAPI.get_controls`.
         """
         return {
             "Editor": [
@@ -217,7 +217,7 @@ class MapEditor(MapCreator, BattleAPI):
     def get_info_panel_text(self) -> str:
         """Multiline summary of the map at the current state.
 
-        Overrides: `api.gui.BattleAPI.get_info_panel_text`.
+        Overrides: `botroyale.api.gui.BattleAPI.get_info_panel_text`.
         """
         valid_str = "Valid map"
         if not self.check_valid():
@@ -254,7 +254,7 @@ class MapEditor(MapCreator, BattleAPI):
     def get_info_panel_color(self) -> tuple[float, float, float]:
         """Color based on the current `MapCreator.brush`.
 
-        Overrides: `api.gui.BattleAPI.get_info_panel_color`.
+        Overrides: `botroyale.api.gui.BattleAPI.get_info_panel_color`.
         """
         color = BRUSH_COLORS[self.brush]
         if hasattr(PlateType, self.brush.name):
@@ -263,9 +263,9 @@ class MapEditor(MapCreator, BattleAPI):
         return color
 
     def get_gui_tile_info(self, hex: Hexagon) -> Tile:
-        """Returns a `api.gui.Tile` for *hex*.
+        """Returns a `botroyale.api.gui.Tile` for *hex*.
 
-        Overrides: `api.gui.BattleAPI.get_gui_tile_info`.
+        Overrides: `botroyale.api.gui.BattleAPI.get_gui_tile_info`.
         """
         state = self.first_round_state
         tile, bg = get_tile_info(hex, state)
@@ -283,19 +283,19 @@ class MapEditor(MapCreator, BattleAPI):
         )
 
     def get_map_size_hint(self) -> float:
-        """Tracks the `logic.state.State.death_radius`.
+        """Tracks the `botroyale.logic.state.State.death_radius`.
 
         The death radius is subtracted by one (and a bit) to "skip" the 0th
         round and show it as it is in round 1.
 
-        Overrides: `api.gui.BattleAPI.get_map_size_hint`.
+        Overrides: `botroyale.api.gui.BattleAPI.get_map_size_hint`.
         """
         return self.state.death_radius - 1.5
 
     def handle_hex_click(self, hex: Hexagon, button: str, mods: str):
         """Handles a tile being clicked on in the tilemap.
 
-        Overrides: `api.gui.BattleAPI.handle_hex_click`.
+        Overrides: `botroyale.api.gui.BattleAPI.handle_hex_click`.
         """
         # Normal click: modify
         if mods == "":

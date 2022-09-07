@@ -13,7 +13,7 @@ class IdleBot(BaseBot):
     SPRITE = "ellipse"
 
     def poll_action(self, state):
-        """Overrides `bots.BaseBot.poll_action`."""
+        """Overrides `botroyale.bots.BaseBot.poll_action`."""
         return Idle()
 
 

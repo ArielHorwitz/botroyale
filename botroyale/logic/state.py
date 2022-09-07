@@ -1,4 +1,4 @@
-"""Home of the `logic.state.State` class.
+"""Home of the `botroyale.logic.state.State` class.
 
 Defines the gameplay mechanics and logic.
 """
@@ -52,11 +52,11 @@ class State:
 
     ### List attributes
     Many attributes of state are lists of values: one for each unit. For these
-    attribtes, the index is by `api.bots.BaseBot.id`.
+    attribtes, the index is by `botroyale.api.bots.BaseBot.id`.
 
     ### Maps (initial states)
     To create an initial state (also known as a map), it is highly recommended
-    to refer to the `logic.maps` module.
+    to refer to the `botroyale.logic.maps` module.
 
     When initializing new states for a map, it should be with only the
     following arguments: *death_radius*, *positions*, *pits*, and *walls*. Note that
@@ -103,7 +103,7 @@ class State:
         if positions is None:
             positions = []
         self.positions: list[Hexagon] = positions
-        """A list of `util.hexagon.Hexagon`s representing the positions of the units."""
+        """A list of `botroyale.util.hexagon.Hexagon`s representing the positions of the units."""
         self.num_of_units: int = len(positions)
         """Number of units."""
         if alive_mask is None:
@@ -139,7 +139,7 @@ class State:
         self.death_radius: int = death_radius
         """The radius of the "ring of death".
 
-        This radius determines at what distance from `util.hexagon.ORIGIN`
+        This radius determines at what distance from `botroyale.util.hexagon.ORIGIN`
         would a unit die.
         """
         if pits is None:
@@ -184,7 +184,7 @@ class State:
         if seed is None:
             seed = PRNG.get_random_seed()
         self.seed: int = seed
-        """A seed for the `logic.prng.PRNG`.
+        """A seed for the `botroyale.logic.prng.PRNG`.
 
         Used by `State.next_round_order`.
         """
@@ -420,7 +420,7 @@ class State:
         """List of uids sorted by the order of turns in the next round.
 
         This assumes no more AP is spent for the rest of the round. The round
-        order is sorted by AP spent and uses `logic.prng.PRNG` as tiebreaker.
+        order is sorted by AP spent and uses `botroyale.logic.prng.PRNG` as tiebreaker.
         """
         return self._get_round_order()
 
@@ -450,7 +450,7 @@ class State:
         return self._get_all_of_plate_by_type(PlateType.PIT_TRAP)
 
     def get_plate(self, hex: Hexagon) -> Optional[Plate]:
-        """Return the `logic.plate.Plate` that is in *hex* if it exists, else None."""
+        """Return the `botroyale.logic.plate.Plate` that is in *hex* if it exists, else None."""
         if hex not in self.plates:
             return None
         extra_plates = self.plates - {hex}
@@ -663,13 +663,13 @@ class State:
         return {p for p in self.plates if p.plate_type is plate_type}
 
     def _activate_pit_trap(self, trap: Plate):
-        """Apply the effects of a `logic.PlateType.PIT_TRAP` pressure popping."""
+        """Apply the effects of a `botroyale.logic.PlateType.PIT_TRAP` pressure popping."""
         self.walls -= trap.targets
         self.pits |= trap.targets
         self.plates -= trap.targets
 
     def _activate_wall_trap(self, trap: Plate):
-        """Apply the effects of a `logic.PlateType.WALL_TRAP` pressure popping."""
+        """Apply the effects of a `botroyale.logic.PlateType.WALL_TRAP` pressure popping."""
         targets = trap.targets - set(self.positions)
         self.walls |= targets
         self.pits -= targets

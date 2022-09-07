@@ -1,6 +1,6 @@
-"""Home of `logic.game.StandardGameAPI`.
+"""Home of `botroyale.logic.game.StandardGameAPI`.
 
-The the standard implementation of `api.gui.GameAPI`.
+The the standard implementation of `botroyale.api.gui.GameAPI`.
 """
 from typing import Any, Union, Optional
 from botroyale.api.gui import GameAPI, InputWidget
@@ -18,7 +18,7 @@ BOTS_TESTING = [b for b in BOTS_SORTED if b.TESTING_ONLY]
 
 
 class StandardGameAPI(GameAPI):
-    """A standard implementation of `api.gui.GameAPI`.
+    """A standard implementation of `botroyale.api.gui.GameAPI`.
 
     See `StandardGameAPI.get_new_battle` on starting battles and the map editor.
     """
@@ -173,7 +173,7 @@ class StandardGameAPI(GameAPI):
 
         Includes "Map editor mode" toggle, map selection, bot selection options.
 
-        See: `api.gui.GameAPI.get_menu_widgets`.
+        See: `botroyale.api.gui.GameAPI.get_menu_widgets`.
         """
         if self.menu_values["editor"]:
             return self._get_editor_widgets()
@@ -184,7 +184,7 @@ class StandardGameAPI(GameAPI):
     ) -> bool:
         """Widgets are set based on battle/map editor modes.
 
-        See: `api.gui.GameAPI.handle_menu_widget`.
+        See: `botroyale.api.gui.GameAPI.handle_menu_widget`.
         """
         # Update our menu values
         relevant_keys = set(self.menu_values.keys()) & set(menu_values.keys())
@@ -255,13 +255,13 @@ class StandardGameAPI(GameAPI):
     def get_new_battle(
         self, menu_values: dict[str, Any]
     ) -> Optional[Union[BattleManager, MapEditor]]:
-        """Return a `api.gui.BattleAPI`.
+        """Return a `botroyale.api.gui.BattleAPI`.
 
-        Returns a `logic.battle_manager.BattleManager` or None if it fails to
-        create the battle, or a `logic.map_editor.MapEditor` if map editor
+        Returns a `botroyale.logic.battle_manager.BattleManager` or None if it fails to
+        create the battle, or a `botroyale.logic.map_editor.MapEditor` if map editor
         mode was set in the main menu.
 
-        See: `api.gui.GameAPI.get_new_battle`.
+        See: `botroyale.api.gui.GameAPI.get_new_battle`.
         """
         map_name = menu_values["map"]
         if menu_values["editor"]:
