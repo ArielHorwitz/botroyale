@@ -449,6 +449,11 @@ class State:
         """Set of all Pit Traps in `State.plates`."""
         return self._get_all_of_plate_by_type(PlateType.PIT_TRAP)
 
+    @property
+    def erase_traps(self) -> set[Plate]:
+        """Set of all Erase Traps in `State.plates`."""
+        return self._get_all_of_plate_by_type(PlateType.ERASE_TRAP)
+
     def get_plate(self, hex: Hexagon) -> Optional[Plate]:
         """Return the `botroyale.logic.plate.Plate` that is in *hex* if it exists, else None."""
         if hex not in self.plates:
@@ -658,6 +663,8 @@ class State:
             self._activate_pit_trap(plate)
         elif plate.plate_type is PlateType.WALL_TRAP:
             self._activate_wall_trap(plate)
+        elif plate.plate_type is PlateType.ERASE_TRAP:
+            self._activate_erase_trap(plate)
 
     def _get_all_of_plate_by_type(self, plate_type: PlateType) -> set[Plate]:
         return {p for p in self.plates if p.plate_type is plate_type}
@@ -674,3 +681,9 @@ class State:
         self.walls |= targets
         self.pits -= targets
         self.plates -= targets
+
+    def _activate_erase_trap(self, trap: Plate):
+        """Apply the effects of a `botroyale.logic.PlateType.ERASE_TRAP` pressure popping."""
+        self.walls -= trap.targets
+        self.pits -= trap.targets
+        self.plates -= trap.targets

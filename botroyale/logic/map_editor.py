@@ -105,6 +105,16 @@ class MapEditor(MapCreator, BattleAPI):
                     targets=self.selected_tiles,
                 )
             )
+        elif self.brush == BrushType.ERASE_TRAP:
+            self.add_plate(
+                Plate(
+                    hex.cube,
+                    plate_type=PlateType.ERASE_TRAP,
+                    pressure=self.plate_pressure,
+                    pressure_reset=self.plate_pressure_reset,
+                    targets=self.selected_tiles,
+                )
+            )
         else:
             raise ValueError(f"Unknown brush type: {self.brush}")
         self._clear_selected()
