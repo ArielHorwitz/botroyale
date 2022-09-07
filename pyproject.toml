@@ -1,13 +1,18 @@
 [build-system]
-requires = ["setuptools"]
+requires = [
+  "setuptools>=61.0",
+]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "botroyale"
-version = "0.0.1"
+description = "A battle royale for bots."
+version = "0.2.0"
 readme = "README.md"
 requires-python = ">=3.9"
 classifiers = [
+  "License :: OSI Approved :: MIT License",
+  "Operating System :: OS Independent",
   "Requires-Python: >=3.9",
   "Programming Language :: Python :: 3",
   "Programming Language :: Python :: 3.9",
@@ -15,8 +20,8 @@ classifiers = [
   "Topic :: Scientific/Engineering :: Artificial Intelligence",
 ]
 dependencies = [
-  "Kivy==2.1.0",
-  "numpy==1.22.4",
+  "Kivy>=2.1.0,<3.0",
+  "numpy>=1.22.4,<2.0",
 ]
 
 [project.optional-dependencies]
@@ -24,10 +29,28 @@ dev = [
   "pdoc3==0.10.0",
   "black==22.6.0",
   "flake8==5.0.4",
+  "flake8-docstrings==1.6.0",
 ]
 
-[tool.setuptools]
-packages = ["botroyale"]
+[tool.setuptools.packages.find]
+include = [
+  "botroyale*",
+]
+
+[tool.setuptools.package-data]
+botroyale = [
+  "assets/**",
+  "logic/maps/*.json",
+]
+
+[tool.setuptools.exclude-package-data]
+botroyale = [
+  "logic/maps/custom*",
+]
 
 [project.scripts]
 botroyale = "botroyale.run:run_script"
+
+[project.urls]
+"Homepage" = "https://github.com/ArielHorwitz/botroyale"
+"Bug Tracker" = "https://github.com/ArielHorwitz/botroyale/issues"

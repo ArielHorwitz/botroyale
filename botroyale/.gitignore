@@ -1,9 +1,4 @@
-
-# Docs
-/docs/*
-!/docs/templates
-!/docs/guides
-/guides/
+# `botroyale` package .gitignore (package-specific)
 
 
 # Custom user data

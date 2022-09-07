@@ -19,7 +19,7 @@ PanelMode = Literal["turns", "timers"]
 
 
 class BattleManager(Battle, BattleAPI):
-    """An interface between `botroyale.logic.battle.Battle` and `botroyale.api.gui.BattleAPI`.
+    """A GUI interface for `botroyale.logic.battle.Battle`.
 
     Provides methods for parsing, formatting, and displaying information about
     the battle, as well as GUI-related controls and display getters.
@@ -179,8 +179,9 @@ class BattleManager(Battle, BattleAPI):
 
         Unlike other methods in this class, the result of this method does not
         consider `BattleManager.replay_mode`. The times shown are updated to the
-        latest state in the battle. This is because `botroyale.logic.battle.Battle.bot_timer`
-        is updated in place on each new state.
+        latest state in the battle. This is because
+        `botroyale.logic.battle.Battle.bot_timer` is updated in place on each
+        new state.
         """
         strs = [
             "      Bot Calculation Times (ms)",
@@ -466,7 +467,7 @@ class BattleManager(Battle, BattleAPI):
         )
 
     def get_map_size_hint(self) -> int:
-        """Tracks the `botroyale.logic.state.State.death_radius` at `BattleManager.replay_index`.
+        """Tracks `botroyale.logic.state.State.death_radius`.
 
         Overrides: `botroyale.api.gui.BattleAPI.get_map_size_hint`.
         """

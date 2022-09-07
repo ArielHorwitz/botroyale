@@ -10,7 +10,16 @@ import copy
 from botroyale.util.hexagon import Hexagon, ORIGIN
 from botroyale.logic.plate import Plate, PlateType
 from botroyale.logic.prng import PRNG
-from botroyale.api.actions import MAX_AP, REGEN_AP, ALL_ACTIONS, Action, Idle, Move, Jump, Push
+from botroyale.api.actions import (
+    MAX_AP,
+    REGEN_AP,
+    ALL_ACTIONS,
+    Action,
+    Idle,
+    Move,
+    Jump,
+    Push,
+)
 
 # Assert AP is always an integer, this is assumed by the round order tiebreaker
 assert all(isinstance(action.ap, int) for action in ALL_ACTIONS)
@@ -103,7 +112,10 @@ class State:
         if positions is None:
             positions = []
         self.positions: list[Hexagon] = positions
-        """A list of `botroyale.util.hexagon.Hexagon`s representing the positions of the units."""
+        """A list of hexagons representing the positions of the units.
+
+        See: `botroyale.util.hexagon.Hexagon`.
+        """
         self.num_of_units: int = len(positions)
         """Number of units."""
         if alive_mask is None:
@@ -450,7 +462,10 @@ class State:
         return self._get_all_of_plate_by_type(PlateType.PIT_TRAP)
 
     def get_plate(self, hex: Hexagon) -> Optional[Plate]:
-        """Return the `botroyale.logic.plate.Plate` that is in *hex* if it exists, else None."""
+        """Return the plate that is in *hex* if it exists, else None.
+
+        See: `botroyale.logic.plate.Plate`
+        """
         if hex not in self.plates:
             return None
         extra_plates = self.plates - {hex}
@@ -663,13 +678,13 @@ class State:
         return {p for p in self.plates if p.plate_type is plate_type}
 
     def _activate_pit_trap(self, trap: Plate):
-        """Apply the effects of a `botroyale.logic.PlateType.PIT_TRAP` pressure popping."""
+        """Apply the effects of a `botroyale.logic.PlateType.PIT_TRAP` popping."""
         self.walls -= trap.targets
         self.pits |= trap.targets
         self.plates -= trap.targets
 
     def _activate_wall_trap(self, trap: Plate):
-        """Apply the effects of a `botroyale.logic.PlateType.WALL_TRAP` pressure popping."""
+        """Apply the effects of a `botroyale.logic.PlateType.WALL_TRAP` popping."""
         targets = trap.targets - set(self.positions)
         self.walls |= targets
         self.pits -= targets

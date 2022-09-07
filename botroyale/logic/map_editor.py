@@ -36,12 +36,11 @@ MIN_PRESSURE = -5
 
 
 class MapEditor(MapCreator, BattleAPI):
-    """An interface between `botroyale.logic.maps.MapCreator` and `botroyale.api.gui.BattleAPI`.
+    """A GUI interface for `botroyale.logic.maps.MapCreator`.
 
     Enables interactive map editing in the GUI.
     """
 
-    """See: `botroyale.logic.battle_manager.BattleManager.UNIT_COLORS`"""
     HELP_STR = "\n".join(
         [
             "Left click to use brush, right click to erase.",

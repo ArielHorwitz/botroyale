@@ -6,7 +6,7 @@ decide which submodule to import and call it's `run()` function.
 import sys
 from importlib import import_module
 from pkgutil import iter_modules
-from botroyale.util import PACKAGE_DIR, TITLE, MAIN_ARGS
+from botroyale.util import PACKAGE_DIR, MAIN_ARGS
 
 
 SCRIPT_DIR = PACKAGE_DIR / "run"
@@ -24,7 +24,7 @@ def run_script():
         quit()
     print(f"Parsed args: {args}")
     requested_module_name = args.module
-    print(f"\n>> Welcome to {TITLE} <<\n")
+    print("\n>> Welcome to Bot Royale <<\n")
 
     # Find the module
     run_modules = _find_run_modules()

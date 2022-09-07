@@ -23,11 +23,11 @@ def center_distance(hex: Hexagon) -> int:
 class BaseBot:
     """The base class for all bots.
 
-    Should be initialized by a `botroyale.logic.battle.Battle`. The `BaseBot.setup` method
-    is to be used by the bot to do any startup procedures.
+    Should be initialized by a `botroyale.logic.battle.Battle`. The
+    `BaseBot.setup` method is to be used by the bot to do any startup procedures.
 
-    The `botroyale.logic.battle.Battle` will call `BaseBot.poll_action` as long as it is
-    the bot's turn, and is how the bots actually play.
+    The `botroyale.logic.battle.Battle` will call `BaseBot.poll_action` as long
+    as it is the bot's turn, and is how the bots actually play.
     """
 
     NAME: str = "BaseBot"
@@ -90,7 +90,7 @@ class BaseBot:
         return self.get_action(wi)
 
     def gui_click(self, hex: Hexagon, button: str) -> VFXArgsList:
-        """Called by `botroyale.api.gui.BattleAPI` subclasses when we are clicked on in the GUI.
+        """Called when we are clicked on in the GUI.
 
         Left click: will call `BaseBot.gui_click_debug`.
 
@@ -106,7 +106,8 @@ class BaseBot:
                 one of: *left*, *right*, *middle*, *mouse1*, *mouse2*, etc.
 
         Returns:
-            None, or a list of dictionaries of vfx keyword arguments. See `botroyale.api.gui.VFX`.
+            None, or a list of dictionaries of vfx keyword arguments.
+                See `botroyale.api.gui.VFX`.
         """
         if button == "left":
             return self.gui_click_debug(hex)
@@ -132,7 +133,8 @@ class BaseBot:
             hex: The hex on which we were clicked.
 
         Returns:
-            None, or a list of dictionaries of vfx keyword arguments. See `botroyale.api.gui.VFX`.
+            None, or a list of dictionaries of vfx keyword arguments.
+                See `botroyale.api.gui.VFX`.
         """
         return [
             {"name": "mark-blue", "hex": hex},
@@ -145,7 +147,8 @@ class BaseBot:
             hex: The hex on which we were clicked.
 
         Returns:
-            None, or a list of dictionaries of vfx keyword arguments. See `botroyale.api.gui.VFX`.
+            None, or a list of dictionaries of vfx keyword arguments.
+                See `botroyale.api.gui.VFX`.
         """
         return [
             {"name": "mark-blue", "hex": hex},
@@ -170,7 +173,7 @@ class BaseBot:
         return f"{id_label:>3} {self.name}"
 
 
-BotLike = TypeVar('BotLike', bound=BaseBot)
+BotLike = TypeVar("BotLike", bound=BaseBot)
 """A type variable for subclasses of `BaseBot`."""
 
 

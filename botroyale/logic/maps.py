@@ -27,7 +27,7 @@ def _find_maps() -> list[str]:
 
 
 MAP_DIR: Path = PACKAGE_DIR / "logic" / "maps"
-"""Directory where maps are stored on disk. ( `botroyale.util.PACKAGE_DIR`/logic/maps )"""
+"""Directory where maps are stored on disk."""
 if not MAP_DIR.is_dir():
     MAP_DIR.mkdir(parents=True, exist_ok=True)
 DEFAULT_STATE: State = State(death_radius=12)

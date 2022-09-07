@@ -9,8 +9,8 @@ import os
 import warnings
 from pathlib import Path
 from pdoc import Module, Context, tpl_lookup, link_inheritance
-from botroyale.util.file import file_dump, file_load, popen_path, get_usr_dir
-from botroyale.util import PROJ_DIR, PACKAGE_DIR, VERSION
+from botroyale.util import PROJ_DIR, PACKAGE_DIR, INSTALLED_FROM_SOURCE
+from botroyale.util.file import popen_path, file_dump, get_usr_dir
 
 
 DOCS_DIR = PROJ_DIR / "docs"
@@ -32,6 +32,8 @@ def open_docs(
 
 def make_docs(output_dir: Optional[os.PathLike] = None):
     """Clear and create the docs."""
+    if not INSTALLED_FROM_SOURCE:
+        raise EnvironmentError("Cannot create docs unless installed from source.")
     print("Clearing existing docs...")
     output_dir = _get_output_dir(output_dir)
     if output_dir.is_dir():
@@ -49,6 +51,9 @@ def make_docs(output_dir: Optional[os.PathLike] = None):
 
 def test_docs():
     """If making the docs raises no warnings."""
+    if not INSTALLED_FROM_SOURCE:
+        print("Cannot create docs unless installed from source.")
+        return False
     with warnings.catch_warnings(record=True) as warning_catcher:
         make_docs()
     if len(warning_catcher) > 0:
@@ -128,32 +133,3 @@ def _recursive_mods(mod):
     yield mod
     for submod in mod.submodules():
         yield from _recursive_mods(submod)
-
-
-def _generate_fixed_readme(dry_run: bool = False):
-    """Generate a "fixed" README for the html docs.
-
-    We want to use the readme for our docs index page. While the readme is
-    designed to work well for Github, not so much for the html docs. A "fixed"
-    readme will be generated in the docs folder (hence the
-    `.. include:: ./docs/README.md` in botroyale.__init__.py). Since the fixed
-    readme has a difference location, the relative links also need to be fixed.
-
-    And so the following is done before writing the fixed readme:
-    - Insert version
-    - Insert link to the guides
-    - Fix assets folder relative link to absolute link
-    """
-    readme_path = PROJ_DIR / "README.md"
-    # Add version and link to guides up top
-    added_lines = "\n".join(
-        [
-            f"Documentation built on `v{VERSION}`.\n",
-        ]
-    )
-    fixed_readme = f"{added_lines}\n{file_load(readme_path)}"
-    # Fix the assets path for the preview gif
-    fixed_assets_path = PACKAGE_DIR / "assets"
-    oldstr, newstr = "botroyale/assets/", f"{str(fixed_assets_path)}/"
-    fixed_readme = fixed_readme.replace(oldstr, newstr)
-    return fixed_readme

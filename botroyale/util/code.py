@@ -24,6 +24,7 @@ to catch warnings.
 from typing import Optional, Callable
 import subprocess
 from botroyale.util.docs import test_docs
+from botroyale.util import PACKAGE_DIR
 
 
 MAX_LINE_LENGTH = 88  # Black's default
@@ -45,7 +46,7 @@ def check_format() -> bool:
     Returns:
         True if the source code requires no formatting.
     """
-    return _run_black(check_only=True, string_normalization=False) == 0
+    return _run_black(check_only=True) == 0
 
 
 def check_lint() -> bool:
@@ -120,8 +121,10 @@ def _run_flake8(
     extra_args.extend(["--extend-ignore", ",".join(ignores)])
 
     command_args = [
+        "python",
+        "-m",
         "flake8",
-        ".",
+        str(PACKAGE_DIR),
         "--max-line-length",
         str(max_line_length),
         "--max-complexity",
@@ -164,8 +167,10 @@ def _run_black(
     if not string_normalization:
         extra_args.append("--skip-string-normalization")
     command_args = [
+        "python",
+        "-m",
         "black",
-        ".",
+        str(PACKAGE_DIR),
         "--target-version",
         TARGET_PYTHON_VERSION,
         "--line-length",

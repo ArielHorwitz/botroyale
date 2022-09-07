@@ -1,7 +1,8 @@
 """A collection of classes used by the GUI.
 
 All classes in this module are the object types that the GUI will request when
-calling certain methods of `botroyale.api.gui.GameAPI` and `botroyale.api.gui.BattleAPI`.
+calling certain methods of `botroyale.api.gui.GameAPI` and
+`botroyale.api.gui.BattleAPI`.
 """
 from typing import (
     Optional,

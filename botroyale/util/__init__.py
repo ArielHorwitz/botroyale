@@ -2,28 +2,23 @@
 from os import PathLike
 import argparse
 from pathlib import Path
-from botroyale.util.file import file_load
 
 
 PROJ_DIR: PathLike = Path(__file__).parent.parent.parent
 """The project directory root."""
 PACKAGE_DIR: PathLike = PROJ_DIR / "botroyale"
 """The source code directory root."""
+INSTALLED_FROM_SOURCE: bool = (PROJ_DIR / "pyproject.toml").is_file()
+"""If the package is installed from source code (as opposed to packaged wheel)."""
+
+# Sanity checks
 assert PROJ_DIR.is_dir()
 assert PACKAGE_DIR.is_dir()
-
-
-VERSION: str = file_load(PROJ_DIR / "VERSION").strip()
-"""Version of the program (using semantic versioning: https://semver.org/)."""
-TITLE: str = "Bot Royale"
-"""Title of the program."""
-DESCRIPTION: str = "A battle royale for bots."
-"""Short description of the program."""
+assert (PACKAGE_DIR / "__init__.py").is_file()
 
 
 def _parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--version", action="version", version=VERSION)
     parser.add_argument(
         "module",
         metavar="MODULE",

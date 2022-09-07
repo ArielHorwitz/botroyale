@@ -1,14 +1,17 @@
+# Root .gitignore (project-wide)
+
 
 # Environment and runtime
 venv/
-__pycache__
 .idea
+__pycache__
+
+
+# Distribution
+build/
+dist/
 *.egg-info/
 
 
 # Convenient development temp folder
 dev/
-
-# Documentation is generated locally
-docs/botroyale/
-docs/README.md

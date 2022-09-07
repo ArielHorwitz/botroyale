@@ -41,8 +41,8 @@ class Battle:
 
             bot_classes_getter: A function that takes an integer and returns
                 that many bots classes. If bot_classes_getter is not provided,
-                the default `botroyale.bots.get_bot_classes` will be used that is based on
-                configured settings.
+                the default `botroyale.bots.get_bot_classes` will be used that
+                is based on configured settings.
 
             description: A description of the battle.
 
@@ -261,7 +261,7 @@ class Battle:
     # Miscallaneous
     @property
     def winner(self) -> Optional[int]:
-        """Returns `botroyale.logic.state.State.winner` of the current state of battle."""
+        """Alias for `botroyale.logic.state.State.winner` of the current state."""
         return self.state.winner
 
     @property
