@@ -1,5 +1,5 @@
 """Home of `botroyale.api.bots.BaseBot`, the base class for all bots."""
-from typing import NamedTuple, Union
+from typing import NamedTuple, Union, TypeVar
 import copy
 from botroyale.util.hexagon import Hexagon, ORIGIN
 from botroyale.api.logging import logger as glogger
@@ -168,6 +168,10 @@ class BaseBot:
         """Formatted name with uid."""
         id_label = f"#{self.id}"
         return f"{id_label:>3} {self.name}"
+
+
+BotLike = TypeVar('BotLike', bound=BaseBot)
+"""A type variable for subclasses of `BaseBot`."""
 
 
 # Backward compatibility

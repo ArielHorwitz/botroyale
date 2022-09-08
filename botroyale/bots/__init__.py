@@ -8,7 +8,7 @@ import random
 from pkgutil import iter_modules
 from importlib import import_module
 from botroyale.util import PACKAGE_DIR
-from botroyale.api.bots import BaseBot
+from botroyale.api.bots import BaseBot, BotLike
 
 
 BOTS_DIR = PACKAGE_DIR / "bots"
@@ -199,6 +199,24 @@ BOTS: dict[str, type] = _bot_importer()
 
 # There should always be at least one bot, let it be a dummy
 assert "dummy" in BOTS
+
+
+def register_bot(bot_class: BotLike):
+    """Register a bot for botroyale.
+
+    This registration is only valid for runtime. You must re-register every time
+    the script is run.
+
+    Args:
+        bot_class: The class of the bot to register.
+    """
+    if not issubclass(bot_class, BaseBot):
+        raise TypeError("Bots must subclass from botroyale.api.bots.BaseBot.")
+    bot_name = bot_class.NAME
+    if bot_name in BOTS:
+        raise KeyError(f'The name "{bot_name}" is already taken.')
+    BOTS[bot_name] = bot_class
+    print(f"Registered bot: {bot_name} ({bot_class})")
 
 
 # Do not add the submodules (bot code) to documentation.

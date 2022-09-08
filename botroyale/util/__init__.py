@@ -7,7 +7,6 @@ from botroyale.util.file import file_load
 
 PROJ_DIR: PathLike = Path(__file__).parent.parent.parent
 """The project directory root."""
-print(f"{PROJ_DIR=}")
 PACKAGE_DIR: PathLike = PROJ_DIR / "botroyale"
 """The source code directory root."""
 assert PROJ_DIR.is_dir()

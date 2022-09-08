@@ -12,9 +12,18 @@ from botroyale.bots import BOTS, bot_getter, NotFairError
 
 
 BOT_SENDTO_PREFIX = "╠"
-BOTS_SORTED = sorted(BOTS.values(), key=lambda b: b.TESTING_ONLY)
-BOTS_NORMAL = [b for b in BOTS_SORTED if not b.TESTING_ONLY]
-BOTS_TESTING = [b for b in BOTS_SORTED if b.TESTING_ONLY]
+
+
+def _get_sorted_bots():
+    return sorted(BOTS.values(), key=lambda b: b.TESTING_ONLY)
+
+
+def _get_normal_bots():
+    return [b for b in _get_sorted_bots() if not b.TESTING_ONLY]
+
+
+def _get_testing_bots():
+    return [b for b in _get_sorted_bots() if b.TESTING_ONLY]
 
 
 class StandardGameAPI(GameAPI):
@@ -38,16 +47,18 @@ class StandardGameAPI(GameAPI):
             all_play=False,
         )
         self.last_error = ""
+        self._sorted_bots = _get_sorted_bots()
+        self._normal_bots = _get_normal_bots()
+        self._testing_bots = _get_testing_bots()
 
     @property
     def _bots_showing(self) -> list[type]:
         showing = []
-        for bot in BOTS_SORTED:
-            if self.menu_values["show_selected"]:
-                if bot in self.selected_bots:
-                    showing.append(bot)
+        for bot in self._sorted_bots:
+            if self.menu_values["show_selected"] and bot in self.selected_bots:
+                showing.append(bot)
                 continue
-            if not self.menu_values["enable_testing"] and bot.TESTING_ONLY:
+            if bot.TESTING_ONLY and not self.menu_values["enable_testing"]:
                 continue
             if self.menu_values["show_filter"]:
                 if self.menu_values["show_filter"].lower() not in bot.NAME.lower():
@@ -78,7 +89,7 @@ class StandardGameAPI(GameAPI):
             self._toggle_bot(bot, set_as=False)
 
     def _remove_testing(self):
-        for bot in BOTS_TESTING:
+        for bot in self._testing_bots():
             self._toggle_bot(bot, set_as=False)
 
     def _toggle_bot(self, bot, set_as=None):
@@ -274,7 +285,7 @@ class StandardGameAPI(GameAPI):
         # Collect bots
         selected_bot_names = [b.NAME for b in self.selected_bots]
         if not selected_bot_names:
-            selected_bot_names = [b.NAME for b in BOTS_NORMAL]
+            selected_bot_names = [b.NAME for b in self._normal_bots]
         # Make bot getter
         bots = bot_getter(
             selection=selected_bot_names,
