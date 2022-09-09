@@ -43,11 +43,6 @@ botroyale = [
   "logic/maps/*.json",
 ]
 
-[tool.setuptools.exclude-package-data]
-botroyale = [
-  "logic/maps/custom*",
-]
-
 [project.scripts]
 botroyale = "botroyale.run:run_script"
 

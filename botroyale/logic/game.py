@@ -240,7 +240,6 @@ class StandardGameAPI(GameAPI):
                 ]
             )
         map = self.menu_values["map"]
-        spawns = get_map_state(map).num_of_units
         bots = [f"  » {b.NAME}" for b in self.selected_bots]
         max_bot_list = 15
         showing = self._bots_showing
@@ -255,7 +254,6 @@ class StandardGameAPI(GameAPI):
                 f"[i]{self.last_error}[/i]",
                 "",
                 f"Map:      {map}",
-                f"Spawns:   {spawns}",
                 "",
                 f"Showing:  {len(showing)} bots",
                 f"[u]Selected: {len(self.selected_bots)} bots[/u]",

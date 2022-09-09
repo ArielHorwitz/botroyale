@@ -5,40 +5,52 @@ It is recommended to use `botroyale.logic.maps.get_map_state` in order to "initi
 """
 from typing import Optional
 import json
+from itertools import chain
 from pathlib import Path
 from botroyale.util import PACKAGE_DIR
-from botroyale.util.file import file_load, file_dump
+from botroyale.util.file import file_load, file_dump, get_usr_dir
 from botroyale.util.settings import Settings
 from botroyale.util.hexagon import Hexagon, Hex, ORIGIN
 from botroyale.logic.state import State
 from botroyale.logic.plate import Plate
 
 
-def _find_maps() -> list[str]:
-    """Return list of map names found on disk."""
-    map_names = []
-    for file in MAP_DIR.iterdir():
-        if not len(file.suffixes) == 1:
-            continue
-        if not file.suffix == ".json":
-            continue
-        map_names.append(file.stem)
-    return map_names
+BUILTIN_MAP_DIR = PACKAGE_DIR / "logic" / "maps"
+"""Directory where builtin maps are stored on disk."""
+USR_MAP_DIR = get_usr_dir("maps")
+"""Directory where custom user maps are stored on disk."""
+if not USR_MAP_DIR.is_dir():
+    USR_MAP_DIR.mkdir(parents=True, exist_ok=True)
 
 
-MAP_DIR: Path = PACKAGE_DIR / "logic" / "maps"
-"""Directory where maps are stored on disk."""
-if not MAP_DIR.is_dir():
-    MAP_DIR.mkdir(parents=True, exist_ok=True)
+def _find_maps() -> dict[str, Path]:
+    """Return list of map names and their paths as found on disk.
+
+    Searches the "maps" dir from `botroyale.util.file.get_usr_dir` and the
+    builtin maps. Custom user maps override builtin maps.
+    """
+    map_files = {}
+    for file in chain(USR_MAP_DIR.iterdir(), BUILTIN_MAP_DIR.iterdir()):
+        if not len(file.suffixes) == 1 or file.suffix != ".json":
+            continue
+        if file.stem in map_files:
+            continue
+        map_files[file.stem] = file
+    return map_files
+
+
 DEFAULT_STATE: State = State(death_radius=12)
 """A `botroyale.logic.state.State` object representing a default, "empty" map.
 
 Should be copied (`botroyale.logic.state.State.copy`) before use.
 """
+MAPS: tuple[str, ...] = tuple(sorted(_find_maps().keys()))
+"""Tuple of available map names.
+
+Searches the "maps" dir from `botroyale.util.file.get_usr_dir` and builtin maps.
+"""
 DEFAULT_MAP_NAME: str = Settings.get("logic.default_map", "danger")
 """Default map name as configured in settings."""
-MAPS: tuple[str, ...] = tuple(_find_maps())
-"""Tuple of available map names as found in `MAP_DIR`."""
 assert DEFAULT_MAP_NAME in MAPS
 
 
@@ -60,12 +72,13 @@ def _load_map(map_name: Optional[str] = None, use_default: bool = True) -> State
     """
     if map_name is None:
         return DEFAULT_STATE.copy()
-    map_file = MAP_DIR / f"{map_name}.json"
-    if not map_file.is_file():
+    map_files = _find_maps()
+    if map_name not in map_files:
         if use_default:
+            print(f"{map_name=} not found in {map_files=}")
             return DEFAULT_STATE.copy()
-        raise FileNotFoundError(f"Could not find map: {map_name} ( {map_file} )")
-    data = json.loads(file_load(map_file))
+        raise FileNotFoundError(f'Could not find map: "{map_name}"')
+    data = json.loads(file_load(map_files[map_name]))
     return State(
         death_radius=data["death_radius"],
         positions=[Hex(x, y) for x, y in data["positions"]],
@@ -87,7 +100,7 @@ def _save_map(map_name: str, state: State, allow_overwrite: bool = True):
         "walls": [w.xy for w in state.walls],
         "plates": [p.export() for p in state.plates],
     }
-    map_file = MAP_DIR / f"{map_name}.json"
+    map_file = USR_MAP_DIR / f"{map_name}.json"
     if not allow_overwrite and map_file.is_file():
         raise FileExistsError(f"Not allowed to overwrite saved map: {map_file}")
     file_dump(map_file, json.dumps(data))
