@@ -1,3 +1,4 @@
+# flake8: noqa
 import numpy as np
 
 from botroyale.api.actions import Move, Push, Idle, Action, Jump, ALL_ACTIONS
@@ -16,7 +17,7 @@ class CrazeeBotAlpha(BaseBot):
     CENTER_TILE = CENTER
     DEPTH_MOD = 1
     tile_view_distance = 5
-    SPRITE = 'flower'
+    SPRITE = "flower"
     logging_enabled = False
 
     def __init__(self, id):
@@ -72,16 +73,16 @@ class CrazeeBotAlpha(BaseBot):
 
     def get_state_score(self, _state: State):
         if not _state.alive_mask[self.id]:
-            return float('-inf')
+            return float("-inf")
 
         enemies_alive = _state.alive_mask.sum() - 1
         if enemies_alive == 0:
-            return float('inf')
+            return float("inf")
 
         bot_id = _state.current_unit
         my_pos: Hexagon = _state.positions[bot_id]
         if center_distance(my_pos) >= _state.death_radius - 1:
-            return float('-inf')
+            return float("-inf")
         enemy_dead_score = -enemies_alive * 1.5
         enemy_mask = np.ones(len(_state.positions), dtype=np.bool)
         enemy_mask[bot_id] = False
@@ -89,11 +90,21 @@ class CrazeeBotAlpha(BaseBot):
         alive_enemy_pos = set(_state.positions[uid] for uid in enemy_ids)
         terrain_score = 0
         enemy_score = 0
-        d_pits = [my_pos.get_distance(pit) for pit in _state.pits if my_pos.get_distance(pit) < self.tile_view_distance]
-        d_walls = [my_pos.get_distance(wall) for wall in _state.walls if
-                   my_pos.get_distance(wall) < self.tile_view_distance]
-        d_enemys = [my_pos.get_distance(enemy) for enemy in alive_enemy_pos
-                    if my_pos.get_distance(enemy) < self.tile_view_distance]
+        d_pits = [
+            my_pos.get_distance(pit)
+            for pit in _state.pits
+            if my_pos.get_distance(pit) < self.tile_view_distance
+        ]
+        d_walls = [
+            my_pos.get_distance(wall)
+            for wall in _state.walls
+            if my_pos.get_distance(wall) < self.tile_view_distance
+        ]
+        d_enemys = [
+            my_pos.get_distance(enemy)
+            for enemy in alive_enemy_pos
+            if my_pos.get_distance(enemy) < self.tile_view_distance
+        ]
         d_center = my_pos.get_distance(self.CENTER_TILE)
         terrain_score -= d_center / 4
         my_ap = _state.ap[bot_id]
@@ -101,13 +112,17 @@ class CrazeeBotAlpha(BaseBot):
         ap_score += max(0, my_ap - self.AP_REGEN) / 4
         ap_score /= 20
         if len(d_pits) > 0:
-            terrain_score += ((sum(d_pits) / len(d_pits)) * 2)
+            terrain_score += (sum(d_pits) / len(d_pits)) * 2
             neighbor_pits_score = len(set(my_pos.neighbors) & _state.pits) / 6
-            terrain_score += neighbor_pits_score if neighbor_pits_score != 6 else -neighbor_pits_score
+            terrain_score += (
+                neighbor_pits_score
+                if neighbor_pits_score != 6
+                else -neighbor_pits_score
+            )
         if len(d_walls) > 0:
-            terrain_score -= (sum(d_walls) / len(d_walls))
+            terrain_score -= sum(d_walls) / len(d_walls)
         if len(d_enemys) > 0:
-            enemy_score += (sum(d_enemys) / len(d_enemys))
+            enemy_score += sum(d_enemys) / len(d_enemys)
         score = terrain_score + enemy_score + enemy_dead_score + ap_score
         # self.logger(f"Score: {score:.2f}, Pos: {my_pos.xy}, terrain: {terrain_score:.2f},"
         #             f"enemy: {enemy_score:.2f}, " f"enemy_dead: {enemy_dead_score:.2f}, ap: {ap_score:.2f}")
@@ -116,7 +131,7 @@ class CrazeeBotAlpha(BaseBot):
     def calc_turn(self, start_state: State, return_fx=0):
         MAX_DEPTH = self.max_depth
         explored_worlds = set()
-        call_counter = {'possible_find_chain_iter': 0}
+        call_counter = {"possible_find_chain_iter": 0}
         vfx = []
 
         def get_next_state(_state: State, action: Action):
@@ -126,28 +141,31 @@ class CrazeeBotAlpha(BaseBot):
                 s = _state.apply_action(action)
             s.score = self.get_state_score(s)
             if return_fx == 1 and type(action) != Idle:
-                fx_name = ''
+                fx_name = ""
                 if type(action) == Move:
-                    fx_name = 'mark-green'
+                    fx_name = "mark-green"
                 elif type(action) == Push:
-                    fx_name = 'mark-red'
+                    fx_name = "mark-red"
                 elif type(action) == Jump:
-                    fx_name = 'mark-blue'
-                vfx.append({'name': fx_name, 'hex': action.target})
+                    fx_name = "mark-blue"
+                vfx.append({"name": fx_name, "hex": action.target})
             if return_fx == 2:
                 score = s.score
-                fx_name = ''
+                fx_name = ""
                 threshold = 12
-                if score == float('inf'):
-                    fx_name = ['mark-green']
-                elif score == float('-inf'):
-                    fx_name = ['death']
+                if score == float("inf"):
+                    fx_name = ["mark-green"]
+                elif score == float("-inf"):
+                    fx_name = ["death"]
                 elif score >= -threshold:
-                    fx_name = ['mark-blue'] * (int(score + threshold) + 1)
+                    fx_name = ["mark-blue"] * (int(score + threshold) + 1)
                 else:
-                    fx_name = ['mark-red'] * (int(-score - threshold) + 1)
+                    fx_name = ["mark-red"] * (int(-score - threshold) + 1)
 
-                vfx.extend({'name': fx, 'hex': _state.positions[_state.current_unit]} for fx in fx_name)
+                vfx.extend(
+                    {"name": fx, "hex": _state.positions[_state.current_unit]}
+                    for fx in fx_name
+                )
 
             return s
 
@@ -157,7 +175,7 @@ class CrazeeBotAlpha(BaseBot):
             best_chain = chain
             current_state = chain[-1]
             for next_action in self.get_legal_actions(current_state):
-                call_counter['possible_find_chain_iter'] += 1
+                call_counter["possible_find_chain_iter"] += 1
                 new_state = get_next_state(current_state, next_action)
                 # Pruning explored worlds
                 c_hash = simple_hash_state(new_state)
@@ -169,15 +187,15 @@ class CrazeeBotAlpha(BaseBot):
                     best_chain = child_best_chain
             return best_chain
 
-        with pingpong(f'{self.NAME}-{self.id} Find Chain', logger=self.logger):
+        with pingpong(f"{self.NAME}-{self.id} Find Chain", logger=self.logger):
             start_state.score = self.get_state_score(start_state)
             init_chain = [start_state]
             result_chain = find_max_chain(init_chain)
             if not result_chain[-1].game_over:
                 result_chain.append(get_next_state(result_chain[-1], Idle()))
             actions = [state.last_action for state in result_chain[1:]]
-            self.logger('\n'.join(str(_) for _ in actions))
-            call_counter['explored_worlds'] = len(explored_worlds)
+            self.logger("\n".join(str(_) for _ in actions))
+            call_counter["explored_worlds"] = len(explored_worlds)
             self.logger(call_counter)
         if return_fx > 0:
             return actions, vfx
@@ -188,18 +206,18 @@ class CrazeeBotAlpha(BaseBot):
         if len(self.planed_actions) > 0:
             for action in self.planed_actions:
                 if type(action) == Move:
-                    sfx.append({'name': 'mark-green', 'hex': action.target})
+                    sfx.append({"name": "mark-green", "hex": action.target})
                 elif type(action) == Push:
-                    sfx.append({'name': 'mark-red', 'hex': action.target})
+                    sfx.append({"name": "mark-red", "hex": action.target})
                 elif type(action) == Jump:
-                    sfx.append({'name': 'mark-blue', 'hex': action.target})
+                    sfx.append({"name": "mark-blue", "hex": action.target})
 
         elif self.last_state is not None:
             actions, vfx = self.calc_turn(self.last_state, return_fx=1)
             sfx.extend(vfx)
 
         else:
-            return [{'name': 'mark-blue', 'hex': _hex}]
+            return [{"name": "mark-blue", "hex": _hex}]
         return sfx
 
     def gui_click_debug_alt(self, _hex: Hexagon):
@@ -208,32 +226,36 @@ class CrazeeBotAlpha(BaseBot):
             actions, vfx = self.calc_turn(self.last_state, return_fx=2)
             sfx.extend(vfx)
         else:
-            return [{'name': 'mark-blue', 'hex': _hex}]
+            return [{"name": "mark-blue", "hex": _hex}]
         return sfx
 
 
 def simple_hash_state(state):
-    return sum([
-        *(hash(h) for h in state.positions),
-        hash(state.alive_mask.tostring()),
-        hash(state.ap.tostring()),
-        ])
+    return sum(
+        [
+            *(hash(h) for h in state.positions),
+            hash(state.alive_mask.tostring()),
+            hash(state.ap.tostring()),
+        ]
+    )
 
 
 def hash_state(state):
-    return sum([
-        *(hash(h) for h in state.positions),
-        *(hash(h) for h in state.walls),
-        *(hash(h) for h in state.pits),
-        hash(state.death_radius),
-        hash(state.alive_mask.tostring()),
-        hash(state.ap.tostring()),
-        hash(state.round_ap_spent.tostring()),
-        hash(str(state.round_remaining_turns)),
-        hash(state.step_count),
-        hash(state.turn_count),
-        hash(state.round_count),
-        ])
+    return sum(
+        [
+            *(hash(h) for h in state.positions),
+            *(hash(h) for h in state.walls),
+            *(hash(h) for h in state.pits),
+            hash(state.death_radius),
+            hash(state.alive_mask.tostring()),
+            hash(state.ap.tostring()),
+            hash(state.round_ap_spent.tostring()),
+            hash(str(state.round_remaining_turns)),
+            hash(state.step_count),
+            hash(state.turn_count),
+            hash(state.round_count),
+        ]
+    )
 
 
 class CrazeeEasy(CrazeeBotAlpha):

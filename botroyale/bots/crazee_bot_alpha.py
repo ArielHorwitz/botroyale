@@ -1,3 +1,4 @@
+# flake8: noqa
 import copy
 import numpy as np
 
@@ -9,12 +10,12 @@ from botroyale.api.bots import world_info
 from botroyale.util.settings import Settings
 from time import perf_counter
 
-DEBUG = Settings.get('logging.bots.crazee.debug', False)
+DEBUG = Settings.get("logging.bots.crazee.debug", False)
 
 
 def debug(*lines):
     if DEBUG:
-        glogger('\n'.join(str(_) for _ in lines))
+        glogger("\n".join(str(_) for _ in lines))
 
 
 class CrazeeBotAlpha(BaseBot):
@@ -24,7 +25,7 @@ class CrazeeBotAlpha(BaseBot):
     AP_REGEN = 50
     CENTER_TILE = Hex(0, 0)
     LETHAL_PUSH_SCORE = 1000
-    SPRITE = 'flower'
+    SPRITE = "flower"
     TESTING_ONLY = True
 
     def __init__(self, id):
@@ -108,7 +109,9 @@ class CrazeeBotAlpha(BaseBot):
             if type(action) is Push:
                 # debug(f"My Pos: {c_pos[self.id]}, Target: {action.action.target}")
                 end_tile = next(c_pos[self.id].straight_line(action.target))
-                enemy_index = [e for e in range(len(c_pos)) if c_pos[e] == action.target][0]
+                enemy_index = [
+                    e for e in range(len(c_pos)) if c_pos[e] == action.target
+                ][0]
                 c_pos[enemy_index] = end_tile
             elif type(action) is Move:
                 c_pos[self.id] = action.target
@@ -120,16 +123,16 @@ class CrazeeBotAlpha(BaseBot):
 
         def get_wi_score(cwi: world_info, bot_id: int):
             if not cwi.alive_mask[bot_id]:
-                return float('-inf')
+                return float("-inf")
 
             enemys_alive = cwi.alive_mask.sum() - 1
             if enemys_alive == 0:
-                return float('inf')
+                return float("inf")
 
             my_pos: Hexagon = cwi.positions[bot_id]
             edge_of_map: set[Hexagon] = set(self.CENTER_TILE.ring(cwi.ring_radius - 1))
             if my_pos in edge_of_map:
-                return float('-inf')
+                return float("-inf")
 
             enemy_dead_score = -enemys_alive * 1.5
             enemy_mask = np.ones(len(cwi.positions), dtype=np.bool)
@@ -139,23 +142,33 @@ class CrazeeBotAlpha(BaseBot):
             tile_view_distance = 5
             terrain_score = 0
             enemy_score = 0
-            d_pits = [my_pos.get_distance(pit) for pit in cwi.pits if my_pos.get_distance(pit) < tile_view_distance]
-            d_walls = [my_pos.get_distance(wall) for wall in cwi.walls if
-                       my_pos.get_distance(wall) < tile_view_distance]
-            d_enemys = [my_pos.get_distance(enemy) for enemy in alive_enemy_pos
-                        if my_pos.get_distance(enemy) < tile_view_distance]
+            d_pits = [
+                my_pos.get_distance(pit)
+                for pit in cwi.pits
+                if my_pos.get_distance(pit) < tile_view_distance
+            ]
+            d_walls = [
+                my_pos.get_distance(wall)
+                for wall in cwi.walls
+                if my_pos.get_distance(wall) < tile_view_distance
+            ]
+            d_enemys = [
+                my_pos.get_distance(enemy)
+                for enemy in alive_enemy_pos
+                if my_pos.get_distance(enemy) < tile_view_distance
+            ]
             d_center = my_pos.get_distance(self.CENTER_TILE)
-            terrain_score -= d_center/4
+            terrain_score -= d_center / 4
             my_ap = cwi.ap[self.id]
             ap_score = min(my_ap, self.AP_REGEN)
-            ap_score += max(0, my_ap-self.AP_REGEN) / 4
+            ap_score += max(0, my_ap - self.AP_REGEN) / 4
             ap_score /= 20
             if len(d_pits) > 0:
                 terrain_score += (sum(d_pits) / len(d_pits)) * 2
             if len(d_walls) > 0:
-                terrain_score -= (sum(d_walls) / len(d_walls))
+                terrain_score -= sum(d_walls) / len(d_walls)
             if len(d_enemys) > 0:
-                enemy_score += (sum(d_enemys) / len(d_enemys))
+                enemy_score += sum(d_enemys) / len(d_enemys)
             score = terrain_score + enemy_score + enemy_dead_score + ap_score
             # debug(f"Score: {score:.2f}, terrain: {terrain_score:.2f}, enemy: {enemy_score:.2f}, "
             #       f"enemy_dead: {enemy_dead_score:.2f}, ap: {ap_score:.2f}")
@@ -167,11 +180,10 @@ class CrazeeBotAlpha(BaseBot):
             best_chain = chain
             current_state = chain[-1].state
             for next_action in self.get_legal_actions(current_state):
-                new_state = get_new_world_state(current_state,
-                                                next_action)
-                new_cstate = CWorld(new_state,
-                                    get_wi_score(new_state, self.id),
-                                    next_action)
+                new_state = get_new_world_state(current_state, next_action)
+                new_cstate = CWorld(
+                    new_state, get_wi_score(new_state, self.id), next_action
+                )
                 # Pruning explored worlds
                 c_hash = hash(new_cstate)
                 if c_hash in explored_worlds:
@@ -190,7 +202,7 @@ class CrazeeBotAlpha(BaseBot):
         if len(result_chain) > 1:
             temp = result_chain.pop(0)
             result_chain.append(temp)
-        debug('\n'.join(str(_) for _ in result_chain))
+        debug("\n".join(str(_) for _ in result_chain))
         return result_chain
 
 
@@ -201,9 +213,11 @@ class CWorld:
         self.action = action
 
     def __str__(self):
-        return f"Score: {self.score:.2f}, " \
-               f"State: {[h.xy for h in self.state.positions]}, " \
-               f"Action: <{type(self.action).__name__}> {self.action.target if hasattr(self.action, 'target') else ''}"
+        return (
+            f"Score: {self.score:.2f}, "
+            f"State: {[h.xy for h in self.state.positions]}, "
+            f"Action: <{type(self.action).__name__}> {self.action.target if hasattr(self.action, 'target') else ''}"
+        )
 
     def __repr__(self):
         return str(self)
