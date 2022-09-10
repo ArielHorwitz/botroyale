@@ -2,28 +2,27 @@
 
 In this guide, we will learn how to write a simple bot that will play in bot royale.
 
-## Start
-Make sure you have Bot Royale installed correctly and create a new file in the *bots* folder, e.g. `mybot.py`.
+See also: [A primer on rules and mechanics](../mechanics_primer.html) and  [Using the GUI app](../ui/gui.html)
 
-
-Let's begin with this simple boilerplate:
+## Setting Up
+[Install Bot Royale](../install.html) and create your python script (e.g. `main.py`). Let's begin with this simple boilerplate:
 ```python
-from api.bots import BaseBot
-from api.actions import Idle
+# main.py
+import botroyale as br
 
 
-class MyBot(BaseBot):
+class MyBot(br.BaseBot):
     NAME = 'testing new bot'
 
     def poll_action(self, state):
-        action = Idle()
+        action = br.actions.Idle()
         return action
 
-
-BOT = MyBot
+br.register_bot(MyBot)
+br.run_gui()
 ```
 
-We should have a new bot that can join games. To test, we simply run the game and make sure to include our new bot ("testing new bot" is their name) by clicking on them in the main menu under "Include" and starting a new battle.
+When we run this script it creates a bot that always idles, registers it, and then runs the app. In the main menu, we can select our new bot ("testing new bot" is their name) and start a new battle.
 
 ## Actions
 Our new bot isn't doing anything - it is using the `botroyale.api.actions.Idle` action every time. The idle action ends our turn. Let's make our bot use the `botroyale.api.actions.Move` action.
@@ -44,7 +43,7 @@ def poll_action(self, state):
     return Move(target)
 ```
 
-Now our bot will move to a random direction every time. However it is also showing some glaring issues: it may kill itself by moving outside the ring of death or onto a pit, and it always ends it's turn with an illegal action.
+Now our bot will move to a random direction every time. However it is also showing some glaring issues: it may kill itself by moving outside the ring of death or onto a pit, it may make an illegal action by bumping into other units or walls, and it always ends it's turn with an illegal action (because of missing AP).
 
 > Illegal actions have no penalty except that they end the turn (as if `botroyale.api.actions.Idle` was used).
 
@@ -94,36 +93,3 @@ In this guide we learned how to write a simple bot that can play and is aware of
 - `botroyale.api.bots` to learn about our Bot's base class.
 
 > If the docs are confusing or wrong, *please* raise an issue on github.
-
-
-# Common functions as examples
-
-The following are some of the common functions that beginner bot developers first write.
-
-### Find hex after push
-```python
-def hex_after_push(my_pos: Hexagon, enemy_pos: Hexagon) - > Hexagon:
-    """Return the tile my enemy will land on after I push them."""
-    assert enemy_pos in my_pos.neighbors
-    after_push_pos = next(my_pos.straight_line(enemy_pos))
-    return after_push_pos
-```
-
-### Find all moveable hexes on the map
-```python
-def moveable_tiles(state: State) -> set[Hexagon]:
-    """Return a set of all tiles that can be legally moved to without dying."""
-    map_center = api.bots.CENTER
-    map_tiles = map_center.range(state.death_radius - 1)
-    moveables = set(map_tiles) - state.pits - state.walls - set(state.positions)
-    return moveables
-```
-
-### Find positions of live enemies
-```python
-def find_enemy_positions(state: State, my_id: int) -> list[Hexagon]:
-    """Return a list of live enemy positions."""
-    enemy_ids = [id for id in range(state.num_of_units) if id in state.alive_mask and id != my_id]
-    enemy_pos = [state.positions[id] for id in enemy_ids]
-    return enemy_pos
-```

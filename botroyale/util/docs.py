@@ -41,9 +41,10 @@ def make_docs(output_dir: Optional[os.PathLike] = None):
     print("Preparing docs...")
     tpl_lookup.directories.insert(0, str(TEMPLATE_DIR))
     _copy_assets(output_dir)
-    _write_guides(output_dir)
+    _write_guides()
     print("Building docs...")
     doc_root = _get_root_package_doc()
+    _delete_guides()
     print("Writing new docs...")
     _write_html(doc_root, output_dir)
     print("Make docs done.")
@@ -88,15 +89,33 @@ def _copy_assets(output_dir):
     )
 
 
-def _write_guides(output_dir):
-    # TODO: make an html index for the guides, not just copying the md files
-    new_guides_dir = output_dir / "botroyale"
-    new_guides_dir.mkdir(parents=True, exist_ok=True)
-    # Copy guides
-    shutil.copytree(
-        DOCS_DIR / "guides",
-        new_guides_dir / "guides",
-    )
+def _recursive_files(dir, _top_dir=None):
+    _top_dir = dir if _top_dir is None else _top_dir
+    for child in dir.iterdir():
+        if child.is_dir():
+            yield from _recursive_files(child, _top_dir)
+        elif child.is_file():
+            yield child.relative_to(_top_dir)
+
+
+def _write_guides():
+    guides_md = PACKAGE_DIR.parent / "docs" / "guides"
+    guides_py = PACKAGE_DIR / "guides"
+    if guides_py.is_dir():
+        warnings.warn(f"Guides subpackage dir already exists: {guides_py}")
+    guides_py.mkdir(exist_ok=True)
+    guides = _recursive_files(guides_md)
+    for path in guides:
+        path_md = guides_md / path
+        path_py = guides_py / path.parent / f"{path.stem}.py"
+        path_py.parent.mkdir(parents=True, exist_ok=True)
+        include_md = f'""".. include:: {path_md}"""'
+        file_dump(path_py, include_md)
+
+
+def _delete_guides():
+    guides_py = PACKAGE_DIR / "guides"
+    shutil.rmtree(guides_py)
 
 
 def _get_root_package_doc():
@@ -108,7 +127,18 @@ def _get_root_package_doc():
 
 def _write_html(doc_root, output_dir):
     for mod in _recursive_mods(doc_root):
-        html = mod.html()
+        with warnings.catch_warnings(record=True) as warning_catcher:
+            html = mod.html()
+        for w in warning_catcher:
+            # Guide modules are generated temporarily, and will not be part of a
+            # commit blob. pdoc will fail to create a link to github source
+            # without a blob reference. Guides do not need links to source so
+            # we ignore said warnings.
+            warning_str = w.message.args[0]
+            unavailable_guide_source = "format_git_link for <module 'botroyale.guides"
+            if unavailable_guide_source in warning_str:
+                continue
+            warnings.warn(warning_str)
         file_path = output_dir / _module_relative_path(mod)
         file_path.parent.mkdir(parents=True, exist_ok=True)
         file_dump(file_path, html)

@@ -1,29 +1,35 @@
 # Bot Royale Documentation
 A battle royale for bots. Write your own bots in Python and watch them play!
 
-![Preview GIF](preview.gif)
-
 ## Install
-It is recommended to use a [virtual environment](https://docs.python.org/3/tutorial/venv.html). Once activated, install using:
 ```noformat
 pip install --upgrade botroyale
 ```
 
+See the [install guide](guides/install.html) for more details.
+
 ## Quickstart
-It takes as few as ***5 lines of code*** to write your own bot and watch it play, from start to finish!
+It takes as few as ***7 lines of code*** to [write your own bot](guides/bots/simple.html) and watch it play!
 
 ```python
+# main.py -- Run this script with Python
 import botroyale as br
 
 class MyBot(br.BaseBot):
     NAME = 'mybot'
 
+    def poll_action(self, state):
+      return br.actions.Idle()
+
 br.register_bot(MyBot)
 br.run_gui()
 ```
 
-## Guides
-Browse the [guides](https://github.com/ArielHorwitz/botroyale/tree/dev/docs/guides) to learn more.
+See the guide on [writing your first bot](guides/bots/simple.html).
 
-## Source code
-See the source code on [GitHub](https://github.com/ArielHorwitz/botroyale).
+## Resources
+- Browse the [guides](guides/index.html) to learn more.
+- Browse the [API reference](#header-submodules).
+- Browse the [source code](https://github.com/ArielHorwitz/botroyale) on GitHub.
+
+![Preview GIF](preview.gif)
