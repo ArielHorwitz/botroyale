@@ -22,15 +22,59 @@ def open_docs(
     output_dir: Optional[os.PathLike] = None,
     force_remake: bool = False,
 ):
-    """Opens the docs in default browser, using `botroyale.util.file.popen_path`."""
+    """Opens the docs in default browser.
+
+    Generates the docs if missing or if *force_remake*.
+    """
     output_dir = _get_output_dir(output_dir)
-    index_file = output_dir / "botroyale" / "index.html"
-    if not index_file.is_file() or force_remake:
-        make_docs()
+    make_docs(output_dir, force_remake=force_remake)
+    index_file = _get_index_file(output_dir)
     popen_path(index_file)
 
 
-def make_docs(output_dir: Optional[os.PathLike] = None):
+def docs_exist(output_dir: Optional[os.PathLike] = None) -> bool:
+    """Return True if docs exist in *output_dir*."""
+    output_dir = _get_output_dir(output_dir)
+    index_file = _get_index_file(output_dir)
+    return index_file.is_file()
+
+
+def make_docs(
+    output_dir: Optional[os.PathLike] = None,
+    force_remake: bool = False,
+):
+    """Create the docs if missing or if *force_remake*."""
+    output_dir = _get_output_dir(output_dir)
+    if force_remake or not docs_exist(output_dir):
+        _make_docs(output_dir)
+
+
+def test_docs():
+    """If making the docs raises no warnings."""
+    if not INSTALLED_FROM_SOURCE:
+        print("Cannot create docs unless installed from source.")
+        return False
+    with warnings.catch_warnings(record=True) as warning_catcher:
+        make_docs(force_remake=True)
+    if len(warning_catcher) > 0:
+        print(f"Found {len(warning_catcher)} warnings:")
+        for warning in warning_catcher:
+            print(f"  {warning.message}")
+        return False
+    print("Documentation built sucessfully.")
+    return True
+
+
+def _get_index_file(output_dir: Optional[os.PathLike]) -> Path:
+    output_dir = _get_output_dir(output_dir)
+    return output_dir / "botroyale" / "index.html"
+
+
+def _get_output_dir(output_dir: Optional[os.PathLike]) -> Path:
+    return get_usr_dir("docs") if output_dir is None else output_dir
+
+
+def _make_docs(output_dir: Optional[os.PathLike] = None):
     """Clear and create the docs."""
     if not INSTALLED_FROM_SOURCE:
         raise EnvironmentError("Cannot create docs unless installed from source.")
@@ -48,30 +92,6 @@ def make_docs(output_dir: Optional[os.PathLike] = None):
     print("Writing new docs...")
     _write_html(doc_root, output_dir)
     print("Make docs done.")
-
-
-def test_docs():
-    """If making the docs raises no warnings."""
-    if not INSTALLED_FROM_SOURCE:
-        print("Cannot create docs unless installed from source.")
-        return False
-    with warnings.catch_warnings(record=True) as warning_catcher:
-        make_docs()
-    if len(warning_catcher) > 0:
-        print(f"Found {len(warning_catcher)} warnings:")
-        for warning in warning_catcher:
-            print(f"  {warning.message}")
-        return False
-    print("Documentation built sucessfully.")
-    return True
-
-
-def _get_output_dir(output_dir: Optional[os.PathLike]) -> Path:
-    if output_dir is None:
-        output_dir = get_usr_dir("docs")
-    else:
-        output_dir /= "docs"
-    return output_dir
 
 
 def _copy_assets(output_dir):

@@ -3,8 +3,16 @@
 Helps developers comply with the project's standard format. See
 `botroyale.util.code.format_source_code`.
 """
-from botroyale.util import MAIN_ARGS
+import argparse
 from botroyale.util.code import format_source_code
+
+
+def _parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(
+        description="Format the source code to comply with integration tests.",
+    )
+    args = parser.parse_args()
+    return args
 
 
 def run():
@@ -12,5 +20,5 @@ def run():
 
     See `botroyale.util.code.format_source_code`.
     """
-    string_normalization = "nostring" not in MAIN_ARGS.opargs
-    format_source_code(string_normalization=string_normalization)
+    _parse_args()
+    format_source_code()

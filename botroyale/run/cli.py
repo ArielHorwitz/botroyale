@@ -204,7 +204,7 @@ def play_complete(battle: BattleManager) -> tuple[str, list[str]]:
 
 
 def run():
-    """Queries the user for a function to run."""
+    """Entry point for cli."""
     while True:
         print(
             "\n".join(

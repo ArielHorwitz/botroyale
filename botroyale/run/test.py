@@ -6,14 +6,36 @@ compliant with the project's automated requirements.
 
 See: `botroyale.util.code`.
 """
-from botroyale.util import MAIN_ARGS
+import argparse
 from botroyale.util.code import STANDARD_TEST_SUITE
+
+
+def _parse_args() -> argparse.Namespace:
+    desc = (
+        "Run the standard test suite and output the results to console. "
+        "Available tests: "
+    )
+    desc += ", ".join(STANDARD_TEST_SUITE.keys())
+    parser = argparse.ArgumentParser(
+        description=desc,
+    )
+    parser.add_argument(
+        "tests",
+        metavar="TESTS",
+        nargs="*",
+        default=None,
+        help="names of tests to run (default: all)",
+    )
+    args = parser.parse_args()
+    return args
 
 
 def run():
     """Run the standard test suite and output the results to console."""
-    if MAIN_ARGS.opargs:
-        test_names = set(MAIN_ARGS.opargs) & set(STANDARD_TEST_SUITE.keys())
+    args = _parse_args()
+    print(f"{args.tests=}")
+    if args.tests:
+        test_names = set(args.tests) & set(STANDARD_TEST_SUITE.keys())
     else:
         test_names = list(STANDARD_TEST_SUITE.keys())
     total_tests = len(test_names)

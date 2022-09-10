@@ -46,7 +46,12 @@ botroyale = [
 ]
 
 [project.scripts]
-botroyale = "botroyale.run:run_script"
+botroyale = "botroyale.run.gui:run"
+botroyale-gui = "botroyale.run.gui:run"
+botroyale-cli = "botroyale.run.cli:run"
+botroyale-docs = "botroyale.run.docs:run"
+botroyale-test = "botroyale.run.test:run"
+botroyale-format = "botroyale.run.format:run"
 
 [project.urls]
 "Homepage" = "https://github.com/ArielHorwitz/botroyale"

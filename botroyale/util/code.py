@@ -13,9 +13,9 @@ list of error codes and violations, see:
 ### Code format
 `check_format` uses the [Black code formatter](https://github.com/psf/black).
 The standard format of the project is based on [Black's default configuration
-](https://black.readthedocs.io/en/stable/the_black_code_style/current_style.html)
-but without string normalization. `format_source_code` will automatically format
-the source code to comply with the `check_format`.
+](https://black.readthedocs.io/en/stable/the_black_code_style/current_style.html).
+`format_source_code` will automatically format the source code to comply with
+`check_format`.
 
 ### Documentation generator
 `check_docs` generates the documentation using `botroyale.util.docs.test_docs`
@@ -63,7 +63,7 @@ def check_lint() -> bool:
 def check_docs() -> bool:
     """Generate the docs and check no warnings were raised.
 
-    See `botroyale.run.makedocs`.
+    See `botroyale.util.docs.make_docs`.
 
     Returns:
         True if the docs were generated without errors or warnings.
@@ -72,16 +72,13 @@ def check_docs() -> bool:
     return test_docs()
 
 
-def format_source_code(string_normalization: bool = True) -> int:
+def format_source_code() -> int:
     """Format source code using the Black code formatter.
-
-    By default, *string_normalization* is enabled (to be encouraged) even
-    though it is not required by `check_format`.
 
     Returns:
         The returncode of the command to the Black code formatter.
     """
-    return _run_black(check_only=False, string_normalization=string_normalization)
+    return _run_black(check_only=False)
 
 
 def _run_flake8(
@@ -141,7 +138,6 @@ def _run_flake8(
 def _run_black(
     check_only: bool = False,
     exclude: Optional[list[str]] = None,
-    string_normalization: bool = True,
 ) -> int:
     """Run the Black code formatter and return the resulting returncode.
 
@@ -151,7 +147,6 @@ def _run_black(
     Args:
         check_only: Performs a check only without modifying files.
         exclude: List of patterns in file/folders to exclude.
-        string_normalization: Enable formatting strings' quotes.
 
     Returns:
         The returncode of the command (0 means no issues).
@@ -164,8 +159,6 @@ def _run_black(
     extra_args.extend(["--extend-exclude", excludes])
     if check_only:
         extra_args.append("--check")
-    if not string_normalization:
-        extra_args.append("--skip-string-normalization")
     command_args = [
         "python",
         "-m",
