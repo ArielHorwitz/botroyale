@@ -1,5 +1,5 @@
 [battle]
-default_map = "danger"
+default_map = "basic"
 # Default game speed (in steps per second)
 default_step_rate = 2
 # Game speed options
