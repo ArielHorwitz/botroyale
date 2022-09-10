@@ -1,8 +1,7 @@
 """.. include:: ../docs/homepage.md"""  # noqa: D415
 
 
-from botroyale.api.bots import BaseBot
-from botroyale.bots import register_bot
+from botroyale.api.bots import BaseBot, register_bot
 from botroyale.run.gui import run as run_gui
 from botroyale.logic.state import State
 from botroyale.util.hexagon import ORIGIN, Hex as get_hex
@@ -20,6 +19,7 @@ __all__ = [
 ]
 __pdoc__ = {
     "gui": False,
+    "bots": False,
     "BaseBot": False,
     "register_bot": False,
     "run_gui": False,

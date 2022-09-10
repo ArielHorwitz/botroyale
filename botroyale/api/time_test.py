@@ -5,7 +5,7 @@ import random
 from botroyale.api.logging import logger as glogger
 from botroyale.logic.maps import get_map_state
 from botroyale.logic.battle_manager import BattleManager
-from botroyale.bots import NotFairError
+from botroyale.api.bots import NotFairError
 from botroyale.bots.idle_bot import DummyBot
 
 

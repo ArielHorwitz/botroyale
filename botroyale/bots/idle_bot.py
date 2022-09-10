@@ -1,6 +1,6 @@
 """Idle bots."""
 # Maintainer: ninja
-from botroyale.bots import BaseBot
+from botroyale.api.bots import BaseBot
 from botroyale.api.actions import Idle
 
 
@@ -13,7 +13,7 @@ class IdleBot(BaseBot):
     SPRITE = "ellipse"
 
     def poll_action(self, state):
-        """Overrides `botroyale.bots.BaseBot.poll_action`."""
+        """Overrides `botroyale.api.bots.BaseBot.poll_action`."""
         return Idle()
 
 

@@ -4,9 +4,8 @@ import sys
 import traceback
 import numpy as np
 from botroyale.api.logging import Logger, logger as glogger
-from botroyale.api.bots import BaseBot
+from botroyale.api.bots import BaseBot, get_bot_classes
 from botroyale.api.actions import Action
-from botroyale.bots import get_bot_classes
 from botroyale.logic.maps import get_map_state
 from botroyale.logic.state import State
 from botroyale.util.time import pingpong
@@ -41,8 +40,7 @@ class Battle:
 
             bot_classes_getter: A function that takes an integer and returns
                 that many bots classes. If bot_classes_getter is not provided,
-                the default `botroyale.bots.get_bot_classes` will be used that
-                is based on configured settings.
+                the default `botroyale.api.bots.get_bot_classes` will be used.
 
             description: A description of the battle.
 

@@ -56,11 +56,11 @@ When running the script now, after each battle there should be printed `"Battle 
 
 
 ## Selecting bots
-We want only our bots to play so that we can train them. To manually choose the bots, let's get familiar with `botroyale.bots.bot_getter`:
+We want only our bots to play so that we can train them. To manually choose the bots, let's get familiar with `botroyale.api.bots.bot_getter`:
 ```python
 ...
 
-from botroyale.bots import bot_getter
+from botroyale.api.bots import bot_getter
 
 MY_BOTS = ['random']
 
@@ -77,7 +77,7 @@ def play_battle() -> Battle:
 ...
 ```
 
-The `botroyale.bots.bot_getter` function has many options, but we are only interested in the *selection* argument to select which bots play. We also set *include_testing* to true so that no bots will get filtered.
+The `botroyale.api.bots.bot_getter` function has many options, but we are only interested in the *selection* argument to select which bots play. We also set *include_testing* to true so that no bots will get filtered.
 
 When running the script now (with only the `"random"` bot selected), we should only ever see draws and `"random"` bots winning because they are the only ones playing. The battle will run very quickly because they are extremely simple bots (<0.1 ms calculation time per step). Depending on the map and the bots, battles may take far, far longer.
 
@@ -88,7 +88,7 @@ Suppose we want to train our bots without walls or pits first. Let's select our 
 ```python
 ...
 
-from botroyale.bots import bot_getter
+from botroyale.api.bots import bot_getter
 from botroyale.logic.maps import get_map_state
 
 INITIAL_STATE = get_map_state('classic')
@@ -121,7 +121,7 @@ Our script `main.py` should look something like this:
 # main.py
 import botroyale as br
 from botroyale.logic.battle import Battle
-from botroyale.bots import bot_getter
+from botroyale.api.bots import bot_getter
 from botroyale.logic.maps import get_map_state
 
 

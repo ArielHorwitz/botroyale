@@ -3,10 +3,9 @@ import copy
 import numpy as np
 
 from botroyale.api.actions import Move, Push, Idle, Action
-from botroyale.bots import BaseBot
 from botroyale.util.hexagon import Hexagon, Hex
 from botroyale.api.logging import logger as glogger
-from botroyale.api.bots import world_info
+from botroyale.api.bots import BaseBot, world_info
 from botroyale.util import settings
 from time import perf_counter
 
@@ -35,7 +34,7 @@ class CrazeeBotAlpha(BaseBot):
         self.ap = None
         self.planed_actions = []
 
-    def get_action(self, wi: world_info):
+    def get_action(self, wi):
         t1_start = perf_counter()
         self.pos: Hexagon = wi.positions[self.id]
         self.ap = wi.ap[self.id]
@@ -49,12 +48,12 @@ class CrazeeBotAlpha(BaseBot):
         debug(f"{self.NAME}-{self.id} took {(perf_counter() - t1_start) * 1000:.2f}ms")
         return action
 
-    def plan_action(self, wi: world_info):
+    def plan_action(self, wi):
         if len(self.planed_actions) == 0:
             self.planed_actions = self.calc_turn(wi)
         return self.planed_actions.pop(0).action
 
-    def get_legal_actions(self, wi: world_info):
+    def get_legal_actions(self, wi):
         actions = []
         my_ap = wi.ap[self.id]
         if my_ap < Move.ap or not wi.alive_mask[self.id]:
@@ -84,11 +83,11 @@ class CrazeeBotAlpha(BaseBot):
         actions.extend(legal_options)
         return actions
 
-    def calc_turn(self, wi: world_info):
+    def calc_turn(self, wi):
         MAX_DEPTH = 5
         explored_worlds = set()
 
-        def copy_wi(_wi: world_info) -> world_info:
+        def copy_wi(_wi) -> world_info:
             return world_info(
                 positions=copy.copy(_wi.positions),
                 walls=copy.copy(_wi.walls),
@@ -102,7 +101,7 @@ class CrazeeBotAlpha(BaseBot):
                 round_remaining_turns=copy.deepcopy(_wi.round_remaining_turns),
             )
 
-        def get_new_world_state(old_wi: world_info, action: Action):
+        def get_new_world_state(old_wi, action: Action):
             new_cwi = copy_wi(old_wi)
             c_pos = new_cwi.positions
             c_ap = new_cwi.ap
@@ -121,7 +120,7 @@ class CrazeeBotAlpha(BaseBot):
             new_cwi.alive_mask[:] = [pos not in new_cwi.pits for pos in c_pos]
             return new_cwi
 
-        def get_wi_score(cwi: world_info, bot_id: int):
+        def get_wi_score(cwi, bot_id: int):
             if not cwi.alive_mask[bot_id]:
                 return float("-inf")
 
@@ -207,7 +206,7 @@ class CrazeeBotAlpha(BaseBot):
 
 
 class CWorld:
-    def __init__(self, state: world_info, score: float, action: Action):
+    def __init__(self, state, score: float, action: Action):
         self.state = state
         self.score = score
         self.action = action

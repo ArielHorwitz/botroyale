@@ -3,12 +3,12 @@
 The the standard implementation of `botroyale.api.gui.GameAPI`.
 """
 from typing import Any, Union, Optional
-from botroyale.api.gui import GameAPI, InputWidget
 from botroyale.gui import logger
+from botroyale.api.gui import GameAPI, InputWidget
+from botroyale.api.bots import BOTS, bot_getter, NotFairError
 from botroyale.logic.maps import MAPS, DEFAULT_MAP_NAME, get_map_state
 from botroyale.logic.battle_manager import BattleManager
 from botroyale.logic.map_editor import MapEditor
-from botroyale.bots import BOTS, bot_getter, NotFairError
 
 
 BOT_SENDTO_PREFIX = "╠"

@@ -2,10 +2,9 @@
 import numpy as np
 
 from botroyale.api.actions import Move, Push, Idle, Action, Jump, ALL_ACTIONS
-from botroyale.bots import BaseBot
 from botroyale.logic.state import State
 from botroyale.util.hexagon import Hexagon
-from botroyale.api.bots import CENTER, center_distance
+from botroyale.api.bots import BaseBot, CENTER, center_distance
 from botroyale.util.time import pingpong
 
 

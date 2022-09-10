@@ -4,9 +4,9 @@ Uses `input` and `print` to interface with the user.
 """
 from collections import Counter
 from botroyale.api.time_test import timing_test
+from botroyale.api.bots import BOTS, bot_getter
 from botroyale.logic.maps import MAPS, get_map_state
 from botroyale.logic.battle_manager import BattleManager
-from botroyale.bots import BOTS, bot_getter
 
 
 # Thresholds of bot calculation times for the competitive timing test
