@@ -88,7 +88,6 @@ def run_winrates():
             bot_classes_getter=get_bots,
             description=f"winrates #{battles_played+1} @ {map_name}",
             enable_logging=False,
-            enable_bot_logging=False,
         )
         print_summary()
         print(f"\nPlaying battle : {battle.description}\n")

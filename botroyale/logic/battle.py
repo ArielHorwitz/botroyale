@@ -27,7 +27,7 @@ class Battle:
         bot_classes_getter: Callable[[int], Sequence[type]] = get_bot_classes,
         description: str = "No description set",
         enable_logging: bool = True,
-        enable_bot_logging: bool = True,
+        enable_bot_logging: Optional[bool] = None,
         only_bot_turn_states: bool = True,
         threshold_bot_block_seconds: float = 20.0,
     ):
@@ -48,7 +48,7 @@ class Battle:
                 including bots.
 
             enable_bot_logging: Passing False will disable the logger while
-                bots are called.
+                bots are called. Defaults to the same value as *enable_logging*.
 
             only_bot_turn_states: Determines whether to skip `State.end_of_round`
                 states and other states that are not expecting an action from a
@@ -63,6 +63,8 @@ class Battle:
         """
         self.enable_logging: bool = enable_logging
         """Enable logging of the battle itself."""
+        if enable_bot_logging is None:
+            enable_bot_logging = enable_logging
         self.enable_bot_logging: bool = enable_bot_logging
         """Enable logging for the bots."""
         self.description: str = description

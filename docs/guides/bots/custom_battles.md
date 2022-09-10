@@ -136,7 +136,6 @@ def play_battle() -> Battle:
         initial_state=INITIAL_STATE,
         bot_classes_getter=bots,
         enable_logging=False,
-        enable_bot_logging=False,
     )
     b.play_all(print_progress=True)
     return b
