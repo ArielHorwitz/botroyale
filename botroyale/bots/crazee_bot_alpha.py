@@ -7,10 +7,10 @@ from botroyale.bots import BaseBot
 from botroyale.util.hexagon import Hexagon, Hex
 from botroyale.api.logging import logger as glogger
 from botroyale.api.bots import world_info
-from botroyale.util.settings import Settings
+from botroyale.util import settings
 from time import perf_counter
 
-DEBUG = Settings.get("logging.bots.crazee.debug", False)
+DEBUG = True
 
 
 def debug(*lines):

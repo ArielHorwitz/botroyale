@@ -9,7 +9,7 @@ from itertools import chain
 from pathlib import Path
 from botroyale.util import PACKAGE_DIR
 from botroyale.util.file import file_load, file_dump, get_usr_dir
-from botroyale.util.settings import Settings
+from botroyale.util import settings
 from botroyale.util.hexagon import Hexagon, Hex, ORIGIN
 from botroyale.logic.state import State
 from botroyale.logic.plate import Plate
@@ -49,7 +49,7 @@ MAPS: tuple[str, ...] = tuple(sorted(_find_maps().keys()))
 
 Searches the "maps" dir from `botroyale.util.file.get_usr_dir` and builtin maps.
 """
-DEFAULT_MAP_NAME: str = Settings.get("logic.default_map", "danger")
+DEFAULT_MAP_NAME: str = settings.get("battle.default_map")
 """Default map name as configured in settings."""
 assert DEFAULT_MAP_NAME in MAPS
 

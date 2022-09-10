@@ -1,5 +1,5 @@
 from botroyale.util import PACKAGE_DIR
-from botroyale.util.settings import Settings
+from botroyale.util import settings
 from botroyale.util.time import RateCounter
 from botroyale.api.logging import logger as glogger
 from botroyale.api.gui import GameAPI, BattleAPI, Control, combine_control_menus
@@ -12,10 +12,10 @@ from botroyale.gui.battle.battle import BattleScreen
 
 ICON = str(PACKAGE_DIR / 'icon.ico')
 # User-configurable settings
-FPS = Settings.get('gui._fps', 60)
-WINDOW_SIZE = Settings.get('gui._window_size', [1280, 720])
-START_MAXIMIZED = Settings.get('gui._window_maximize', True)
-LOG_HOTKEYS = Settings.get('logging.hotkeys', False)
+FPS = settings.get('gui.fps')
+WINDOW_SIZE = settings.get('gui.window_size')
+START_MAXIMIZED = settings.get('gui.window_maximize')
+LOG_HOTKEYS = settings.get('logging.hotkeys')
 
 
 class App(widgets.App):

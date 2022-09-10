@@ -1,13 +1,14 @@
 import numpy as np
 from botroyale.api.logging import logger as glogger
 from botroyale.util import PACKAGE_DIR
-from botroyale.util.settings import Settings
+from botroyale.util import settings
 
 
-GUI_DEBUG = Settings.get('logging.gui', False)
+GUI_DEBUG = settings.get('logging.gui')
 ASSETS_DIR = PACKAGE_DIR / 'assets'
-DEFAULT_FONT_NAME = Settings.get('gui.font', 'liberation')
+DEFAULT_FONT_NAME = settings.get('gui.fonts.default')
 FONT = str(ASSETS_DIR / 'fonts' / f'{DEFAULT_FONT_NAME}.ttf')
+FONT_SIZE = settings.get('gui.fonts.size')
 
 
 def center_sprite(pos, size):

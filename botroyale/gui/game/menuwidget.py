@@ -2,10 +2,10 @@
 from botroyale.gui.kex import widgets
 from botroyale.api.gui import InputWidget
 from botroyale.api.gui import PALETTE_BG
-from botroyale.util.settings import Settings
+from botroyale.util import settings
 
 
-MENU_WIDGET_SIZE = Settings.get('gui.menu_widget_size', [350, 40])
+MENU_WIDGET_SIZE = settings.get('gui.menu.widget_size')
 
 
 class MenuWidget(widgets.AnchorLayout):

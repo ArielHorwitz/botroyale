@@ -1,6 +1,0 @@
-# `botroyale` package .gitignore (package-specific)
-
-
-# Custom user data
-settings.json
-.deletesettings

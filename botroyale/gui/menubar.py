@@ -1,11 +1,10 @@
 from botroyale.gui.kex import widgets
-from botroyale.util.settings import Settings
-from botroyale.gui import ASSETS_DIR, FONT
+from botroyale.util import settings
+from botroyale.gui import ASSETS_DIR, FONT, FONT_SIZE
 
 
-font = Settings.get('gui.font_menubar', 'liberation-bold')
+font = settings.get('gui.fonts.menubar')
 FONT_MENU = str(ASSETS_DIR / 'fonts' / f'{font}.ttf')
-FONT_SIZE = Settings.get('gui.font_menubar_size', 16)
 
 
 class MenuBar(widgets.BoxLayout):

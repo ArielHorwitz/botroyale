@@ -1,11 +1,10 @@
 from botroyale.gui.kex import widgets
-from botroyale.util.settings import Settings
-from botroyale.gui import ASSETS_DIR
+from botroyale.util import settings
+from botroyale.gui import ASSETS_DIR, FONT_SIZE
 
 
-font = Settings.get('gui.font_panel', 'firacode-mono-bold')
+font = settings.get('gui.fonts.panel')
 FONT = str(ASSETS_DIR / 'fonts' / f'{font}.ttf')
-FONT_SIZE = Settings.get('gui.font_panel_size', 16)
 
 
 class Panel(widgets.BoxLayout):

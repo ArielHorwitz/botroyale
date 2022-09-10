@@ -3,15 +3,15 @@ from typing import Optional, Literal
 from botroyale.logic.battle import Battle
 from botroyale.api.gui import BattleAPI, Tile, Control, ControlMenu
 from botroyale.util.time import ping, pong
-from botroyale.util.settings import Settings
+from botroyale.util import settings
 from botroyale.util.hexagon import Hex, Hexagon
 from botroyale.logic.state import State
 from botroyale.logic import UNIT_COLORS, get_tile_info, get_tile_info_unit
 
 
-STEP_RATE = Settings.get("logic._step_rate_cap", 2)
-STEP_RATES = Settings.get("logic.|step_rates", [1, 2, 3, 5, 60])
-LOGIC_DEBUG = Settings.get("logging.battle", True)
+STEP_RATE = settings.get("battle.default_step_rate")
+STEP_RATES = settings.get("battle.toggle_step_rates")
+LOGIC_DEBUG = settings.get("logging.battle")
 MAP_CENTER = Hex(0, 0)
 
 

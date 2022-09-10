@@ -4,21 +4,21 @@ import numpy as np
 from botroyale.gui import kex, center_sprite, logger, ASSETS_DIR
 from botroyale.gui.kex import widgets
 from botroyale.api.gui import Control
-from botroyale.util.settings import Settings
+from botroyale.util import settings
 from botroyale.util.hexagon import Hex, ORIGIN, WIDTH_HEIGHT_RATIO, SQRT3
 
 
 ZOOM_RATIO = 3/2
-AUTO_ZOOM = Settings.get('tilemap.autozoom', True)
-MAX_MAP_TILES = Settings.get('tilemap.max_draw_tiles', 2500)
-TILE_PADDING = Settings.get('tilemap._tile_padding', 1)
-MAX_TILE_RADIUS = Settings.get('tilemap.max_tile_radius', 300)
-UNIT_SIZE = Settings.get('tilemap.unit_size', 0.7)
-font = Settings.get('gui.font_tilemap', 'liberation-mono')
+AUTO_ZOOM = settings.get('gui.tilemap.autozoom')
+MAX_MAP_TILES = settings.get('gui.tilemap.max_draw_tiles')
+TILE_PADDING = settings.get('gui.tilemap.tile_padding')
+MAX_TILE_RADIUS = settings.get('gui.tilemap.max_tile_radius')
+UNIT_SIZE = settings.get('gui.tilemap.unit_size')
+font = settings.get('gui.fonts.tilemap')
 FONT = str(ASSETS_DIR / 'fonts' / f'{font}.ttf')
-FONT_SCALE = Settings.get('tilemap.font_scale', 0.7)
-MAX_FONT_SIZE = Settings.get('tilemap.max_font_size', 50)
-REDRAW_COOLDOWN = Settings.get('tilemap.|redraw_cooldown', 0.3)
+FONT_SCALE = settings.get('gui.tilemap.font_scale')
+MAX_FONT_SIZE = settings.get('gui.tilemap.max_font_size')
+REDRAW_COOLDOWN = settings.get('gui.tilemap.redraw_cooldown')
 SPRITES_DIR = ASSETS_DIR / 'sprites'
 VFX_DIR = ASSETS_DIR / 'vfx'
 HEX_PNG = str(SPRITES_DIR / 'hex.png')

@@ -1,70 +1,101 @@
 """Manages user settings.
 
-The settings file is located at `botroyale.util.PACKAGE_DIR` as *settings.json*.
-
-To restore a setting to it's default value, simply delete the line from the
-settings file. To restore all settings to defaults, simply delete the settings
-file.
-
-If the file *.deletesettings* is found at `botroyale.util.PACKAGE_DIR`, the
-settings file will be deleted at the start of every execution.
+Settings are configured using TOML. A built-in default config exists in the
+package, and a user-defined custom config exists in the usr dir. User-defined
+values take priority.
 """
 from typing import Any
-import json
+import copy
+import shutil
+import warnings
 from botroyale.util import PACKAGE_DIR
-from botroyale.util.file import file_load, file_dump
+from botroyale.util.file import file_load, file_dump, toml_loads, get_usr_dir
 
 
-CLEAR_SETTINGS = (PACKAGE_DIR / ".deletesettings").is_file()
-SETTINGS_FILE = PACKAGE_DIR / "settings.json"
+def _create_missing_files():
+    if not SETTINGS_FILE.is_file():
+        file_dump(SETTINGS_FILE, "")
+    if not DEFAULTS_FILE_USR.is_file():
+        shutil.copy(DEFAULTS_FILE, DEFAULTS_FILE_USR)
 
 
-class Settings:
-    """Settings manager class.
+DEFAULTS_FILE = PACKAGE_DIR / "default_settings.toml"
+DEFAULTS = toml_loads(file_load(DEFAULTS_FILE))
+SETTINGS_DIR = get_usr_dir("settings")
+SETTINGS_DIR.mkdir(parents=True, exist_ok=True)
+SETTINGS_FILE = SETTINGS_DIR / "settings.toml"
+DEFAULTS_FILE_USR = SETTINGS_DIR / "defaults.toml"
+_create_missing_files()
 
-    .. todo:: Remove `Settings` class and use functions and module-level variables.
+
+def _import_settings():
+    """Import settings from usr dir, fill missing entries from defaults.
+
+    Ignores entries that don't exist in defaults.
     """
-
-    _user_settings = {}
-    if CLEAR_SETTINGS and SETTINGS_FILE.is_file():
-        SETTINGS_FILE.unlink()
+    # Gather settings from user and defaults
+    settings = copy.deepcopy(DEFAULTS)
+    usr_settings = {}
     if SETTINGS_FILE.is_file():
-        _s = file_load(SETTINGS_FILE)
-        _user_settings = json.loads(_s)
-    _default_settings = {}
-
-    @classmethod
-    def get(cls, name: str, default: Any) -> Any:
-        """Get the value of a setting (user configured or default value).
-
-        Args:
-            name: Name of setting (json key).
-            default: The default value if not configured by the user.
-
-        Return:
-            The value of the setting (json value).
-        """
-        if default is not None:
-            cls._default_settings[name] = default
-        if name in cls._user_settings:
-            return cls._user_settings[name]
-        elif name in cls._default_settings:
-            return cls._default_settings[name]
-        raise KeyError(f'No such setting "{name}" found')
-
-    @classmethod
-    def write_to_file(cls):
-        """Write the settings to file.
-
-        Will remove entries without defaults (as registered with `Settings.get`).
-        """
-        all_settings = cls._default_settings | cls._user_settings
-        for name in list(all_settings.keys()):
-            if name not in cls._default_settings:
-                del all_settings[name]
-        sorted_settings = {k: all_settings[k] for k in sorted(all_settings.keys())}
-        file_dump(SETTINGS_FILE, json.dumps(sorted_settings, indent=4))
+        usr_settings = toml_loads(file_load(SETTINGS_FILE))
+    # Find all keys
+    default_paths = set(_yield_setting_paths(settings))
+    usr_paths = set(_yield_setting_paths(usr_settings))
+    # Ignore paths that are not in defaults
+    ignored_paths = usr_paths - default_paths
+    for path in ignored_paths:
+        warnings.warn(f'Unkown setting "{path}" (not in defaults)')
+    shared_paths = default_paths & usr_paths
+    for path in shared_paths:
+        usr_value = _resolve_setting(usr_settings, path)
+        _set_setting(settings, path, usr_value)
+    return settings
 
 
-get = Settings.get
-save_settings = Settings.write_to_file
+def _resolve_setting(data, key_path):
+    d = data
+    for part in key_path.split("."):
+        if part not in d:
+            raise KeyError(f'Unkown setting "{key_path}" (not in defaults)')
+        d = d[part]
+    return d
+
+
+def _set_setting(data, key_path, value):
+    d = data
+    path_parts = key_path.split(".")
+    for part in path_parts[:-1]:
+        if part not in d:
+            raise KeyError(f'Unkown setting "{key_path}"')
+        d = d[part]
+    d[path_parts[-1]] = value
+
+
+def _yield_setting_paths(d, path=None):
+    path = [] if path is None else path
+    for k, v in d.items():
+        assert isinstance(k, str)
+        new_path = [*path, k]
+        if isinstance(v, dict):
+            yield from _yield_setting_paths(v, path=new_path)
+        else:
+            yield ".".join(new_path)
+
+
+class __Settings:
+    data = _import_settings()
+
+
+def get(setting_name: str) -> Any:
+    """Get the value of *setting_name*."""
+    v = _resolve_setting(__Settings.data, setting_name)
+    return v
+
+
+def clear():
+    """Revert all settings data to defaults."""
+    if SETTINGS_FILE.is_file():
+        SETTINGS_FILE.unlink()
+    if DEFAULTS_FILE_USR.is_file():
+        DEFAULTS_FILE_USR.unlink()
+    _create_missing_files()

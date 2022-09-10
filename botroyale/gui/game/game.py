@@ -2,13 +2,12 @@ import copy
 from botroyale.gui.kex import widgets
 from botroyale.api.gui import GameAPI, Control, combine_control_menus, PALETTE_BG
 from botroyale.gui.game.menuwidget import get_menu_widget
-from botroyale.gui import ASSETS_DIR
-from botroyale.util.settings import Settings
+from botroyale.gui import ASSETS_DIR, FONT_SIZE
+from botroyale.util import settings
 
 
-font = Settings.get('gui.font_menu', 'firacode-mono-bold')
+font = settings.get('gui.fonts.menu')
 FONT = str(ASSETS_DIR / 'fonts' / f'{font}.ttf')
-FONT_SIZE = Settings.get('gui.font_menu_size', 16)
 
 
 class GameScreen(widgets.AnchorLayout):

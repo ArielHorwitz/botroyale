@@ -1,7 +1,7 @@
 """Game mechanics."""
 from typing import Optional
 from enum import IntEnum, auto as enum_auto
-from botroyale.util.settings import Settings
+from botroyale.util import settings
 from botroyale.util.hexagon import ORIGIN, Hexagon
 
 
@@ -16,37 +16,19 @@ class PlateType(IntEnum):
     """Turns tiles into walls."""
 
 
-UNIT_COLORS = Settings.get(
-    "tilemap.|colors.|units",
-    [
-        (0.6, 0, 0.1),  # Red
-        (0.9, 0.3, 0.4),  # Pink
-        (0.8, 0.7, 0.1),  # Yellow
-        (0.7, 0.4, 0),  # Orange
-        (0.1, 0.4, 0),  # Green
-        (0.4, 0.7, 0.1),  # Lime
-        (0.1, 0.7, 0.7),  # Teal
-        (0.1, 0.4, 0.9),  # Blue
-        (0, 0.1, 0.5),  # Navy
-        (0.4, 0, 0.7),  # Violet
-        (0.7, 0.1, 0.9),  # Purple
-        (0.7, 0, 0.5),  # Magenta
-    ],
-)
+UNIT_COLORS = settings.get("gui.tilemap.colors.units")
 """All available colors for unit sprites. 12 colors in rainbow order."""
-DEFAULT_CELL_BG = Settings.get("tilemap.|colors._default_tile", (0.16, 0.16, 0.2))
+DEFAULT_CELL_BG = settings.get("gui.tilemap.colors.default_tile")
 """Color of an empty tile."""
-OUT_OF_BOUNDS_CELL_BG = Settings.get(
-    "tilemap.|colors._out_of_bounds", (0.06, 0.05, 0.04)
-)
+OUT_OF_BOUNDS_CELL_BG = settings.get("gui.tilemap.colors.out_of_bounds")
 """Color of a tile outside the death radius."""
-WALL_COLOR = Settings.get("tilemap.|colors._walls", (0.6, 0.65, 0.6))
+WALL_COLOR = settings.get("gui.tilemap.colors.walls")
 """Color of a wall."""
-PIT_COLOR = Settings.get("tilemap.|colors._pits", (0.25, 0.25, 0.25))
+PIT_COLOR = settings.get("gui.tilemap.colors.pits")
 """Color of a pit."""
-PLATE_NO_RESET_COLOR = Settings.get("tilemap.|colors._plate_no_reset", (0.4, 0.45, 0.6))
+PLATE_NO_RESET_COLOR = settings.get("gui.tilemap.colors.plate_no_reset")
 """Color of a plate that will not reset its pressure."""
-PLATE_RESET_COLOR = Settings.get("tilemap.|colors._plate_reset", (0.4, 0.4, 0.65))
+PLATE_RESET_COLOR = settings.get("gui.tilemap.colors.plate_reset")
 """Color of a plate that will reset its pressure."""
 
 

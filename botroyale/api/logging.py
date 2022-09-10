@@ -6,11 +6,11 @@ well as `Logger.set_logging_temp`.
 Currently, logging is done by printing to console.
 """
 import contextlib
-from botroyale.util.settings import Settings
+from botroyale.util import settings
 
 
 # Permanently disables logging globally if False
-GLOBAL_LOGGING = Settings.get("logging.global", True)
+GLOBAL_LOGGING = settings.get("logging.global")
 
 
 class Logger:
