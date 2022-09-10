@@ -12,10 +12,16 @@ readme = "README.md"
 requires-python = ">=3.9"
 classifiers = [
   "License :: OSI Approved :: MIT License",
-  "Operating System :: OS Independent",
-  "Requires-Python: >=3.9",
+  "Operating System :: POSIX :: Linux",
+  "Operating System :: Microsoft :: Windows",
   "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3 :: Only",
   "Programming Language :: Python :: 3.9",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Natural Language :: English",
+  "Intended Audience :: Developers",
+  "Intended Audience :: Education",
   "Topic :: Games/Entertainment :: Turn Based Strategy",
   "Topic :: Scientific/Engineering :: Artificial Intelligence",
 ]
@@ -41,6 +47,8 @@ include = [
 [tool.setuptools.package-data]
 botroyale = [
   "default_settings.toml",
+  "icon.png",
+  "icon.ico",
   "assets/**",
   "logic/maps/*.json",
 ]
