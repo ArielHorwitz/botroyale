@@ -6,7 +6,6 @@ In this guide, we will learn how to run our own battles programmatically. This i
 [Install Bot Royale](../install.html) and create your python script (e.g. `main.py`). Let's make some bots play a couple of battles using the `botroyale.logic.battle.Battle` class:
 ```python
 # main.py
-import botroyale as br
 from botroyale.logic.battle import Battle
 
 
@@ -56,20 +55,18 @@ When running the script now, after each battle there should be printed `"Battle 
 
 
 ## Selecting bots
-We want only our bots to play so that we can train them. To manually choose the bots, let's get familiar with `botroyale.api.bots.bot_getter`:
+We want only our bots to play so that we can train them. To manually choose the bots, let's get familiar with `botroyale.api.bots.BotSelection`:
 ```python
 ...
 
-from botroyale.api.bots import bot_getter
+from botroyale.api.bots import BotSelection
 
-MY_BOTS = ['random']
 
 def play_battle() -> Battle:
     """Creates a battle and plays it. Returns the battle object."""
-    bots = bot_getter(selection=MY_BOTS, include_testing=True)
     b = Battle(
-        bot_classes_getter=bots,
-        enable_logging=False,
+      bots=BotSelection(['random']),
+      enable_logging=False,
     )
     b.play_all(print_progress=True)
     return b
@@ -77,7 +74,7 @@ def play_battle() -> Battle:
 ...
 ```
 
-The `botroyale.api.bots.bot_getter` function has many options, but we are only interested in the *selection* argument to select which bots play. We also set *include_testing* to true so that no bots will get filtered.
+The `botroyale.api.bots.BotSelection` object has many configuration options, but we are only interested in the *selection* argument to select which bots play.
 
 When running the script now (with only the `"random"` bot selected), we should only ever see draws and `"random"` bots winning because they are the only ones playing. The battle will run very quickly because they are extremely simple bots (<0.1 ms calculation time per step). Depending on the map and the bots, battles may take far, far longer.
 
@@ -88,18 +85,15 @@ Suppose we want to train our bots without walls or pits first. Let's select our 
 ```python
 ...
 
-from botroyale.api.bots import bot_getter
 from botroyale.logic.maps import get_map_state
+from botroyale.api.bots import BotSelection
 
-INITIAL_STATE = get_map_state('classic')
-MY_BOTS = ['random']
 
 def play_battle() -> Battle:
     """Creates a battle and plays it. Returns the battle object."""
-    bots = bot_getter(selection=MY_BOTS, include_testing=True)
     b = Battle(
-        initial_state=INITIAL_STATE,
-        bot_classes_getter=bots,
+        initial_state=get_map_state('classic'),
+        bots=BotSelection(['random']),
         enable_logging=False,
     )
     b.play_all(print_progress=True)
@@ -119,22 +113,16 @@ In this guide we learned how to run a custom script in the project in order to r
 Our script `main.py` should look something like this:
 ```python
 # main.py
-import botroyale as br
 from botroyale.logic.battle import Battle
-from botroyale.api.bots import bot_getter
+from botroyale.api.bots import BotSelection
 from botroyale.logic.maps import get_map_state
-
-
-INITIAL_STATE = get_map_state('classic')
-MY_BOTS = ['random']
 
 
 def play_battle() -> Battle:
     """Creates a battle and plays it. Returns the battle object."""
-    bots = bot_getter(selection=MY_BOTS, include_testing=True)
     b = Battle(
-        initial_state=INITIAL_STATE,
-        bot_classes_getter=bots,
+        initial_state=get_map_state('classic'),
+        bots=BotSelection(['random']),
         enable_logging=False,
     )
     b.play_all(print_progress=True)

@@ -1,5 +1,5 @@
 """Home of `botroyale.api.bots.BaseBot`, the base class for all bots."""
-from typing import Optional, Union, Sequence, Callable, TypeVar, NamedTuple
+from typing import Optional, Union, Sequence, TypeVar, NamedTuple
 import random
 import copy
 from pkgutil import iter_modules
@@ -217,163 +217,155 @@ def _state_to_world_info(state):
 __pdoc__ = {"world_info": False}
 
 
-# BOT COLLECTION
+# BOT SELECTION
 class NotFairError(Exception):
     """Raised when a request for bots cannot be fulfilled fairly."""
 
     pass
 
 
-def get_bot_classes(
-    total_slots: int,
-    selection: Optional[Sequence[str]] = None,
-    ignore: Optional[Sequence[str]] = None,
-    include_testing: bool = False,
-    keep_fair: bool = True,
-    no_dummies: bool = False,
-    all_play: bool = False,
-) -> list[type]:
-    """Returns a list of bot classes.
+class BotSelection:
+    """An object for providing bots to `botroyale.logic.battle.Battle`."""
 
-    Will return at least two bots or raise a `NotFairError`.
+    def __init__(
+        self,
+        selection: Optional[Sequence[str]] = None,
+        ignore: Optional[Sequence[str]] = None,
+        keep_fair: bool = False,
+        no_dummies: bool = False,
+        all_play: bool = False,
+        max_repeat: Optional[int] = None,
+    ):
+        """Initialize the class.
 
-    Args:
-        total_slots: The number of bot classes to return.
-        selection: List of bot names to select from (will select from all bots
-            if no selection provided).
-        ignore: List of bot names to remove from *selection*.
-        include_testing: Include bots marked as
-            `botroyale.api.bots.BaseBot.TESTING_ONLY`.
-        keep_fair: Ensure an equal number of slots for each bot, filling
-            remaining slots with dummy bots.
-        no_dummies: When *keep_fair* is true, ensure that no dummy bots are
-            added.
-        all_play: Ensure that every bot is selected at least once.
+        The configuration given by the initialization arguments are used later
+        by `BotSelection.get_bots`.
 
-    Returns:
-        List of bot classes. Will have at least one bot.
+        Args:
+            selection: List of bot names to select from. None will select from
+                all bots (that are not marked at "testing").
+            ignore: List of bot names to ignore (remove from selection).
+            keep_fair: Ensure that an equal number of each bot is selected.
+                Fills remaining slots with dummy bots.
+            no_dummies: If *keep_fair* is True, will raise `NotFairError` if
+                dummy bots are required to keep fair.
+            all_play: If true, will raise `NotFairError` if not all bots in
+                selection can be slotted.
+            max_repeat: Ensure that at most *max_repeat* number of each bot is
+                selected.
+        """
+        self.selection = selection
+        self.ignore = ignore
+        self.keep_fair = keep_fair
+        self.no_dummies = no_dummies
+        self.all_play = all_play
+        self.max_repeat = max_repeat
 
-    Raises:
-        NotFairError: Raised when no bots could be collected given the
-            arguments.
-        NotFairError: Raised when *fair_play* is true and not all bots in
-            *selection* can be returned at least once.
-        NotFairError: Raised when *fair_play* and *no_dummies* are true, and
-            *selection* does not divide with *total_slots* without remainder.
-    """
-    available_bots = set(BOTS.keys())
-    # Filter bots
-    if selection is not None:
-        available_bots &= set(selection)
-    if ignore is not None:
-        available_bots -= set(ignore)
-    if not include_testing:
-        testing_only = {b for b in available_bots if BOTS[b].TESTING_ONLY}
-        available_bots -= testing_only
+    def get_bots(self, total_slots: int) -> list[BotLike]:
+        """Return *total_slots* number of bots based on our configuration.
 
-    # Fill slots
-    selected_bots = _fill_slots(
-        total_slots,
-        available_bots,
-        all_play,
-        keep_fair,
-        no_dummies,
-    )
+        Args:
+            total_slots: Number of bot classes to return.
 
-    # Convert to classes
-    bot_classes = []
-    for bot_name in selected_bots:
-        bot_classes.append(BOTS[bot_name])
-    random.shuffle(bot_classes)
-    assert len(bot_classes) == total_slots
-    return bot_classes
+        Returns:
+            List of bot classes.
 
-
-def bot_getter(**kwargs) -> Callable[[int], list[type]]:
-    """A more convenient way to use `get_bot_classes`.
-
-    The statement *bot_getter()* (return value of this function) is functionally
-    equivalent to *get_bot_classes* (the `get_bot_classes` function name).
-
-    <u>__Example usage:__</u>
-    ```python
-    get_bots = bots.bot_getter(
-        selection=['random', 'idle'],
-        include_testing=True,
-    )
-    logic.battle.Battle(bot_classes_getter=get_bots)
-    ```
-
-    Which is equivalent to:
-    ```python
-    def get_bots(n):
-        return bots.get_bot_classes(
-            n,
-            selection=['random', 'idle'],
-            include_testing=True,
-        )
-    logic.battle.Battle(bot_classes_getter=get_bots)
-    ```
-
-    Args:
-        Equivalent to arguments of `get_bot_classes` (not including
-            `total_slots`).
-
-    Returns:
-        A callable to `get_bot_classes` with preconfigued arguments.
-    """
-
-    def bot_getter_inner(slots: int) -> list[type]:
-        return get_bot_classes(slots, **kwargs)
-
-    return bot_getter_inner
-
-
-def _fill_slots(
-    total_slots: int,
-    available_bots: set[str],
-    all_play: bool,
-    keep_fair: bool,
-    no_dummies: bool,
-) -> list[str]:
-    """Fill slots based on a set of bot names."""
-    # Count slots
-    total_bots = len(available_bots)
-    if total_bots == 0:
-        raise NotFairError(f"Found 0 bots to fill {total_slots} slots.")
-    slots_per_bot = int(total_slots / total_bots)
-
-    # If we have more bots than slots - choose a random sample, size of total_slots
-    if slots_per_bot < 1:
-        if all_play:
-            raise NotFairError(
-                f"Requested for all {total_bots} bots to play, but only "
-                f"{total_slots} slots available."
-            )
-        selected_bots = list(available_bots)
-        random.shuffle(selected_bots)
-        return selected_bots[:total_slots]
-
-    # We have enough slots for all bots
-    selected_bots = list(available_bots) * slots_per_bot
-    remaining_slots = total_slots - len(selected_bots)
-    if remaining_slots:
-        if keep_fair and no_dummies:
-            raise NotFairError(
-                "Requested to keep fair and no dummies, but we have "
-                f"{total_slots} total slots for {len(selected_bots)} bots "
-                f"({remaining_slots} slots remainder)."
-            )
-        elif keep_fair:
-            # Fill with dummies
-            fill = ["dummy"] * remaining_slots
+        Raises:
+            `NotFairError` if cannot satisfy providing *total_slots* bot classes
+                given our configuration.
+        """
+        available_bots = set(BOTS.keys())
+        # Filter bots
+        if self.selection is not None:
+            available_bots &= set(self.selection)
         else:
-            # Fill with as many different bots as we can fit
-            fill = list(available_bots)
-            random.shuffle(fill)
-            fill = fill[:remaining_slots]
-        selected_bots.extend(fill)
-    return selected_bots
+            testing_only = {b for b in available_bots if BOTS[b].TESTING_ONLY}
+            available_bots -= testing_only
+        if self.ignore is not None:
+            available_bots -= set(self.ignore)
+        # Fill slots
+        selected_bots = self._fill_slots(
+            total_slots,
+            available_bots,
+            all_play=self.all_play,
+            keep_fair=self.keep_fair,
+            no_dummies=self.no_dummies,
+            max_repeat=self.max_repeat,
+        )
+        # Convert to classes
+        bot_classes = []
+        for bot_name in selected_bots:
+            bot_classes.append(BOTS[bot_name])
+        random.shuffle(bot_classes)
+        assert len(bot_classes) == total_slots
+        return bot_classes
+
+    @staticmethod
+    def _fill_slots(
+        total_slots: int,
+        available_bots: set[str],
+        all_play: bool,
+        keep_fair: bool,
+        no_dummies: bool,
+        max_repeat: Optional[int] = None,
+    ) -> list[str]:
+        """Fill slots based on a set of bot names."""
+        # Count slots
+        total_bots = len(available_bots)
+        if total_bots == 0:
+            raise NotFairError(f"Found 0 bots to fill {total_slots} slots.")
+        slots_per_bot = int(total_slots / total_bots)
+        if max_repeat is not None:
+            slots_per_bot = min(max_repeat, slots_per_bot)
+
+        # If we have more bots than slots - choose a random sample, size of total_slots
+        if slots_per_bot < 1:
+            if all_play:
+                raise NotFairError(
+                    f"Requested for all {total_bots} bots to play, but only "
+                    f"{total_slots} slots available."
+                )
+            selected_bots = list(available_bots)
+            random.shuffle(selected_bots)
+            return selected_bots[:total_slots]
+
+        # We have enough slots for all bots
+        selected_bots = list(available_bots) * slots_per_bot
+        remaining_slots = total_slots - len(selected_bots)
+        if remaining_slots:
+            if no_dummies and (keep_fair or max_repeat):
+                reason = "to keep fair" if keep_fair else f"max {max_repeat} per bot"
+                raise NotFairError(
+                    f"Requested {reason} and no dummies, but we have "
+                    f"{total_slots} total slots for {len(selected_bots)} bots "
+                    f"({remaining_slots} slots remainder)."
+                )
+            elif keep_fair or max_repeat:
+                # Fill with dummies
+                fill = ["dummy"] * remaining_slots
+            else:
+                # Fill with as many different bots as we can fit
+                fill = list(available_bots)
+                random.shuffle(fill)
+                fill = fill[:remaining_slots]
+            selected_bots.extend(fill)
+        return selected_bots
+
+    def __repr__(self):
+        """Repr."""
+        options = []
+        if self.ignore:
+            options.append(f"{len(self.ignore)} ignored")
+        if self.keep_fair:
+            options.append("fair")
+        if self.no_dummies:
+            options.append("no dummies")
+        if self.all_play:
+            options.append("all play")
+        if self.max_repeat:
+            options.append(f"max repeat {self.max_repeat}")
+        options = ": " + ", ".join(options) if options else ""
+        return f"<BotSelection {len(self.selection)} selected{options}>"
 
 
 # BOT IMPORTING

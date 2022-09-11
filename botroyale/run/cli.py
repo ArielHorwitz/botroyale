@@ -4,7 +4,7 @@ Uses `input` and `print` to interface with the user.
 """
 from collections import Counter
 from botroyale.api.time_test import timing_test
-from botroyale.api.bots import BOTS, bot_getter
+from botroyale.api.bots import BOTS, BotSelection
 from botroyale.logic.maps import MAPS, get_map_state
 from botroyale.logic.battle_manager import BattleManager
 
@@ -21,9 +21,9 @@ COMP_FAIL_CONDITIONS = (
 def run_competitive_timing_test():
     """Run the competitive timing test, print the names of the bots that fail."""
     map_name = query_map_name()
-    bot_classes = query_bot_classes()
+    bot_names = query_bot_names()
     results = timing_test(
-        bots=bot_classes,
+        bots=bot_names,
         battle_count=COMP_SAMPLE_SIZE,
         map_name=map_name,
         verbose_results=False,
@@ -51,8 +51,8 @@ def run_regular_timing_test():
     battle_count = int(ucount) if ucount else 10_000
     assert battle_count > 0
     map_name = query_map_name()
-    bot_classes = query_bot_classes()
-    timing_test(bot_classes, battle_count, map_name=map_name)
+    bots = query_bot_names()
+    timing_test(bots, battle_count, map_name=map_name)
 
 
 def run_winrates():
@@ -76,16 +76,11 @@ def run_winrates():
     battles_played = 0
     map_name = query_map_name()
     initial_state = get_map_state(map_name)
-    bot_selection = [b.NAME for b in query_bot_classes()]
-    get_bots = bot_getter(
-        selection=bot_selection,
-        all_play=True,
-        include_testing=True,
-    )
+    bots = query_bot_names()
     while True:
         battle = BattleManager(
             initial_state=initial_state,
-            bot_classes_getter=get_bots,
+            bots=BotSelection(bots, all_play=True, keep_fair=True),
             description=f"winrates #{battles_played+1} @ {map_name}",
             enable_logging=False,
         )
@@ -145,8 +140,8 @@ def _query_user(available_names, selected_names):
     return r
 
 
-def query_bot_classes() -> list[type]:
-    """Queries the user in console for bots. Returns a list of bot classes."""
+def query_bot_names() -> list[str]:
+    """Queries the user in console for bots. Returns a list of bot names."""
     bot_cls_list = [bot_cls for bot_cls in BOTS.values()]
     sorted_bots = sorted(bot_cls_list, key=lambda botcls: botcls.TESTING_ONLY)
     available_bots = [bot_cls.NAME for bot_cls in sorted_bots]
@@ -181,8 +176,7 @@ def query_bot_classes() -> list[type]:
     # Fill with all bots if none selected
     if not selected_names:
         selected_names = available_bots_non_testing
-    bot_classes = [BOTS[bn] for bn in selected_names]
-    return bot_classes
+    return selected_names
 
 
 def play_complete(battle: BattleManager) -> tuple[str, list[str]]:

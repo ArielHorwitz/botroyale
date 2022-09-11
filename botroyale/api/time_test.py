@@ -1,11 +1,10 @@
 """Home of `timing_test` - a tool for measuring calculation time of bots."""
 from typing import Optional, Sequence, NamedTuple
 import numpy as np
-import random
 from botroyale.api.logging import logger as glogger
 from botroyale.logic.maps import get_map_state
 from botroyale.logic.battle_manager import BattleManager
-from botroyale.api.bots import NotFairError
+from botroyale.api.bots import BotSelection, BOTS
 from botroyale.bots.idle_bot import DummyBot
 
 
@@ -19,7 +18,7 @@ class TimeResult(NamedTuple):
 
 
 def timing_test(
-    bots: Sequence[type],
+    bots: Sequence[str],
     battle_count: int,
     map_name: Optional[str] = None,
     shuffle_bots: bool = True,
@@ -33,7 +32,7 @@ def timing_test(
     required, dummy bots will be supplied.
 
     Args:
-        bots: List of bot classes.
+        bots: List of bot names.
         battle_count: Number of battles to play.
         map_name: Name of map to play on.
         shuffle_bots: Automatically shuffle the order of the bots for each battle.
@@ -43,37 +42,20 @@ def timing_test(
     Returns:
         Dictionary of bot names mapped to a `TimeResult`.
     """
-    bots = [b for b in bots if b.NAME != "dummy"]
-    requested_bot_count = len(bots)
+    bots = [b for b in bots if BOTS[b].NAME != "dummy"]
     battle_index = 0
-    all_results = {bot.NAME: TimeResult([], []) for bot in bots}
+    all_results = {b: TimeResult([], []) for b in bots}
 
     glogger("\n\n========== Timing Test ==========")
-    glogger("Selected:\n" + "\n".join(f"{i:>2} {b.NAME}" for i, b in enumerate(bots)))
-
-    def get_bots(num_of_units):
-        try:
-            assert requested_bot_count <= num_of_units
-        except AssertionError:
-            raise NotFairError(
-                f"Requested for {requested_bot_count} bots to play, but only"
-                f"{num_of_units} slots available."
-            )
-        selected_bot_classes = [*bots]
-        missing_units = num_of_units - requested_bot_count
-        selected_bot_classes.extend([DummyBot] * missing_units)
-        if shuffle_bots:
-            random.shuffle(selected_bot_classes)
-        return selected_bot_classes
+    glogger("Selected:\n" + "\n".join(f"{i:>2} {b}" for i, b in enumerate(bots)))
 
     for battle_index in range(battle_count):
-        initial_state = get_map_state(map_name)
+        botselect = BotSelection(bots, all_play=True, max_repeat=1)
         battle = BattleManager(
-            bot_classes_getter=get_bots,
-            initial_state=initial_state,
+            bots=botselect,
+            initial_state=get_map_state(map_name),
             description=f"time test {battle_index+1} / {battle_count} @ {map_name}",
             enable_logging=not disable_logging,
-            enable_bot_logging=not disable_logging,
         )
 
         glogger(f"\nPlaying battle : {battle.description}")

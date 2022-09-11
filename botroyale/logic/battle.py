@@ -1,10 +1,10 @@
 """Home of the `botroyale.logic.battle.Battle` class."""
-from typing import Optional, Sequence, Callable
+from typing import Optional
 import sys
 import traceback
 import numpy as np
 from botroyale.api.logging import Logger, logger as glogger
-from botroyale.api.bots import BaseBot, get_bot_classes
+from botroyale.api.bots import BaseBot, BotSelection
 from botroyale.api.actions import Action
 from botroyale.logic.maps import get_map_state
 from botroyale.logic.state import State
@@ -24,7 +24,7 @@ class Battle:
     def __init__(
         self,
         initial_state: Optional[State] = None,
-        bot_classes_getter: Callable[[int], Sequence[type]] = get_bot_classes,
+        bots: BotSelection = None,
         description: str = "No description set",
         enable_logging: bool = True,
         enable_bot_logging: Optional[bool] = None,
@@ -38,9 +38,7 @@ class Battle:
                 not provided, it will be generated using the map generator based
                 on configured settings.
 
-            bot_classes_getter: A function that takes an integer and returns
-                that many bots classes. If bot_classes_getter is not provided,
-                the default `botroyale.api.bots.get_bot_classes` will be used.
+            bots: A `botroyale.api.bots.BotSelection` object that provides bots.
 
             description: A description of the battle.
 
@@ -81,8 +79,9 @@ class Battle:
         bot_count = initial_state.num_of_units
         self.bot_timer: TurnTimer = TurnTimer(bot_count)
         """A `TurnTimer` object for keeping track of bot calculation times."""
-        with Logger.set_logging_temp(enable_logging):
-            bot_classes = bot_classes_getter(bot_count)
+        self.logger(f"{bots}")
+        with Logger.set_logging_temp(enable_bot_logging):
+            bot_classes = bots.get_bots(bot_count)
         assert len(bot_classes) == bot_count
         self.bots: tuple[BaseBot, ...] = tuple(
             bcls(i) for i, bcls in enumerate(bot_classes)

@@ -5,7 +5,7 @@ The the standard implementation of `botroyale.api.gui.GameAPI`.
 from typing import Any, Union, Optional
 from botroyale.gui import logger
 from botroyale.api.gui import GameAPI, InputWidget
-from botroyale.api.bots import BOTS, bot_getter, NotFairError
+from botroyale.api.bots import BOTS, BotSelection, NotFairError
 from botroyale.logic.maps import MAPS, DEFAULT_MAP_NAME, get_map_state
 from botroyale.logic.battle_manager import BattleManager
 from botroyale.logic.map_editor import MapEditor
@@ -45,6 +45,7 @@ class StandardGameAPI(GameAPI):
             keep_fair=False,
             no_dummies=False,
             all_play=False,
+            max_repeat="",
         )
         self.last_error = ""
         self._sorted_bots = _get_sorted_bots()
@@ -161,6 +162,12 @@ class StandardGameAPI(GameAPI):
                 default=self.menu_values["no_dummies"],
                 sendto="no_dummies",
             ),
+            InputWidget(
+                "Max per bot",
+                "text",
+                default=self.menu_values["max_repeat"],
+                sendto="max_repeat",
+            ),
             # Bot toggles
             InputWidget("Bots", "divider"),
             *bot_widgets,
@@ -205,7 +212,8 @@ class StandardGameAPI(GameAPI):
         if widgets:
             self.last_error = ""
         # Do not recreate menu if user is typing text
-        if "show_filter" in widgets and len(widgets) == 1:
+        text_widgets = {"show_filter", "max_repeat"} & set(widgets)
+        if text_widgets and len(widgets) == 1:
             return False
         # Clear filter text if necessary
         clear_filter_widgets = {"clear_filter", "show_selected"}
@@ -280,23 +288,36 @@ class StandardGameAPI(GameAPI):
         keep_fair = menu_values["keep_fair"]
         no_dummies = menu_values["no_dummies"]
         all_play = menu_values["all_play"]
+        max_repeat_input = menu_values["max_repeat"]
+        try:
+            if max_repeat_input == "":
+                max_repeat = None
+            else:
+                max_repeat = int(max_repeat_input)
+                assert max_repeat > 0
+        except (ValueError, AssertionError):
+            self.last_error = (
+                '» Invalid "max_repeat" value, must be a positive integer, '
+                f'not: "{max_repeat_input}"'
+            )
+            return None
         # Collect bots
         selected_bot_names = [b.NAME for b in self.selected_bots]
         if not selected_bot_names:
             selected_bot_names = [b.NAME for b in self._normal_bots]
         # Make bot getter
-        bots = bot_getter(
+        bot_selector = BotSelection(
             selection=selected_bot_names,
-            include_testing=True,
             keep_fair=keep_fair,
             no_dummies=no_dummies,
             all_play=all_play,
+            max_repeat=max_repeat,
         )
         # Make Battle
         try:
             return BattleManager(
                 initial_state=state,
-                bot_classes_getter=bots,
+                bots=bot_selector,
                 description=f"GUI battle @ {map_name}",
                 gui_mode=True,
             )
