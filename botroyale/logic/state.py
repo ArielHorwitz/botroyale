@@ -52,15 +52,14 @@ Use `State.increment_round` to get the state of the beginning of the first turn.
 
 ### Round incrementation
 For a more manual approach to applying actions, one can use
-`State.apply_action_no_round_increment`. This method is similar to
-`State.apply_action` but does not increment rounds automatically, allowing
-one to see states between turns (see: `State.end_of_round`), where the effects
-of a new round are applied. This requires using the method
-`State.increment_round` in order to continue to the next turn.
+`State.apply_action_manual`. This method is similar to `State.apply_action` but
+does not increment rounds automatically, allowing one to see states between
+turns (see: `State.end_of_round`), where the effects of a new round are applied.
+This requires using the method `State.increment_round` in order to continue to
+the next turn.
 """
 from typing import Optional, Sequence, NamedTuple
 from numpy.typing import NDArray
-from warnings import warn
 import numpy as np
 import copy
 from botroyale.util.hexagon import Hexagon, ORIGIN
@@ -226,33 +225,10 @@ class State:
         """
 
     # User methods - return new states
-    # check_legal_action "unit" argument is being deprecated.
-    def check_legal_action(
-        self, unit: None = None, action: Optional[Action] = None
-    ) -> bool:
-        """If applying *action* to this state is legal.
-
-        .. warning:: Signature Change
-            The *unit* argument is deprecated since v1.0 and will be removed in v2.0.
-            Please only pass *action* like so: `check_legal_action(action=my_action)`
-            until v2.0.
-        """
-        # DEPRECATING the unit argument.
-        # The action argument is non-optional, despite the typing hints.
-        # We still want the method name check_legal_action and so we make unit
-        # an optional keyword argument. The action parameter must then also
-        # be a keyword argument since it is positioned after the unit argument.
-        # After deprecation, the action argument will be a normal positional
-        # argument expecting an Action.
-        if action is None:
-            raise ValueError("Must provide an action.")
-        assert isinstance(action, Action)
-        # Check if user is still using the unit argument and warn if so.
-        if unit is not None:
-            warn(
-                "State.check_legal_action signature will change. "
-                "Please see documentation."
-            )
+    def check_legal_action(self, action: Action) -> bool:
+        """If applying *action* to this state is legal."""
+        if not isinstance(action, Action):
+            raise ValueError(f"Must provide an action, instead got: {action}.")
         if isinstance(action, Idle):
             return True
         return self._check_legal_action(action)
@@ -264,14 +240,14 @@ class State:
         ensuring that the resulting state will always be on a unit's turn (at
         least if the resulting state is not a game over).
 
-        For a more manual approach, use `State.apply_action_no_round_increment`.
+        For a more manual approach, use `State.apply_action_manual`.
         """
-        new_state = self.apply_action_no_round_increment(action)
+        new_state = self.apply_action_manual(action)
         if new_state.end_of_round:
             new_state._next_round()
         return new_state
 
-    def apply_action_no_round_increment(self, action: Action) -> "State":
+    def apply_action_manual(self, action: Action) -> "State":
         """Return the state resulting from applying *action* to this state.
 
         This will include `State.end_of_round` states, where it is no unit's
@@ -360,16 +336,16 @@ class State:
         Returns:
             A new `State` after the current unit dies on their turn.
         """
-        new_state = self.apply_kill_unit_no_round_increment()
+        new_state = self.apply_kill_unit_manual()
         if new_state.end_of_round and not new_state.game_over:
             new_state._next_round()
         return new_state
 
-    def apply_kill_unit_no_round_increment(self):
+    def apply_kill_unit_manual(self):
         """Return the state resulting from killing the `State.current_unit`.
 
-        Works as an alternative for `State.apply_action_no_round_increment`
-        when a unit is non-cooperative and will not return an action.
+        Works as an alternative for `State.apply_action_manual` when a unit is
+        non-cooperative and will not return an action.
 
         Returns:
             A new `State` after the current unit dies on their turn.

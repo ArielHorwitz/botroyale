@@ -76,7 +76,7 @@ class Battle:
                 states out of turn and only care to see when a bot needs to take
                 action. This essentially determines whether actions are applied
                 to states with `State.apply_action` or
-                `State.apply_action_no_round_increment`.
+                `State.apply_action_manual`.
 
             threshold_bot_block_seconds: Threshold of calculation time for bots
                 to trigger a warning in the log.
@@ -155,7 +155,7 @@ class Battle:
                 if self.__only_bot_turn_states:
                     new_state = state.apply_action(action)
                 else:
-                    new_state = state.apply_action_no_round_increment(action)
+                    new_state = state.apply_action_manual(action)
                     if not new_state.is_last_action_legal:
                         self.logger(f"ILLEGAL: {action}")
             else:
@@ -164,7 +164,7 @@ class Battle:
                 if self.__only_bot_turn_states:
                     new_state = state.apply_kill_unit()
                 else:
-                    new_state = state.apply_kill_unit_no_round_increment()
+                    new_state = state.apply_kill_unit_manual()
         self.__current_state = new_state
         self.history.append(new_state)
         if new_state.round_count >= self.bot_timer.round_count:
