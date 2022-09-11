@@ -10,7 +10,6 @@ pip install botroyale
 It takes as few as ***7 lines of code*** to [write your own bot](https://ariel.ninja/botroyale/docs/guides/bots/simple.html) and watch it play!
 
 ```python
-# main.py -- Run this script with Python
 import botroyale as br
 
 class MyBot(br.BaseBot):

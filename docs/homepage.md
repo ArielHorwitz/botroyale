@@ -12,7 +12,6 @@ See the [install guide](guides/install.html) for more details.
 It takes as few as ***7 lines of code*** to [write your own bot](guides/bots/simple.html) and watch it play!
 
 ```python
-# main.py -- Run this script with Python
 import botroyale as br
 
 class MyBot(br.BaseBot):
