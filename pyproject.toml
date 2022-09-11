@@ -12,8 +12,10 @@ readme = "README.md"
 requires-python = ">=3.9"
 classifiers = [
   "License :: OSI Approved :: MIT License",
+  "Development Status :: 3 - Alpha",
   "Operating System :: POSIX :: Linux",
   "Operating System :: Microsoft :: Windows",
+  "Programming Language :: Python",
   "Programming Language :: Python :: 3",
   "Programming Language :: Python :: 3 :: Only",
   "Programming Language :: Python :: 3.9",
@@ -24,6 +26,7 @@ classifiers = [
   "Intended Audience :: Education",
   "Topic :: Games/Entertainment :: Turn Based Strategy",
   "Topic :: Scientific/Engineering :: Artificial Intelligence",
+  "Typing :: Typed",
 ]
 dependencies = [
   "Kivy>=2.1.0,<3.0",
@@ -62,5 +65,6 @@ botroyale-test = "botroyale.run.test:run"
 botroyale-format = "botroyale.run.format:run"
 
 [project.urls]
-"Homepage" = "https://github.com/ArielHorwitz/botroyale"
+"Documentation" = "https://ariel.ninja/botroyale/docs"
+"Source Code" = "https://github.com/ArielHorwitz/botroyale"
 "Bug Tracker" = "https://github.com/ArielHorwitz/botroyale/issues"
