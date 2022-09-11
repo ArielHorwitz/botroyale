@@ -1,4 +1,9 @@
-"""Home of `timing_test` - a tool for measuring calculation time of bots."""
+"""Tool for measuring calculation time of bots.
+
+The `timing_test` function is a convenient way to quickly measure mean and
+maximum calculation time of bots. Results are logged (printed to console,
+currently) as they are available.
+"""
 from typing import Optional, Sequence, NamedTuple
 import numpy as np
 from botroyale.api.logging import logger as glogger

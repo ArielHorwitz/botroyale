@@ -1,4 +1,30 @@
-"""Home of the `botroyale.logic.battle.Battle` class."""
+"""Home of the `botroyale.logic.battle.Battle` class.
+
+The `Battle` class is used to manage the states and bots of a full battle. Bot
+developers will use this module when playing battles programatically (without
+the GUI).
+
+## Setup and Play
+The Battle collects bots from a given `botroyale.api.bots.BotSelection` object,
+initializes them and calls their `botroyale.api.bots.BaseBot.setup` method
+before any turns begin. When it is requested to play states, the Battle will
+manage calling the bot's `botroyale.api.bots.BaseBot.poll_action` method on
+their turn and applying the action. See: `Battle.play_all`.
+
+## State History
+The latest state in a Battle can be found using `Battle.state`. All previous
+states instances reside in the `Battle.history` list.
+
+## Example Usage
+```python
+new_battle = br.Battle(
+    initial_state=br.get_map_state("classic")
+    bots=br.BotSelection(["mybot", "mybot2"])
+)
+new_battle.play_all()
+print(f"Winner: {new_battle.winner}")  # May be None in case of draw
+```
+"""
 from typing import Optional
 import sys
 import traceback
@@ -15,11 +41,7 @@ LINEBR = "=" * 75
 
 
 class Battle:
-    """Manages the states and bots of a single battle.
-
-    It creates the bots and polls them for an action on their turn, and
-    remembers a history of states as well as the current state.
-    """
+    """See module documentation for details."""
 
     def __init__(
         self,

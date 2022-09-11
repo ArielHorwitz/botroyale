@@ -12,6 +12,6 @@ __pdoc__ = {
     "gui": False,
     # The bots subpackage contains the built-in bots
     "bots": False,
-    # Some names are not documented and filtering them out raises a warning
+    # Filtering out undocumented items raises a warning
     **{n: False for n in api.DOCUMENTED},
 }

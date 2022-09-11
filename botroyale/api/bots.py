@@ -1,4 +1,51 @@
-"""Home of `botroyale.api.bots.BaseBot`, the base class for all bots."""
+"""Bot definitions and functions.
+
+## BaseBot and Registration
+Every bot in Bot Royale must subclass from `BaseBot`. Once defined, you must
+register them using `register_bot` to make them available for play. Normally
+this will be enough since the GUI app will make all registered bots available
+for selection.
+```python
+import botroyale as br
+
+class MyBot(br.BaseBot):
+    NAME = "mybot"
+
+    def poll_action(self, state: br.State) -> br.actions.Action:
+        return br.actions.Idle()
+
+br.register_bot(MyBot)
+```
+
+## Programatic Bot Selection
+A `logic.battle.Battle` object will collect bot classes from a given
+`BotSelection` object, initialize them and call their `BaseBot.setup` method
+with the battle's first `logic.state.State` object (before any turn is to be
+played).
+
+To manually create a battle that will include a particular bot, something like
+this should suffice:
+```python
+import botroyale as br
+from botroyale.api.bots import BotSelection
+
+class MyBot(br.BaseBot):
+    NAME = "mybot"
+
+# Register MyBot (to br.api.bots.BOTS)
+br.register_bot(MyBot)
+assert "mybot" in br.api.bots.BOTS
+assert br.api.bots.BOTS["mybot"] is MyBot
+
+new_battle = br.Battle(bots=BotSelection(["mybot"]))
+new_battle.play_all()
+print(f"Winner: {new_battle.winner}")  # May be None in case of draw
+```
+
+## Available Bots
+To see all bots that are registered see the `BOTS` dictionary, which maps each
+bot name to their class definition.
+"""
 from typing import Optional, Union, Sequence, TypeVar, NamedTuple
 import random
 import copy
@@ -27,14 +74,7 @@ def center_distance(hex: Hexagon) -> int:
 
 # BOT CLASS
 class BaseBot:
-    """The base class for all bots.
-
-    Should be initialized by a `botroyale.logic.battle.Battle`. The
-    `BaseBot.setup` method is to be used by the bot to do any startup procedures.
-
-    The `botroyale.logic.battle.Battle` will call `BaseBot.poll_action` as long
-    as it is the bot's turn, and is how the bots actually play.
-    """
+    """The base class for all bots. See module documenation for details."""
 
     NAME: str = "BaseBot"
     """The bot class name. Must be unique."""

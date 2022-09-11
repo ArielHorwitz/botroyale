@@ -1,4 +1,8 @@
-"""Game mechanics."""
+"""Game mechanics.
+
+The relevant modules for bot developers include `botroyale.logic.state` and
+`botroyale.logic.battle`.
+"""
 from typing import Optional
 from enum import IntEnum, auto as enum_auto
 from botroyale.util import settings

@@ -6,12 +6,12 @@ In this guide, we will learn how to run our own battles programmatically. This i
 [Install Bot Royale](../install.html) and create your python script (e.g. `main.py`). Let's make some bots play a couple of battles using the `botroyale.logic.battle.Battle` class:
 ```python
 # main.py
-from botroyale.logic.battle import Battle
+import botroyale as br
 
 
-def play_battle() -> Battle:
+def play_battle() -> br.Battle:
     """Creates a battle and plays it. Returns the battle object."""
-    b = Battle(enable_logging=False)
+    b = br.Battle(enable_logging=False)
     b.play_all(print_progress=True)
     return b
 
@@ -29,7 +29,7 @@ When we run this we should see a progress bar. But when the battles are over we 
 ```python
 ...
 
-def get_winner_name(battle: Battle) -> str:
+def get_winner_name(battle: br.Battle) -> str:
     """Returns the battle winner's name (or "draw")."""
     assert battle.state.game_over
     # Winner can be None or 0 or 1, etc. Make sure to compare to None.
@@ -59,13 +59,11 @@ We want only our bots to play so that we can train them. To manually choose the 
 ```python
 ...
 
-from botroyale.api.bots import BotSelection
 
-
-def play_battle() -> Battle:
+def play_battle() -> br.Battle:
     """Creates a battle and plays it. Returns the battle object."""
-    b = Battle(
-      bots=BotSelection(['random']),
+    b = br.Battle(
+      bots=br.BotSelection(['random']),
       enable_logging=False,
     )
     b.play_all(print_progress=True)
@@ -85,15 +83,11 @@ Suppose we want to train our bots without walls or pits first. Let's select our 
 ```python
 ...
 
-from botroyale.logic.maps import get_map_state
-from botroyale.api.bots import BotSelection
-
-
-def play_battle() -> Battle:
+def play_battle() -> br.Battle:
     """Creates a battle and plays it. Returns the battle object."""
-    b = Battle(
-        initial_state=get_map_state('classic'),
-        bots=BotSelection(['random']),
+    b = br.Battle(
+        initial_state=br.get_map_state('classic'),
+        bots=br.BotSelection(['random']),
         enable_logging=False,
     )
     b.play_all(print_progress=True)
@@ -113,23 +107,21 @@ In this guide we learned how to run a custom script in the project in order to r
 Our script `main.py` should look something like this:
 ```python
 # main.py
-from botroyale.logic.battle import Battle
-from botroyale.api.bots import BotSelection
-from botroyale.logic.maps import get_map_state
+import botroyale as br
 
 
-def play_battle() -> Battle:
+def play_battle() -> br.Battle:
     """Creates a battle and plays it. Returns the battle object."""
-    b = Battle(
-        initial_state=get_map_state('classic'),
-        bots=BotSelection(['random']),
+    b = br.Battle(
+        initial_state=br.get_map_state('classic'),
+        bots=br.BotSelection(['random']),
         enable_logging=False,
     )
     b.play_all(print_progress=True)
     return b
 
 
-def get_winner_name(battle: Battle) -> str:
+def get_winner_name(battle: br.Battle) -> str:
     """Returns the battle winner's name (or "draw")."""
     assert battle.state.game_over
     # Winner can be None or 0 or 1, etc. Make sure to compare to None.

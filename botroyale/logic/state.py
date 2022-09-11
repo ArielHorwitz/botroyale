@@ -1,6 +1,62 @@
 """Home of the `botroyale.logic.state.State` class.
 
-Defines the gameplay mechanics and logic.
+Bot developers normally encounter the `State` class as its instances are passed
+to bots in `botroyale.api.bots.BaseBot.setup` and in-turn in
+`botroyale.api.bots.BaseBot.poll_action` (which are handled by
+`botroyale.logic.battle`). All of the `State` functionality is available from
+these instances.
+
+> **Note:** All public methods of State that return a State object actually
+    return a new state object, since states should not be modified directly.
+
+## Inspecting State
+The `State` object contains all the information of the battle at a given point
+in time. This means that just inspecting it's properties is enough to learn
+anything one needs to know about the current state of the battle; e.g. which
+bots are still alive, how much AP do I have, where are my enemies, etc.
+
+Some properties of the state are lists of values: one for each unit. For these
+attribtes, the index is by `botroyale.api.bots.BaseBot.id`.
+
+```python
+# From a bot class definition
+def poll_action(self, state):
+    my_pos = state.positions[self.id]
+    my_ap = state.ap[self.id]
+```
+
+> **Note:** The State object is unaware of the bots and only knows them as
+    units. To reference the bots in a battle, see: `botroyale.logic.battle`.
+
+## Checking and Applying Actions
+A `State` object represents a point in time of a battle. Normally (but not
+always) a state is prepared to have an action applied to them which will produce
+a new resultant state. This means that looking into the future is as simple as
+applying actions using `State.apply_action`. You can do this as many times as
+you wish until game over (see: `State.game_over`).
+
+When applying an action to a state, it will first check if the action is legal.
+To check this yourself, use `State.check_legal_action`.
+
+## Advanced Usage
+The following are use cases that are mostly relevant for core developers.
+
+### Maps (initial states)
+To create an initial state (also known as a map), it is highly recommended
+to use to use `botroyale.logic.maps.get_map_state` from the
+`botroyale.logic.maps` module.
+
+When initializing new states for a map, it should be with only map features.
+Initial states are created by default at round 0, and not on a unit's turn.
+Use `State.increment_round` to get the state of the beginning of the first turn.
+
+### Round incrementation
+For a more manual approach to applying actions, one can use
+`State.apply_action_no_round_increment`. This method is similar to
+`State.apply_action` but does not increment rounds automatically, allowing
+one to see states between turns (see: `State.end_of_round`), where the effects
+of a new round are applied. This requires using the method
+`State.increment_round` in order to continue to the next turn.
 """
 from typing import Optional, Sequence, NamedTuple
 from numpy.typing import NDArray
@@ -47,39 +103,7 @@ class OrderError(Exception):
 
 
 class State:
-    """The State object represents a point in time of a battle.
-
-    Under most normal circumstances, a state should not be initialized directly.
-    Usually, the only relevant methods are `State.check_legal_action` and
-    `State.apply_action`. Given an existing State, these two methods will be all
-    one needs in order to play an entire battle.
-
-    The `State.apply_action` method will return the new state given after
-    applying an action. The returned state will always be on a unit's turn
-    (unless it is `State.game_over`), allowing you to repeatedly apply actions
-    until game over.
-
-    ### List attributes
-    Many attributes of state are lists of values: one for each unit. For these
-    attribtes, the index is by `botroyale.api.bots.BaseBot.id`.
-
-    ### Maps (initial states)
-    To create an initial state (also known as a map), it is highly recommended
-    to refer to the `botroyale.logic.maps` module.
-
-    When initializing new states for a map, it should be with only the
-    following arguments: *death_radius*, *positions*, *pits*, and *walls*. Note that
-    initial states are created by default at round 0, and not on a unit's turn.
-    Use `State.increment_round` to get the state of the beginning of the first turn.
-
-    ### Round incrementation
-    For a more manual approach to applying actions, one can use
-    `State.apply_action_no_round_increment`. This method is similar to
-    `State.apply_action` but does not increment rounds automatically, allowing
-    one to see states between turns (end_of_round), where the effects of a new
-    round are applied. This requires using the method `State.increment_round`
-    in order to play an entire battle.
-    """
+    """See module documentation for details."""
 
     # We ignore C901 ("too complex") error. The "complexity" arises from there
     # being many if statements to set default values to None parameters.
@@ -104,7 +128,7 @@ class State:
         effects: Optional[list[Effect]] = None,
         seed: Optional[int] = None,
     ):
-        """Initialize the class.
+        """Initializing the class.
 
         This is normally not required unless you are creating maps.
         """
