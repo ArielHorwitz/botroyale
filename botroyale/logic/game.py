@@ -90,7 +90,7 @@ class StandardGameAPI(GameAPI):
             self._toggle_bot(bot, set_as=False)
 
     def _remove_testing(self):
-        for bot in self._testing_bots():
+        for bot in self._testing_bots:
             self._toggle_bot(bot, set_as=False)
 
     def _toggle_bot(self, bot, set_as=None):
