@@ -4,10 +4,11 @@ A battle royale for bots. Write your own bots in Python and watch them play!
 ![Preview GIF](/botroyale/assets/preview.gif)
 
 ## Quickstart
+It is recommended to use a [virtual environment](https://docs.python.org/3/tutorial/venv.html). Once activated, install using:
 ```noformat
 pip install botroyale
 ```
-It takes as few as ***7 lines of code*** to [write your own bot](https://ariel.ninja/botroyale/docs/guides/bots/simple.html) and watch it play!
+It takes as few as ***7 lines of code*** to [write your own bot](https://ariel.ninja/botroyale/docs/guides/bots/simple.html) and watch it play:
 
 ```python
 import botroyale as br

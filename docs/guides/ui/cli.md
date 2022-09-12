@@ -10,7 +10,7 @@ botroyale-cli
 This gives us the option to automatically run many battles and produce winrates, and calculation times.
 
 ## Developer Options
-If you are developing in a [dev environment](../contributing.html#dev-environment), there are several useful commands:
+If you have [installed from source](../install.html#install-from-source), there are several useful commands:
 
 - `botroyale-docs` (create and show the docs locally)
 - `botroyale-format` (format the source code to comply with enforced style)

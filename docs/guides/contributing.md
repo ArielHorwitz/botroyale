@@ -18,7 +18,7 @@ Given the early stage of the project, any new bots that are publically shared ar
 
 Moreover, it helps the core developers immenesly because they may learn about any confusing or difficult issues for bot developers, and the project is ultimately about serving bot developers.
 
-See the guides on [writing bots](guides/bots) to get started, and make sure to share your creation with others!
+See the guides on [writing bots](bots/index.html) to get started, and make sure to share your creation with others!
 
 ### Bugs and Issues
 This one goes without saying, but any bugs or issues found and reported to the [issue tracker](https://github.com/ArielHorwitz/botroyale/issues) are incredibly helpful. If you do find a bug or an issue, please raise it with appropriate detail (especially any logs that may be related) so that the core developers may handle it as efficiently as possible.
@@ -28,36 +28,17 @@ This one goes without saying, but any bugs or issues found and reported to the [
 ### Feature Requests
 Feature requests can be divided into two categories: API features and game mechanics suggestions.
 
-API feature requests which include any features that bot developers might want are more than welcome on the [issue tracker](https://github.com/ArielHorwitz/botroyale/issues). Game mechanics suggestions should be discussed in community forums and gather overwhelming agreement. See the [home page](https://github.com/ArielHorwitz/botroyale) for details on community forums.
+API feature requests which include any features that bot developers might want are more than welcome on the [issue tracker](https://github.com/ArielHorwitz/botroyale/issues). Game mechanics suggestions should be discussed in community forums and gather overwhelming agreement. See the [home page](../index.html#resources) for details on community forums.
 
 ### Guides and Documentation
-A good API reference and collection of guides are critical for the purposes of this project -- it is here to serve bot developers that wish to play with writing AI. And so, any contribution to the guides or documentation is highly valued.
+A good API reference and collection of guides are critical for the purposes of this project -- it is here to serve bot developers that wish to play with writing AI. And so, any contribution to the guides or documentation is high priority.
 
-Guides are written in markdown, which is extremely easy to write and share. The documentation is generated from source code and requires setting up a [dev environment](install.html#dev-environment).
+Guides are written in markdown, which is extremely easy to write and share. The API reference is generated from source code and requires the same procedure as for [code contribution](#code-contribution).
 
 ### Code Contribution
-It has been said the project is still in early development, however we believe most of the core features have been implemented. This means the codebase is being refactored regularly to improve quality. Hence, code contributions should focus on improving the quality of the codebase.
+While the project is still in early development, many of the core features have been implemented. Hence, code contributions should generally focus on improving the quality of the API and codebase in general.
 
-Contributing code requires setting up a [dev environment](install.html#dev-environment).
-
-
-## Dev Environment
-Those wishing to [contribute](contributing.html) to the source code must set up an environment similar to other core developers such that cooperation is efficient.
-
-### Install from source
-Assuming we have cloned the repo, activated our virtual environment, and `cd`'d into the project directory, we can install the project in `editable` mode from source with the `dev` extras:
-```noformat
-pip install --upgrade --editable .[dev]
-```
-
-> **Note:** We should rerun this command any time the project metadata or requirements change (see `pyproject.toml`).
-
-This essentially installs the project itself as a library in the project's environment. The `.` represents the current directory because we are working from within the project directory. We install it as `editable` so that local changes to our code may reflect on the installed library. The `dev` extras are extra library requirements that core developers use such as for code formatting and linting, building the documentation, etc.
-
-You should now have access to the developer options in the [CLI utilities](ui/cli.html#developer-options), which include tests.
-
-### Tests
-It is critical to run the test suite ***before making any changes***:
+Contributing code requires [installing from source](install.html#install-from-source). It is critical to run the test suite ***before making any changes***:
 ```noformat
 botroyale-test
 ```

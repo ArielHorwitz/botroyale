@@ -102,8 +102,6 @@ The battles are now being played on the `classic` map.
 ## Final notes
 In this guide we learned how to run a custom script in the project in order to run battles without the GUI with our selected map and bots. It is highly recommended to study the `botroyale.logic.battle.Battle` class for playing battles manually.
 
-> If the docs are confusing or wrong, *please* raise an issue on github.
-
 Our script `main.py` should look something like this:
 ```python
 # main.py
