@@ -493,13 +493,13 @@ class BattleManager(Battle, BattleAPI):
                         self.add_vfx("highlight", t, steps=1)
         # Shift click: mark
         elif mods == "+":
-            vfx = {"right": "red", "middle": "blue"}.get(button, "green")
+            vfx = {"left": "green", "right": "red"}.get(button, "blue")
             self.add_vfx(f"mark-{vfx}", hex, steps=1)
         # Alt click: bot debug
-        elif click == "! left":
+        elif mods == "!":
             if hex in self.replay_state.positions:
                 unit_id = self.replay_state.positions.index(hex)
-                vfx_seq = self.bots[unit_id].gui_click(hex, button)
+                vfx_seq = self.bots[unit_id].gui_click(hex, button, mods)
                 if vfx_seq is not None:
                     for vfx_kwargs in vfx_seq:
                         vfx_kwargs["steps"] = 1

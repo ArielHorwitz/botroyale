@@ -116,12 +116,12 @@ class InputWidget:
 
     Widget types include:
 
-    * 'spacer' - has a label but no value
-    * 'toggle' - toggle button (boolean value)
-    * 'text' - arbitrary text input (string value)
-    * 'select' - select from list (string value, must supply options)
-    * 'slider' - a slider (float value)
-    * 'divider' - like *spacer* but creates a new section
+    * `spacer` - has a label but no value
+    * `toggle` - toggle button (boolean value)
+    * `text` - arbitrary text input (string value)
+    * `select` - select from list (string value, must supply *options*)
+    * `slider` - a slider (float value)
+    * `divider` - like `spacer` but creates a new section
     """
 
     label: str
@@ -129,16 +129,16 @@ class InputWidget:
     type: Literal["spacer", "toggle", "text", "select", "slider", "divider"]
     """Type of widget."""
     default: Any = None
-    """Starting value of the widget (default: None)"""
+    """Starting value of the widget (default: None)."""
     sendto: Optional[str] = None
     """
-    Name of value (default is to use the label as sendto).
+    Name of value (default is to use the same value of *label*).
 
     This is used by the GUI to map the value of the widget to a key in a
     dictionary. See `GameAPI.get_new_battle`.
     """
     options: Optional[Sequence[str]] = None
-    """List of strings, required only by "select" widgets."""
+    """List of strings, required only by `select` widgets."""
 
     def __post_init__(self):
         """Initialize the dataclass."""
@@ -161,7 +161,7 @@ class InputWidget:
 
 @dataclass
 class Tile:
-    """Represents how a hex on the tilemap must be drawn."""
+    """Represents how a hex on the tilemap should be drawn."""
 
     tile: Optional[str] = None
     """Sprite name of the tile itself."""
@@ -180,20 +180,20 @@ class VFX:
     """Represents a visual effect to be drawn on the tilemap."""
 
     name: str
-    """Name of vfx image (with .png extension)"""
+    """Name of vfx image (with .png extension)."""
     hex: Hexagon
-    """Hex of image center"""
+    """Hex of image center."""
     direction: Hexagon
-    """Hex to indicate direction for image rotation"""
+    """Hex to indicate direction for image rotation."""
     start_step: Union[int, float]
-    """In-game time before which the vfx expires"""
+    """In-game time before which the vfx expires."""
     expire_step: Union[int, float]
-    """In-game time after which the vfx expires"""
+    """In-game time after which the vfx expires."""
     expire_seconds: float
-    """"real-time time after which the vfx expires"""
+    """Real-time seconds after which the vfx expires."""
 
     def asdict(self):
-        """Equivalent to passing self to `dataclasses.dataclass_asdict`."""
+        """Equivalent to passing *self* to `dataclasses.dataclass_asdict`."""
         return dataclass_asdict(self)
 
 

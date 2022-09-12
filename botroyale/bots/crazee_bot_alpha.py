@@ -5,11 +5,12 @@ import numpy as np
 from botroyale.api.actions import Move, Push, Idle, Action
 from botroyale.util.hexagon import Hexagon, Hex
 from botroyale.api.logging import logger as glogger
-from botroyale.api.bots import BaseBot, world_info
+from botroyale.api.bots import BaseBot
 from botroyale.util import settings
 from time import perf_counter
 
-DEBUG = True
+world_info = None  # BaseBot API changed
+DEBUG = True  # Settings API changed
 
 
 def debug(*lines):

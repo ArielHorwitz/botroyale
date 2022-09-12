@@ -8,7 +8,7 @@ import numpy as np
 from botroyale.util.time import pingpong, ping, pong
 from botroyale.util.hexagon import DIAGONALS
 from botroyale.api.bots import BaseBot, CENTER, center_distance
-from botroyale.api.actions import Idle, Move, Push, Jump
+from botroyale.api.actions import MAX_AP, REGEN_AP, Idle, Move, Push, Jump
 
 
 DEBUG_VERBOSE = False
@@ -333,10 +333,10 @@ class CheckPoint:
     SPENT_AP_VALUE_FACTOR = -0.05
 
     def _evaluate_ap(self, weight=1):
-        useful_ap = self.ap - max(0, self.ap - BaseBot.ap_regen)
+        useful_ap = self.ap - max(0, self.ap - REGEN_AP)
         ap_spent = self.state.round_ap_spent[self.uid]
-        useful_ap_value = useful_ap / BaseBot.max_ap * weight
-        ap_spent_value = self.SPENT_AP_VALUE_FACTOR * ap_spent / BaseBot.max_ap * weight
+        useful_ap_value = useful_ap / MAX_AP * weight
+        ap_spent_value = self.SPENT_AP_VALUE_FACTOR * ap_spent / MAX_AP * weight
         total_ap_value = useful_ap_value + ap_spent_value
         d = (
             f"ap: {self.__format_eval_value(total_ap_value)} "
@@ -361,7 +361,7 @@ class CheckPoint:
     PIT1_THREAT = 1
     PIT2S_THREAT = 0.5
     PIT2D_THREAT = 0.4
-    MAX_ENEMY_THREAT_DIST = (BaseBot.max_ap - MIN_AP_PER_PUSH) / MIN_AP_PER_MOVE + 1
+    MAX_ENEMY_THREAT_DIST = (MAX_AP - MIN_AP_PER_PUSH) / MIN_AP_PER_MOVE + 1
 
     def evaluate_reposition_tile(self, tile):
         """Quickly guess the evaulation of standing on tile at the end of our turn."""
@@ -456,7 +456,7 @@ class CheckPoint:
         start_step = state.step_count
         total_threat = 0
         d = []
-        extra_ap_cost_max = BaseBot.max_ap - MIN_AP_PER_PUSH
+        extra_ap_cost_max = MAX_AP - MIN_AP_PER_PUSH
         # Find the(<=2) states that is the enemy's turn before ours
         enemy_turns = []
         enemy_turn_state = iter_state_to_turn(state, enemy_id, self.uid)

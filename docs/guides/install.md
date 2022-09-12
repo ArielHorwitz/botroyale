@@ -13,4 +13,4 @@ That's it! You now have Bot Royale installed in Python. See the guide on [writin
 
 
 ## Dev Environment
-Those wishing to contribute source code should follow the installation procedure as [described here](contribute.html#dev-environment).
+Those wishing to contribute source code should follow the installation procedure as [described here](contributing.html#dev-environment).
