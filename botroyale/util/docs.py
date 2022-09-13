@@ -6,6 +6,8 @@ documentation. Will delete the output folder and recreate docs.
 from typing import Optional
 import shutil
 import os
+import traceback
+import sys
 import warnings
 from pathlib import Path
 from pdoc import Module, Context, tpl_lookup, link_inheritance
@@ -49,17 +51,21 @@ def make_docs(
         _make_docs(output_dir)
 
 
-def test_docs():
-    """If making the docs raises no warnings."""
+def test_docs() -> bool:
+    """If making the docs raises no warnings or exceptions."""
     if not INSTALLED_FROM_SOURCE:
         print("Cannot create docs unless installed from source.")
         return False
+    issues = []
     with warnings.catch_warnings(record=True) as warning_catcher:
-        make_docs(force_remake=True)
-    if len(warning_catcher) > 0:
-        print(f"Found {len(warning_catcher)} warnings:")
-        for warning in warning_catcher:
-            print(f"  {warning.message}")
+        try:
+            make_docs(force_remake=True)
+        except Exception as e:
+            issues.append(f"  Error: {e}")
+    issues = [f"  Warning: {w.message}" for w in warning_catcher] + issues
+    if len(issues) > 0:
+        print(f"Found {len(issues)} issues:")
+        print("\n".join(issues))
         return False
     print("Documentation built sucessfully.")
     return True
@@ -78,17 +84,15 @@ def _make_docs(output_dir: Optional[os.PathLike] = None):
     """Clear and create the docs."""
     if not INSTALLED_FROM_SOURCE:
         raise EnvironmentError("Cannot create docs unless installed from source.")
-    print("Clearing existing docs...")
     output_dir = _get_output_dir(output_dir)
     if output_dir.is_dir():
+        print("Clearing existing docs...")
         shutil.rmtree(output_dir)
     print("Preparing docs...")
     tpl_lookup.directories.insert(0, str(TEMPLATE_DIR))
     _copy_assets(output_dir)
-    _write_guides()
     print("Building docs...")
     doc_root = _get_root_package_doc()
-    _delete_guides()
     print("Writing new docs...")
     _write_html(doc_root, output_dir)
     print("Make docs done.")
@@ -118,6 +122,20 @@ def _recursive_files(dir, _top_dir=None):
             yield child.relative_to(_top_dir)
 
 
+def _get_root_package_doc():
+    try:
+        _write_guides()
+        context = Context()
+        root_package = Module("botroyale", context=context)
+        link_inheritance(context)
+    except Exception as e:
+        print("".join(traceback.format_exception(*sys.exc_info())))
+        _delete_guides()
+        raise e
+    _delete_guides()
+    return root_package
+
+
 def _write_guides():
     guides_md = PACKAGE_DIR.parent / "docs" / "guides"
     guides_py = PACKAGE_DIR / "guides"
@@ -126,9 +144,9 @@ def _write_guides():
     guides_py.mkdir(exist_ok=True)
     guides = _recursive_files(guides_md)
     for path in guides:
-        path_md = guides_md / path
         path_py = guides_py / path.parent / f"{path.stem}.py"
         path_py.parent.mkdir(parents=True, exist_ok=True)
+        path_md = _windows_compatibility(str(guides_md / path))
         include_md = f'""".. include:: {path_md}"""'
         file_dump(path_py, include_md)
 
@@ -136,13 +154,6 @@ def _write_guides():
 def _delete_guides():
     guides_py = PACKAGE_DIR / "guides"
     shutil.rmtree(guides_py)
-
-
-def _get_root_package_doc():
-    context = Context()
-    root_package = Module("botroyale", context=context)
-    link_inheritance(context)
-    return root_package
 
 
 def _write_html(doc_root, output_dir):
@@ -183,3 +194,8 @@ def _recursive_mods(mod):
     yield mod
     for submod in mod.submodules():
         yield from _recursive_mods(submod)
+
+
+def _windows_compatibility(s):
+    """Multiply backslashes in a string for windows path compatibility."""
+    return s.replace("\\", "\\\\")
