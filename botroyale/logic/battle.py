@@ -46,7 +46,7 @@ class Battle:
     def __init__(
         self,
         initial_state: Optional[State] = None,
-        bots: BotSelection = None,
+        bots: Optional[BotSelection] = None,
         description: str = "No description set",
         enable_logging: bool = True,
         enable_bot_logging: Optional[bool] = None,
@@ -101,7 +101,8 @@ class Battle:
         bot_count = initial_state.num_of_units
         self.bot_timer: TurnTimer = TurnTimer(bot_count)
         """A `TurnTimer` object for keeping track of bot calculation times."""
-        self.logger(f"{bots}")
+        if bots is None:
+            bots = BotSelection()
         with Logger.set_logging_temp(enable_bot_logging):
             bot_classes = bots.get_bots(bot_count)
         assert len(bot_classes) == bot_count
