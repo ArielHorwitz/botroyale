@@ -36,7 +36,7 @@ class MyBot(br.BaseBot):
     NAME = "mybot"
 
 br.register_bot(MyBot)
-battle = br.Battle(bots=BotSelection(["mybot"]))
+battle = br.Battle(bots=br.BotSelection(["mybot"]))
 battle.play_all()
 print(f"Winner: {battle.winner}")  # May be None in case of draw
 ```
@@ -340,7 +340,7 @@ def _bot_importer(get_legend: bool = False) -> dict[str, type]:
 
 
 BOTS: dict[str, type] = _bot_importer()
-"""A dictionary of bot names mapped to bot classes."""
+"""A dictionary of registered bot names mapped to bot classes."""
 
 
 # There should always be at least one bot, let it be a dummy

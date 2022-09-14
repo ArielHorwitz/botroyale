@@ -1,4 +1,97 @@
-"""Home of the `botroyale.util.hexagon.Hexagon` class and related constants."""
+"""Home of the `botroyale.util.hexagon.Hexagon` class.
+
+The Hexagon represents a whole-number point in hex-space. It can also be
+thought of as a whole-number vector from the `ORIGIN` (0, 0, 0) in hex-space.
+
+### Coordinates
+See the offset (x, y) coordinates with `Hexagon.xy` and the cube (q, r, s)
+coordinates with `Hexagon.cube`.
+
+Hexagons are normally not created manually, rather are returned from methods of
+existing hexagons. To create a new Hexagon instance, see `Hexagon.from_xy`,
+`Hexagon.from_qr` and `Hexagon.from_floats`.
+
+### Neighboring hexagons
+`Hexagon.neighbors` will return a hexagon's 6 nearest neighbors:
+
+```python
+import botroyale as br
+
+hex = br.CENTER  # Hexagon(0, 0, 0)
+neighbors = hex.neighbors  # tuple of the 6 nearest hexagons
+assert hex.neighbors == hex.ring(1)
+```
+
+`Hexagon.doubles` and `Hexagon.diagonals` together make up the second ring:
+```python
+import botroyale as br
+
+hex = br.CENTER  # Hexagon(0, 0, 0)
+assert set(hex.ring(2)) == set(hex.doubles) | set(hex.diagonals)
+```
+
+### Distance
+To find the hex-wise distance between two hexagons, use `Hexagon.get_distance`:
+```python
+import botroyale as br
+
+hex = br.Hexagon.from_xy(5, -6)
+distance_from_center = hex.get_distance(br.CENTER)  # 8 tiles distance
+```
+
+### Range
+To find all hexagons *within* a certain distance, use `Hexagon.range`:
+```python
+import botroyale as br
+
+hex = br.CENTER  # Hexagon(0, 0, 0)
+tiles_in_range = hex.range(3)  # tuple of the 37 hexagons within 3 distance
+```
+
+### Ring
+To find all hexagon *at exactly* a certain distance, use `Hexagon.ring`:
+```python
+import botroyale as br
+
+hex = br.CENTER  # Hexagon(0, 0, 0)
+tiles_in_ring = hex.ring(3)  # tuple of the 18 hexagons at exactly 3 distance
+```
+
+### Straight line
+To find hexagons in a straight line, use `Hexagon.straight_line`:
+```python
+import botroyale as br
+
+hex = br.CENTER  # Hexagon(0, 0, 0)
+neighbor = hex.neighbors[0]  # A neighbor of hex
+
+# The first hex that continues the line from hex to neighbor
+next_in_line = next(hex.straight_line(neighbor))
+
+# Iterating through hexagons in a straight line
+for hex_in_line in hex.straight_line(neighbor):
+    ...
+```
+
+### Rotation
+To find a hexagon from rotation, use `Hexagon.rotate`:
+```python
+import botroyale as br
+
+hex = br.Hexagon.from_xy(-2, 18)
+mirrored_hex = hex.rotate(3)  # the hex on the opposite side of the origin
+```
+
+### Operators
+Hexagons are also vectors, and can be added and subtracted:
+```python
+import botroyale as br
+
+hex1 = br.Hexagon.from_qr(1, 2)
+hex2 = br.Hexagon.from_qr(-1, -2)
+center = hex1 - hex2  # equivalent to br.CENTER
+```
+"""
 from typing import Sequence, Generator
 import math
 import functools
@@ -10,11 +103,7 @@ GRID_OFFSET = -1
 
 
 class Hexagon:
-    """Represents a whole-number point in hex-space.
-
-    Can also be thought of as a whole-number vector from the origin (0, 0, 0)
-    in hex-space.
-    """
+    """See module documentation for details."""
 
     def __init__(self, q: int, r: int, s: int):
         """Initialize the class.

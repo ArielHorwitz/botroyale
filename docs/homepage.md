@@ -18,7 +18,7 @@ class MyBot(br.BaseBot):
     NAME = 'mybot'
 
     def poll_action(self, state):
-      return br.actions.Idle()  # Add bot logic here
+      return br.Idle()  # Add bot logic here
 
 br.register_bot(MyBot)
 br.run_gui()

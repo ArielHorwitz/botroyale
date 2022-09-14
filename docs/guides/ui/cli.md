@@ -1,6 +1,6 @@
 # Command Line Interface
 
-### CLI Utility
+## CLI Utility
 Other than the [GUI app](gui.html), we can also have a CLI utility with the command:
 ```noformat
 botroyale cli

@@ -55,7 +55,7 @@ When running the script now, after each battle there should be printed `"Battle 
 
 
 ## Selecting bots
-We want only our bots to play so that we can train them. To manually choose the bots, let's get familiar with `botroyale.api.bots.BotSelection`:
+We want only *our* bots to play so that we can train them. To manually choose the bots, let's get familiar with `botroyale.api.bots.BotSelection`:
 ```python
 ...
 
@@ -63,8 +63,8 @@ We want only our bots to play so that we can train them. To manually choose the 
 def play_battle() -> br.Battle:
     """Creates a battle and plays it. Returns the battle object."""
     b = br.Battle(
-      bots=br.BotSelection(['random']),
-      enable_logging=False,
+        bots=br.BotSelection(['random']),
+        enable_logging=False,
     )
     b.play_all(print_progress=True)
     return b
@@ -72,9 +72,9 @@ def play_battle() -> br.Battle:
 ...
 ```
 
-The `botroyale.api.bots.BotSelection` object has many configuration options, but we are only interested in the *selection* argument to select which bots play.
+The `botroyale.api.bots.BotSelection` object has many configuration options, but we are only interested in passing a list of bot names to select which bots play.
 
-When running the script now (with only the `"random"` bot selected), we should only ever see draws and `"random"` bots winning because they are the only ones playing. The battle will run very quickly because they are extremely simple bots (<0.1 ms calculation time per step). Depending on the map and the bots, battles may take far, far longer.
+When running the script now (with only the `"random"` bot selected), we should only ever see draws and `"random"` bots winning because they are the only ones playing. The battle will run very quickly because they are extremely simple and quick bots. Depending on the map and the bots, battles may take far, far longer.
 
 
 ## Selecting maps
@@ -100,7 +100,7 @@ The battles are now being played on the `classic` map.
 
 
 ## Final notes
-In this guide we learned how to run a custom script in the project in order to run battles without the GUI with our selected map and bots. It is highly recommended to study the `botroyale.logic.battle.Battle` class for playing battles manually.
+In this guide we learned how to run a custom script in the project in order to run battles without the GUI with our selected map and bots. It is highly recommended to study `botroyale.logic.battle` for creating battles manually.
 
 Our script `main.py` should look something like this:
 ```python

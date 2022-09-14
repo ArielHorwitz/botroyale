@@ -372,9 +372,9 @@ class State:
         Will return None if the current state is `State.end_of_round` (and there
         is no unit in turn).
 
-        .. caution:: A statement in Python will equate to `False` if it is
-            either `None` (no unit in turn in this case) or `0` (unit #0 in turn
-            in this case).
+        .. caution::
+            A statement in Python will equate to `False` if it is either `None`
+            (no unit in turn in this case) or `0` (unit #0 in turn in this case).
 
         Hence, do **not** use like this:
         ```python
@@ -404,8 +404,9 @@ class State:
         Will return None if it is a draw or it is not yet `State.game_over`.
 
         .. tip:: Check `State.game_over` before checking `State.winner`.
-        .. caution:: A statement in Python will equate to `False` if it is
-            either `None` (draw in this case) or `0` (unit #0 won in this case).
+        .. caution::
+            A statement in Python will equate to `False` if it is either `None`
+            (draw in this case) or `0` (unit #0 won in this case).
 
         Hence, do **not** use like this:
         ```python
