@@ -58,9 +58,9 @@ class Hexagon:
         if radius < 0:
             raise ValueError(f"Radius must be non-negative, got: {radius}")
         if radius == 0:
-            return [self]
+            return (self,)
         if radius == 1:
-            return list(self.neighbors)
+            return self.neighbors
         ring = []
         dir_ngbr = self + DIRECTIONS[4]
         hex = list(self.straight_line(dir_ngbr, max_distance=radius - 1))[-1]
