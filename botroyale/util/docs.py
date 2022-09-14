@@ -161,14 +161,7 @@ def _write_html(doc_root, output_dir):
         with warnings.catch_warnings(record=True) as warning_catcher:
             html = mod.html()
         for w in warning_catcher:
-            # Guide modules are generated temporarily, and will not be part of a
-            # commit blob. pdoc will fail to create a link to github source
-            # without a blob reference. Guides do not need links to source so
-            # we ignore said warnings.
             warning_str = w.message.args[0]
-            unavailable_guide_source = "format_git_link for <module 'botroyale.guides"
-            if unavailable_guide_source in warning_str:
-                continue
             warnings.warn(warning_str)
         file_path = output_dir / _module_relative_path(mod)
         file_path.parent.mkdir(parents=True, exist_ok=True)
