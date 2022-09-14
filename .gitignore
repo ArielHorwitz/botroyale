@@ -5,6 +5,7 @@
 venv/
 .idea
 __pycache__
+.hypothesis
 
 
 # Distribution

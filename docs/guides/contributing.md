@@ -40,11 +40,11 @@ While the project is still in early development, many of the core features have 
 
 Contributing code requires [installing from source](install.html#install-from-source). It is critical to run the test suite ***before making any changes***:
 ```noformat
-botroyale-test
+botroyale test
 ```
 
 This will run the suite of integration tests and make sure the codebase complies with the automated quality standards. If this fails before you made any changes, something is wrong and it should be reported immediately.
 
 ***Any changes that are meant to merged back upstream must pass these tests.***
 
-> **Note:** To pass the format test, one simply needs to run `botroyale-format`.
+> **Note:** To pass the format test, one simply needs to run `botroyale format`.

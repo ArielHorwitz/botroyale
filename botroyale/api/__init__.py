@@ -56,9 +56,9 @@ def run_gui():
     """Run the GUI app."""
     # We import from inside the function as a hotfix until the gui can be
     # imported without opening a window.
-    from botroyale.run.gui import run as _run_gui
+    from botroyale.run.gui import entry_point_gui
 
-    _run_gui()
+    entry_point_gui(args=[])
 
 
 # Names to be available in botroyale/__init__.py

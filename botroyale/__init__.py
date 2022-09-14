@@ -12,6 +12,8 @@ __pdoc__ = {
     "gui": False,
     # The bots subpackage contains the built-in bots
     "bots": False,
+    # The run subpackage has arg parsing for help
+    "run": False,
     # Filtering out undocumented items raises a warning
     **{n: False for n in api.DOCUMENTED},
 }

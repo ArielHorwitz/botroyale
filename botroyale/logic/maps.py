@@ -23,15 +23,19 @@ if not USR_MAP_DIR.is_dir():
     USR_MAP_DIR.mkdir(parents=True, exist_ok=True)
 
 
-def _find_maps() -> dict[str, Path]:
+def _find_maps(use_custom: bool = True) -> dict[str, Path]:
     """Return list of map names and their paths as found on disk.
 
-    Searches the "maps" dir from `botroyale.util.file.get_usr_dir` and the
-    builtin maps. Custom user maps override builtin maps.
+    Setting *use_custom* to True will include the "maps" usr dir. Custom user
+    maps override builtin maps.
     """
     map_files = {}
-    for file in chain(USR_MAP_DIR.iterdir(), BUILTIN_MAP_DIR.iterdir()):
+    path_iter = BUILTIN_MAP_DIR.iterdir()
+    path_iter = chain(USR_MAP_DIR.iterdir(), path_iter)
+    for file in path_iter:
         if not len(file.suffixes) == 1 or file.suffix != ".json":
+            continue
+        if file.stem == "custom" and not use_custom:
             continue
         if file.stem in map_files:
             continue

@@ -1,7 +1,8 @@
-"""A command line interface for running functions that don't require the GUI.
+"""A command line utility for running functions that don't require the GUI.
 
 Uses `input` and `print` to interface with the user.
 """
+import argparse
 from collections import Counter
 from botroyale.api.time_test import timing_test
 from botroyale.api.bots import BOTS, BotSelection
@@ -196,8 +197,10 @@ def play_complete(battle: BattleManager) -> tuple[str, list[str]]:
     return winner, losers
 
 
-def run():
-    """Entry point for cli."""
+def entry_point_cli(args):
+    """Entry point for the CLI utility."""
+    parser = argparse.ArgumentParser(description="Run the CLI utility.")
+    parser.parse_args(args)
     while True:
         print(
             "\n".join(
@@ -214,7 +217,7 @@ def run():
         )
         selection = input("Enter selection: ")
         if selection == "q":
-            return
+            return 0
         selection = int(selection)
         assert 1 <= selection <= 3
         if selection == 1:
@@ -223,3 +226,4 @@ def run():
             run_regular_timing_test()
         elif selection == 3:
             run_competitive_timing_test()
+    return 0

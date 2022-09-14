@@ -1,4 +1,9 @@
-A collection of guides on how to use the program.
+# Running Bot Royale
 
 - [Using the GUI app](gui.html)
-- [Running the CLI utilities](cli.html)
+- [Using the CLI](cli.html)
+
+See all commands:
+```noformat
+botroyale --help
+```

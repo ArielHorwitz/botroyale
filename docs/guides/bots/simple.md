@@ -2,7 +2,7 @@
 
 In this guide, we will learn how to write a simple bot that will play in bot royale.
 
-See also: [A primer on rules and mechanics](../mechanics_primer.html) and  [Using the GUI app](../ui/gui.html)
+See also: [A primer on rules and mechanics](mechanics_primer.html) and  [Using the GUI app](../ui/gui.html)
 
 ## Setting Up
 [Install Bot Royale](../install.html) and create your python script (e.g. `main.py`). Let's begin with this simple boilerplate:

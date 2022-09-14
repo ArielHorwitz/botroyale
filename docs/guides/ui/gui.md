@@ -1,4 +1,4 @@
-# Using the GUI
+# Using the GUI app
 
 ## Running the App
 To run the GUI app, use the command:

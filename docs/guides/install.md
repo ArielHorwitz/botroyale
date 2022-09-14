@@ -23,4 +23,4 @@ pip install --upgrade --editable .[dev]
 
 This essentially installs the project itself as a library in the project's environment. The `.` represents the path to the current directory (we run the command from within the project directory). We install it as `editable` so that local changes to our code may reflect on the installed library. The `dev` extras are extra library requirements that core developers use such as for code formatting and linting, building the documentation, etc.
 
-You should now have access to the developer options in the [CLI utilities](ui/cli.html#developer-options), which include tests.
+You now have access to the developer options [in the command line](ui/cli.html#developer-options), which include tests.

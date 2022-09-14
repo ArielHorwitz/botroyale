@@ -1,7 +1,21 @@
-"""Build the docs based on local source code.
+"""Documentation utility.
 
-Uses `pdoc3` library to automatically read source code and produce HTML
-documentation. Will delete the output folder and recreate docs.
+This module includes tools to test, create, and open the documentation locally.
+Project must be installed from source and with dev requirements, see:
+`botroyale.guides.contributing`.
+
+To create and open the docs:
+```noformat
+botroyale docs --help
+```
+
+### Creating the docs
+Uses the `pdoc3` library to automatically read source code and produce HTML
+documentation. Will delete the output folder and recreate docs. Default output
+folder is in the usr dir.
+
+### Testing the docs
+See `botroyale.util.code` for more information about testing.
 """
 from typing import Optional
 import shutil
@@ -9,6 +23,7 @@ import os
 import traceback
 import sys
 import warnings
+import argparse
 from pathlib import Path
 from pdoc import Module, Context, tpl_lookup, link_inheritance
 from botroyale.util import PROJ_DIR, PACKAGE_DIR, INSTALLED_FROM_SOURCE
@@ -18,6 +33,30 @@ from botroyale.util.file import popen_path, file_dump, get_usr_dir
 DOCS_DIR = PROJ_DIR / "docs"
 TEMPLATE_DIR = DOCS_DIR / "templates"
 USER_DIR = "botroyale"
+
+
+def entry_point_docs(args) -> int:
+    """Script entry point to run the documentation utility."""
+    parser = argparse.ArgumentParser(
+        description="Generate and view Bot Royale documentation",
+    )
+    parser.add_argument(
+        "-f",
+        "--force",
+        action="store_true",
+        help="force recreating the docs",
+    )
+    parser.add_argument(
+        "--no-open",
+        "--no",
+        action="store_true",
+        help="don't open the docs",
+    )
+    args = parser.parse_args(args)
+    make_docs(force_remake=args.force)
+    if not args.no_open:
+        open_docs()
+    return 0
 
 
 def open_docs(
