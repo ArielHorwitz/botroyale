@@ -4,6 +4,8 @@ import argparse
 from botroyale.util import INSTALLED_FROM_SOURCE
 from botroyale.run.gui import entry_point_gui
 from botroyale.run.cli import entry_point_cli
+from botroyale.run.snake import entry_point_snake
+from botroyale.run.tetris import entry_point_tetris
 
 
 HELP_STR = """usage: botroyale [SUBCOMMAND] [--help]
@@ -11,6 +13,10 @@ HELP_STR = """usage: botroyale [SUBCOMMAND] [--help]
 Subcommands (default: "gui")
   gui         Open the GUI app
   cli         Open the CLI utility
+
+Other game modes
+  snake       Play the classic game of hex-snake
+  tetris      Play the classic game of hex-tetris
 """
 
 if INSTALLED_FROM_SOURCE:
@@ -27,6 +33,8 @@ def _collect_entry_points():
     commands_map = {
         "gui": entry_point_gui,
         "cli": entry_point_cli,
+        "snake": entry_point_snake,
+        "tetris": entry_point_tetris,
     }
     if INSTALLED_FROM_SOURCE:
         from botroyale.util.code import entry_point_tests, entry_point_format
