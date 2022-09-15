@@ -8,7 +8,7 @@ from botroyale.api import *  # noqa: F401,F403
 
 __all__ = api.__all__
 __pdoc__ = {
-    # The GUI backend requires no documentation (for now)
+    # The GUI backend needs no public documentation
     "gui": False,
     # The bots subpackage contains the built-in bots
     "bots": False,

@@ -51,9 +51,7 @@ IGNORE_ERRORS = [
     "E203",  # whitespace before ':' (not pep8 compliant)
 ]
 TARGET_PYTHON_VERSION = "py39"
-EXCLUDE_FOLDERS = [
-    "gui",  # Currently too messy to consider (should be removed in the future)
-]
+EXCLUDE_FOLDERS = []
 DOCSTRING_CONVENTION = "google"
 # A dictionary of hypothesis profiles for unit testing `conftest.py`
 UNITTEST_PROFILES = {
