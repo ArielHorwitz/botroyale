@@ -1,0 +1,69 @@
+[battle]
+default_map = "basic"
+# Default game speed (in steps per second)
+default_step_rate = 2
+# Game speed options
+toggle_step_rates = [1, 2, 3, 5, 60]
+
+[logging]
+global = true
+battle = true
+gui = false
+hotkeys = false
+
+[gui]
+fps = 30
+window_maximize = true
+window_size = [1280, 720]
+
+[gui.menu]
+# Size of main menu widgets
+widget_size = [350, 40]
+
+[gui.tilemap]
+# Automatically zoom to fit map on screen
+autozoom = true
+# Cap number of tiles to draw
+max_draw_tiles = 2500
+# Relative size of font in tile
+font_scale = 0.7
+# Very large fonts may crash on some platforms
+max_font_size = 50
+# Tile size
+max_tile_radius = 300
+# Tile padding in percent
+tile_padding = 1
+# Relative size of unit in tile
+unit_size = 0.7
+# Amount of seconds to wait before trying to redraw
+redraw_cooldown = 0.3
+
+[gui.tilemap.colors]
+default_tile = [0.16, 0.16, 0.2]
+out_of_bounds = [0.06, 0.05, 0.04]
+pits = [0.25, 0.25, 0.25]
+plate_no_reset = [0.4, 0.45, 0.6]
+plate_reset = [0.4, 0.4, 0.65]
+units = [
+  [0.6, 0.0, 0.1],
+  [0.9, 0.3, 0.4],
+  [0.8, 0.7, 0.1],
+  [0.7, 0.4, 0.0],
+  [0.1, 0.4, 0.0],
+  [0.4, 0.7, 0.1],
+  [0.1, 0.7, 0.7],
+  [0.1, 0.4, 0.9],
+  [0.0, 0.1, 0.5],
+  [0.7, 0.1, 0.9],
+  [0.4, 0.0, 0.7],
+  [0.7, 0.0, 0.5],
+]
+walls = [0.6, 0.65, 0.6]
+
+[gui.fonts]
+size = 16
+default = "liberation"
+menubar = "liberation-bold"
+panel = "firacode-mono-bold"
+menu = "firacode-mono-bold"
+tilemap = "liberation-mono"

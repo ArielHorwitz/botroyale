@@ -1,22 +1,17 @@
+# Root .gitignore (project-wide)
+
 
 # Environment and runtime
 venv/
-__pycache__
 .idea
+__pycache__
+.hypothesis
 
 
-# Docs
-/docs/*
-!/docs/templates
-!/docs/guides
-/guides/
-
-
-# Custom user data
-settings.json
-.deletesettings
-logic/maps/custom*
-*.psd
+# Distribution
+build/
+dist/
+*.egg-info/
 
 
 # Convenient development temp folder

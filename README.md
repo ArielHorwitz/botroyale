@@ -1,46 +1,33 @@
 # Bot Royale
-A battle royale for bots.
+A battle royale for bots. Write your own bots in Python and watch them play!
 
-![Preview GIF](assets/preview.gif)
+![Preview GIF](/botroyale/assets/preview.gif)
 
-<br>
+## Quickstart
+It is recommended to use a [virtual environment](https://docs.python.org/3/tutorial/venv.html). Once activated, install using:
+```noformat
+pip install botroyale
+```
+It takes as few as ***7 lines of code*** to [write your own bot](https://ariel.ninja/botroyale/docs/guides/bots/simple.html) and watch it play:
 
-## Requirements
-- [Python 3.9+](https://www.python.org/)
-- [Kivy](https://pypi.org/project/Kivy/) for the GUI
-- [numpy](https://pypi.org/project/numpy/) because of course
-- [pdoc3](https://pypi.org/project/pdoc3/) to create the docs (optional)
-- [black](https://github.com/psf/black) for code formatting (optional)
-- [flake8](https://flake8.pycqa.org/) for code quality analysis (optional)
+```python
+import botroyale as br
 
-It is recommended to use a [virtual environment](https://docs.python.org/3/tutorial/venv.html). Once activated, install the requirements:
+class MyBot(br.BaseBot):
+    NAME = 'mybot'
 
-`pip install -r requirements.txt`
+    def poll_action(self, state):
+      return br.Idle()  # Add bot logic here
 
-<br>
-
-## Run
-The main script:
-
-`python main.py`
-
-Will choose which module to import and run based on the first command line argument. The default is `gui`. To see other options:
-
-`python main.py --list`
-
-For example:
-
-`python main.py cli`
-
-<br>
+br.register_bot(MyBot)
+br.run_gui()
+```
 
 ## Guides and Documentation
-To view the docs locally (which include guides), run:
+Browse the [docs](https://ariel.ninja/botroyale/docs/) for guides and API reference to learn more.
 
-`python main.py docs`
+## Community
+Join us in the [community discord server](https://discord.gg/ADss5FRyqG).
 
-This will create the docs from source if missing, and then open them in the default browser. If you wish to force recreating the docs, run:
-
-`python main.py makedocs`
-
-The docs expect the project folder to be a valid python package name (if you are unsure, name your project folder "botroyale").
+## Contributing
+Browse the [contribution guide](https://ariel.ninja/botroyale/docs/guides/contributing.html).

@@ -28,7 +28,8 @@
 <%def name="ident(name)"><span class="ident">${name}</span></%def>
 
 <%def name="show_source(d)">
-  % if (show_source_code or git_link_template) and d.source and d.obj is not getattr(d.inherits, 'obj', None):
+  <% is_guide = "botroyale.guides" in d.qualname %>
+  % if not is_guide and (show_source_code or git_link_template) and d.source and d.obj is not getattr(d.inherits, 'obj', None):
     <% git_link = format_git_link(git_link_template, d) %>
     % if show_source_code:
       <details class="source">
@@ -283,17 +284,17 @@
   functions = module.functions(sort=sort_identifiers)
   submodules = module.submodules()
   supermodule = module.supermodule
+  rel_count = module.name.count(".") - int(not module.is_package)
+  path_to_root = "../" * rel_count
   %>
   <nav id="sidebar">
 
     ## <%include file="logo.mako"/>
     ## Insert logo and link to root
-    <%! from util import PROJ_DIR %>
-    <%! from run.makedocs import OUTPUT_DIR %>
-    <p><a href="${OUTPUT_DIR}/index.html">
-    <img src="${PROJ_DIR}/icon.png"/>
+    <p><a href="${path_to_root}index.html">
+    <b><u>Bot Royale Documentation</u></b>
     <br><br>
-    <b><u>Bot Royale Documentation</b></u>
+    <img src="${path_to_root}icon.png"/>
     </a></p>
 
     % if google_search_query:
@@ -307,7 +308,7 @@
       <%include file="_lunr_search.inc.mako"/>
     % endif
 
-    ## <h1>Index</h1>
+    <h3><code>${module.name}</code></h3>
     ${extract_toc(module.docstring) if extract_module_toc_into_sidebar else ''}
     <ul id="index">
     % if supermodule:
