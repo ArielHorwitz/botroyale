@@ -1,3 +1,8 @@
+[![](https://img.shields.io/badge/docs--orange.svg?style=plastic)](https://ariel.ninja/botroyale/docs/)
+[![](https://img.shields.io/badge/license-MIT-green.svg?style=plastic)](https://github.com/ArielHorwitz/botroyale/blob/dev/LICENSE)
+[![](https://img.shields.io/pypi/v/botroyale?style=plastic&color=blue)](https://pypi.org/project/botroyale/)
+[![](https://img.shields.io/pypi/pyversions/botroyale?style=plastic&color=blueviolet)](https://www.python.org/)
+[![](https://img.shields.io/discord/1000665419906039839?label=discord&style=plastic)](https://discord.gg/ADss5FRyqG)
 # Bot Royale
 A battle royale for bots. Write your own bots in Python and watch them play!
 
