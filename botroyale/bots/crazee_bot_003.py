@@ -1,4 +1,22 @@
-# flake8: noqa
+# -*- coding: utf-8 -*-
+"""Crazee Bot.
+
+This bot does a search algorithm to find the optimal chain of moves for a given
+turn using a heuristic defined in `get_state_score`
+
+Attributes:
+    CrazeeBotAlpha (BaseBot): Best CrazeeBot
+    CrazeeEasy (BaseBot): Easy CrazeeBot
+    CrazeeHard (BaseBot): Hard CrazeeBot
+
+Todo:
+    * add timer to not over compute
+    * optimize the heuristic `get_state_score`
+
+"""
+
+__author__ = "Crazee"
+
 import numpy as np
 
 from botroyale.api.actions import Move, Push, Idle, Action, Jump, ALL_ACTIONS
@@ -9,6 +27,8 @@ from botroyale.util.time import pingpong
 
 
 class CrazeeBotAlpha(BaseBot):
+    """Boss Crazee Bot."""
+
     NAME = "CrazeeBot_Boss"
     COLOR_INDEX = 9
     MAX_AP = 100
@@ -20,6 +40,11 @@ class CrazeeBotAlpha(BaseBot):
     logging_enabled = False
 
     def __init__(self, id):
+        """Init CrazeeBotAlpha.
+
+        Args:
+            id: bot id (super)
+        """
         super().__init__(id)
         self.planed_actions = []
         self.last_state = None
@@ -30,20 +55,21 @@ class CrazeeBotAlpha(BaseBot):
         self.logger(f"{self.max_depth=}")
 
     def poll_action(self, state: State):
+        """Overwrites Base Class."""
         self.last_state = state
-        action = self.plan_action(state)
+        action = self._plan_action(state)
         if not action:
             self.logger(f"NO LEGAL MOVES FOR ME TO DO, Bot {self.id}")
             action = Idle()
         return action
 
-    def plan_action(self, state: State):
+    def _plan_action(self, state: State):
         if len(self.planed_actions) == 0:
-            self.planed_actions = self.calc_turn(state)
+            self.planed_actions = self._calc_turn(state)
         return self.planed_actions.pop(0)
 
     @staticmethod
-    def get_legal_actions(state: State):
+    def _get_legal_actions(state: State):
         legal_actions = []
         if state.current_unit is None:
             return legal_actions
@@ -70,7 +96,7 @@ class CrazeeBotAlpha(BaseBot):
                 legal_actions.append(action)
         return legal_actions
 
-    def get_state_score(self, _state: State):
+    def _get_state_score(self, _state: State):
         if not _state.alive_mask[self.id]:
             return float("-inf")
 
@@ -123,11 +149,9 @@ class CrazeeBotAlpha(BaseBot):
         if len(d_enemys) > 0:
             enemy_score += sum(d_enemys) / len(d_enemys)
         score = terrain_score + enemy_score + enemy_dead_score + ap_score
-        # self.logger(f"Score: {score:.2f}, Pos: {my_pos.xy}, terrain: {terrain_score:.2f},"
-        #             f"enemy: {enemy_score:.2f}, " f"enemy_dead: {enemy_dead_score:.2f}, ap: {ap_score:.2f}")
         return score
 
-    def calc_turn(self, start_state: State, return_fx=0):
+    def _calc_turn(self, start_state: State, return_fx=0):  # noqa: C901
         MAX_DEPTH = self.max_depth
         explored_worlds = set()
         call_counter = {"possible_find_chain_iter": 0}
@@ -138,7 +162,7 @@ class CrazeeBotAlpha(BaseBot):
                 s = _state.copy()
             else:
                 s = _state.apply_action(action)
-            s.score = self.get_state_score(s)
+            s.score = self._get_state_score(s)
             if return_fx == 1 and type(action) != Idle:
                 fx_name = ""
                 if type(action) == Move:
@@ -173,7 +197,7 @@ class CrazeeBotAlpha(BaseBot):
                 return chain
             best_chain = chain
             current_state = chain[-1]
-            for next_action in self.get_legal_actions(current_state):
+            for next_action in self._get_legal_actions(current_state):
                 call_counter["possible_find_chain_iter"] += 1
                 new_state = get_next_state(current_state, next_action)
                 # Pruning explored worlds
@@ -187,7 +211,7 @@ class CrazeeBotAlpha(BaseBot):
             return best_chain
 
         with pingpong(f"{self.NAME}-{self.id} Find Chain", logger=self.logger):
-            start_state.score = self.get_state_score(start_state)
+            start_state.score = self._get_state_score(start_state)
             init_chain = [start_state]
             result_chain = find_max_chain(init_chain)
             if not result_chain[-1].game_over:
@@ -201,6 +225,7 @@ class CrazeeBotAlpha(BaseBot):
         return actions
 
     def gui_click_debug(self, _hex: Hexagon):
+        """Overwrites Base Class."""
         sfx = []
         if len(self.planed_actions) > 0:
             for action in self.planed_actions:
@@ -212,7 +237,7 @@ class CrazeeBotAlpha(BaseBot):
                     sfx.append({"name": "mark-blue", "hex": action.target})
 
         elif self.last_state is not None:
-            actions, vfx = self.calc_turn(self.last_state, return_fx=1)
+            actions, vfx = self._calc_turn(self.last_state, return_fx=1)
             sfx.extend(vfx)
 
         else:
@@ -220,44 +245,30 @@ class CrazeeBotAlpha(BaseBot):
         return sfx
 
     def gui_click_debug_alt(self, _hex: Hexagon):
+        """Overwrites Base Class."""
         sfx = []
         if self.last_state is not None:
-            actions, vfx = self.calc_turn(self.last_state, return_fx=2)
+            actions, vfx = self._calc_turn(self.last_state, return_fx=2)
             sfx.extend(vfx)
         else:
             return [{"name": "mark-blue", "hex": _hex}]
         return sfx
 
 
-def simple_hash_state(state):
+def simple_hash_state(state: State):
+    """Get Simple State Hash."""
     return sum(
         [
             *(hash(h) for h in state.positions),
             hash(state.alive_mask.tostring()),
             hash(state.ap.tostring()),
-        ]
-    )
-
-
-def hash_state(state):
-    return sum(
-        [
-            *(hash(h) for h in state.positions),
-            *(hash(h) for h in state.walls),
-            *(hash(h) for h in state.pits),
-            hash(state.death_radius),
-            hash(state.alive_mask.tostring()),
-            hash(state.ap.tostring()),
-            hash(state.round_ap_spent.tostring()),
-            hash(str(state.round_remaining_turns)),
-            hash(state.step_count),
-            hash(state.turn_count),
-            hash(state.round_count),
         ]
     )
 
 
 class CrazeeEasy(CrazeeBotAlpha):
+    """Easy Crazee Bot."""
+
     NAME = "CrazeeBot_Easy"
     COLOR_INDEX = 7
     DEPTH_MOD = 0.25
@@ -265,6 +276,8 @@ class CrazeeEasy(CrazeeBotAlpha):
 
 
 class CrazeeHard(CrazeeBotAlpha):
+    """Hard Crazee Bot."""
+
     NAME = "CrazeeBot_Hard"
     COLOR_INDEX = 8
     DEPTH_MOD = 0.5
