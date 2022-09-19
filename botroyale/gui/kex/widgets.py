@@ -1,337 +1,559 @@
-import logging
-logger = logging.getLogger(__name__)
-# logger.setLevel(logging.DEBUG)
-
-from pathlib import Path
+"""Kex widgets."""
 from collections import namedtuple, defaultdict
-
-import kivy
-from kivy.config import Config as kvConfig
-from kivy.app import App as kvApp
-from kivy.core.window import Window as kvWindow
-from kivy.clock import Clock as kvClock
-from kivy.core.text import Label as CoreLabel
-from kivy.uix.behaviors.button import ButtonBehavior as kvButtonBehavior
-from kivy.uix.behaviors.drag import DragBehavior as kvDragBehavior
-from kivy.core.clipboard import Clipboard
-# Widgets
-from kivy.uix.widget import Widget as kvWidget
-from kivy.uix.boxlayout import BoxLayout as kvBoxLayout
-from kivy.uix.gridlayout import GridLayout as kvGridLayout
-from kivy.uix.stacklayout import StackLayout as kvStackLayout
-from kivy.uix.floatlayout import FloatLayout as kvFloatLayout
-from kivy.uix.anchorlayout import AnchorLayout as kvAnchorLayout
-from kivy.uix.relativelayout import RelativeLayout as kvRelativeLayout
-from kivy.uix.scrollview import ScrollView as kvScrollView
-from kivy.uix.popup import Popup as kvPopup
-from kivy.uix.label import Label as kvLabel
-from kivy.uix.button import Button as kvButton
-from kivy.uix.spinner import Spinner as kvSpinner
-from kivy.uix.checkbox import CheckBox as kvCheckBox
-from kivy.uix.dropdown import DropDown as kvDropDown
-from kivy.uix.slider import Slider as kvSlider
-from kivy.uix.togglebutton import ToggleButton as kvToggleButton
-from kivy.uix.progressbar import ProgressBar as kvProgressBar
-from kivy.uix.textinput import TextInput as kvTextInput
-from kivy.uix.colorpicker import ColorPicker as kvColorPicker
-from kivy.uix.image import Image as kvImage
-from kivy.uix.filechooser import FileChooser as kvFileChooser
-from kivy.uix.filechooser import FileChooserListView as kvFileChooserListView
-from kivy.uix.filechooser import FileChooserIconView as kvFileChooserIconView
-# Animation
-from kivy.uix.screenmanager import ScreenManager as kvScreenManager
-from kivy.uix.screenmanager import Screen as kvScreen
-from kivy.uix.screenmanager import FadeTransition as kvFadeTransition
-from kivy.uix.screenmanager import CardTransition as kvCardTransition
-from kivy.uix.screenmanager import SlideTransition as kvSlideTransition
-from kivy.uix.screenmanager import SwapTransition as kvSwapTransition
-from kivy.uix.screenmanager import WipeTransition as kvWipeTransition
-from kivy.uix.screenmanager import ShaderTransition as kvShaderTransition
-from kivy.uix.modalview import ModalView as kvModalView
-# Graphics
-from kivy.graphics.instructions import InstructionGroup as kvInstructionGroup
-from kivy.graphics import Color as kvColor
-from kivy.graphics import Rectangle as kvRectangle
-from kivy.graphics import Line as kvLine
-from kivy.graphics import Point as kvPoint
-from kivy.graphics import Ellipse as kvEllipse
-from kivy.graphics import Quad as kvQuad
-from kivy.graphics import Triangle as kvTriangle
-from kivy.graphics import Bezier as kvBezier
-from kivy.graphics import Rotate as kvRotate, PushMatrix as kvPushMatrix, PopMatrix as kvPopMatrix
-# Audio
-from kivy.core.audio import SoundLoader as kvSoundLoader
-from kivy.core.audio import Sound as kvSound
-
-from botroyale.gui import kex
-from botroyale.gui.kex import KexWidget, restart_script, ping, pong
+from typing import Callable, Optional, Any, Literal, Mapping
+from functools import partial
+from . import kivy as kv
+from .util import (
+    XWindow,
+    XWidget,
+    ColorType,
+    XColor,
+    restart_script,
+    consume_args,
+    ping,
+    pong,
+)
 
 
-def get_app():
-    return kvApp.get_running_app()
+logger = print
+get_app = kv.App.get_running_app
 
 
-# ABSTRACTIONS
-class App(kvApp):
-    def __init__(self,
-            escape_exits=False,
-            enable_multitouch=False,
-            **kwargs):
-        super().__init__(**kwargs)
-        self.root = BoxLayout()
-        kex.Config.enable_escape_exit(escape_exits)
-        if not enable_multitouch:
-            kex.Config.disable_multitouch()
-            # On my linux machine, this doesn't seem to have an effect, so we
-            # manually catch and discard mouse events recognized as multitouch.
-            self.root.bind(
-                on_touch_down=self.intercept_multitouch,
-                on_touch_up=self.intercept_multitouch,
-                on_touch_move=self.intercept_multitouch,
-            )
-
-    def run(self, **kwargs):
-        super().run(**kwargs)
-
-    def hook_mainloop(self, fps):
-        c = lambda *a: kex.Clock.schedule_interval(self.mainloop_hook, 1/fps)
-        kex.Clock.schedule_once(c, 0)
-
-    def mainloop_hook(self, dt):
-        pass
-
-    def open_settings(self, *args):
-        return False
-
-    def set_window_size(self, size):
-        kvWindow.size = size
-
-    def toggle_fullscreen(self, *a):
-        kvWindow.fullscreen = not kvWindow.fullscreen
-
-    @property
-    def add(self):
-        return self.root.add
-
-    @property
-    def mouse_pos(self):
-        return kvWindow.mouse_pos
-
-    def intercept_multitouch(self, w, m):
-        if not hasattr(m, 'multitouch_sim'):
-            return False
-        if m.multitouch_sim:
-            return True
+# LAYOUTS
 
 
-class Widget(kvWidget, KexWidget):
+class XBox(XWidget, kv.BoxLayout):
     pass
 
 
-class ConsumeTouch(Widget):
-    def __init__(self, enable=True, widget=None, consume_keys=False, **kwargs):
+class XZBox(XWidget, kv.GridLayout):
+    """Behaves like a Box where widgets are drawn in reverse order."""
+
+    def __init__(
+        self,
+        orientation: Literal["horizontal", "vertical"] = "horizontal",
+        **kwargs,
+    ):
+        """Initialize the class."""
+        if orientation == "horizontal":
+            kwargs["orientation"] = "rl-tb"
+            kwargs["rows"] = 1
+        elif orientation == "vertical":
+            kwargs["orientation"] = "lr-bt"
+            kwargs["cols"] = 1
+        else:
+            raise ValueError(
+                'FlipZIndex orientation must be "horizontal" or "vertical"'
+            )
         super().__init__(**kwargs)
-        self.enable = enable
-        self.widget = widget
-        self.consume_keys = consume_keys
-        self.__mpos = -1, -1
-        self.size = 0, 0
-        kvWindow.bind(mouse_pos=self._on_mouse_pos, on_key_down=self.on_key_down)
 
-    def _on_mouse_pos(self, w, p):
-        self.__mpos = p
+    def add(self, *children, **kwargs):
+        """Overrides base method to insert correctly."""
+        for child in children:
+            super().add(child, insert_last=True, **kwargs)
+        return child
 
-    def on_key_down(self, *a):
-        if self.enable and self.consume_keys is True:
-            if self.widget is not None:
-                r = self.widget.collide_point(*self.__mpos)
-                return r
-        return False
 
-    def on_touch_down(self, m):
-        if not self.enable:
+class XDBox(XWidget, kv.GridLayout):
+    """Behaves like a Box that will dynamically resize based on children's height."""
+
+    def __init__(self, cols: int = 1, **kwargs):
+        """Initialize the class."""
+        super().__init__(cols=cols, **kwargs)
+
+    def add(self, w: XWidget, *args, **kwargs):
+        """Overrides XWidget `add` in order to bind to size changes."""
+        w.bind(size=self._resize)
+        r = super().add(w, *args, **kwargs)
+        kv.Clock.schedule_once(self._resize, 0)
+        return r
+
+    def remove_widget(self, *a, **k):
+        """Overrides base class `remove_widget` in order to resize."""
+        super().remove_widget(*a, **k)
+        self._resize()
+
+    def _resize(self, *a):
+        self.set_size(hx=1, y=sum([c.height for c in self.children]))
+
+
+class XGrid(XWidget, kv.GridLayout):
+    pass
+
+
+class XStack(XWidget, kv.StackLayout):
+    pass
+
+
+class XRelative(XWidget, kv.RelativeLayout):
+    pass
+
+
+class XAnchor(XWidget, kv.AnchorLayout):
+    @classmethod
+    def from_widget(
+        cls,
+        widget: Optional[XWidget] = None,
+        color: Optional[XColor] = None,
+        source: Optional[str] = None,
+        **kwargs,
+    ) -> "XAnchor":
+        anchor = cls(**kwargs)
+        if widget:
+            anchor.add(widget)
+        if color or source:
+            anchor.make_bg(color, source)
+        return anchor
+
+
+class XScroll(XWidget, kv.ScrollView):
+    def __init__(
+        self,
+        view: XWidget,
+        scroll_dir: Literal["vertical", "horizontal"] = "vertical",
+        scroll_amount: float = 50,
+        **kwargs,
+    ):
+        """Initialize the class.
+
+        Args:
+            view: A widget to put in the scroll view.
+            scroll_dir: Direction of scroll: "horizontal" or "vertical"
+            scroll_amount: Resolution of scroll in pixels.
+        """
+        super().__init__(**kwargs)
+        self.scroll_dir = scroll_dir
+        self.scroll_amount = scroll_amount
+        self.bar_width = 15
+        self.scroll_type = ["bars"]
+        self.view = self.add(view)
+        self.bind(size=self._on_size, on_touch_down=self._on_touch_down)
+        self.view.bind(size=self._on_size)
+
+    @property
+    def scroll_dir(self):
+        return self.__scroll_dir
+
+    @scroll_dir.setter
+    def scroll_dir(self, v):
+        self.__scroll_dir = v
+        self.do_scroll_x = v == "horizontal"
+        self.do_scroll_y = v == "vertical"
+
+    def _on_size(self, *a):
+        self.do_scroll_x = (
+            self.view.size[0] > self.size[0] and self.scroll_dir == "horizontal"
+        )
+        self.do_scroll_y = (
+            self.view.size[1] > self.size[1] and self.scroll_dir == "vertical"
+        )
+        if self.size[0] >= self.view.size[0]:
+            self.scroll_x = 1
+        if self.size[1] >= self.view.size[1]:
+            self.scroll_y = 1
+
+    def _on_touch_down(self, w, m):
+        if m.button not in {"scrollup", "scrolldown"}:
             return False
-        if self.widget is not None:
-            return self.widget.collide_point(*m.pos)
-        return False
-
-    def on_touch_up(self, m):
-        if not self.enable:
+        if not any((self.do_scroll_x, self.do_scroll_y)):
             return False
-        if self.widget is not None:
-            return self.widget.collide_point(*m.pos)
-        return False
-
-    def on_touch_move(self, m):
-        if not self.enable:
+        if not self.collide_point(*m.pos):
             return False
-        if self.widget is not None:
-            return self.widget.collide_point(*m.pos)
+
+        dir = -1 if m.button == "scrollup" else 1
+        pixels_x, pixels_y = self.convert_distance_to_scroll(
+            self.scroll_amount,
+            self.scroll_amount,
+        )
+        if self.scroll_dir == "horizontal":
+            self.scroll_x = min(1, max(0, self.scroll_x + pixels_x * dir))
+        elif self.scroll_dir == "vertical":
+            self.scroll_y = min(1, max(0, self.scroll_y + pixels_y * dir))
+        return True
+
+
+class XOverlay(kv.FocusBehavior, XAnchor):
+    def __init__(
+        self,
+        text: str = "",
+        alpha: float = 0.5,
+        block_input: bool = True,
+        **kwargs,
+    ):
+        super().__init__(**kwargs)
+        self.make_bg(XColor(a=alpha))
+        self.label = self.add(XLabel(text=text))
+        self.label.set_size(x=300, y=75)
+        self.label.make_bg(XColor.from_name("red", 0.15))
+        if block_input:
+            self.bind(
+                on_touch_down=self.block_touch,
+                on_touch_up=self.block_touch,
+                on_touch_move=self.block_touch,
+            )
+            self.focus = True
+            self.keyboard_on_key_down = self.block_touch
+            self.keyboard_on_key_up = self.block_touch
+
+    def block_touch(self, *args):
+        return True
+
+
+class XApp(XWidget, kv.App):
+    """See module documentation for details."""
+
+    def __init__(
+        self,
+        escape_exits: bool = False,
+        enable_multitouch: bool = False,
+        **kwargs,
+    ):
+        """Initialize the class.
+
+        Args:
+            escape_exits: Enable exiting when the escape key is pressed.
+            enable_multitouch: Enable multitouch.
+        """
+        super().__init__(**kwargs)
+        self.root = XAnchor()
+        XWindow.enable_escape_exit(escape_exits)
+        if not enable_multitouch:
+            XWindow.disable_multitouch()
+            # On my linux machine, this doesn't seem to have an effect, so we
+            # manually catch and discard mouse events recognized as multitouch.
+            self.root.bind(
+                on_touch_down=self._intercept_multitouch,
+                on_touch_up=self._intercept_multitouch,
+                on_touch_move=self._intercept_multitouch,
+            )
+
+    def hook(self, func: Callable[[float], None], fps: float):
+        """Hook *func* to be called *fps* times per seconds.
+
+        Args:
+            fps: Number of times to be called per second.
+            func: The function to call with *delta_time* as a parameter.
+        """
+        kv.Clock.schedule_once(
+            lambda *a: kv.Clock.schedule_interval(func, 1 / fps),
+            0,
+        )
+
+    def open_settings(self, *args) -> False:
+        """Overrides base class method to disable settings."""
+        return False
+
+    @property
+    def mouse_pos(self):
+        """The current position of the mouse."""
+        return XWindow.mouse_pos
+
+    @property
+    def add(self):
+        """Add a widget to the root widget."""
+        return self.root.add
+
+    def _intercept_multitouch(self, w, m):
+        if not hasattr(m, "multitouch_sim"):
+            return False
+        if m.multitouch_sim:
+            return True
         return False
 
 
-KeyCalls = namedtuple('KeyCalls', ['keys', 'on_press'])
+def frozen_overlay(**overlay_kwargs):
+    """Wrapper for creating an overlay for functions that block execution.
 
+    Used for functions that will block code execution for a significant period
+    of time, for user feedback. Will create an overlay on the app, call the
+    function, and remove the overlay.
 
-class InputManager(Widget):
+    ### Example usage:
+    ```python
+    @frozen_overlay(text="Sleeping for 2 seconds")
+    def do_sleep():
+        time.sleep(2)
+    ```
+
+    Args:
+        overlay_kwargs: Keyword arguments for Overlay.
     """
-    ^ Control
-    ! Alt
-    + Shift
-    # Super
+
+    def frozen_overlay_inner(func):
+        def frozen_overlay_wrapper(*args, **kwargs):
+            app = kv.App.get_running_app()
+            if app is None:
+                func(*args, **kwargs)
+                return
+            wrapped = partial(func, *args, **kwargs)
+            overlay = app.root.add(XOverlay(**overlay_kwargs))
+            kv.Clock.schedule_once(
+                lambda dt: _call_then_remove(wrapped, overlay),
+                0.05,
+            )
+
+        return frozen_overlay_wrapper
+
+    return frozen_overlay_inner
+
+
+def _call_then_remove(func: Callable[[], Any], widget: XWidget):
+    func()
+    # In order to schedule properly, we must tick or else all the time spent
+    # calling func will be counted as time waited for scheduled callback
+    kv.Clock.tick()
+    kv.Clock.schedule_once(lambda dt: _final_remove(widget), 0.05)
+
+
+def _final_remove(widget):
+    next_focus = widget.get_focus_next()
+    if next_focus:
+        next_focus.focus = True
+    widget.parent.remove_widget(widget)
+
+
+KeyCalls = namedtuple("KeyCalls", ["keys", "on_press"])
+
+
+class XInputManager(kv.Widget):
+    """Object for handling keyboard presses.
+
+    The characters representing the modifier keys:
+    - `^` Control
+    - `!` Alt
+    - `+` Shift
+    - `#` Super
+
+    Todo:
+        Refactor, document, type annotate
     """
-    MODIFIER_SORT = '^!+#'
 
-    @property
-    def currently_pressed(self):
-        return self.__last_keys_down
-
-    @property
-    def currently_pressed_mods(self):
-        last_keys = self.__last_keys_down
-        if ' ' not in last_keys:
-            return ''
-        mods = last_keys.split(' ')[0]
-        return mods
-
-    @property
-    def actions(self):
-        return list(self.__actions.keys())
-
-    def activate(self):
-        self.__bound_down = self.keyboard.fbind('on_key_down', self._on_key_down)
-        self.__bound_up = self.keyboard.fbind('on_key_up', self._on_key_up)
-
-    def deactivate(self):
-        if self.__bound_down:
-            self.keyboard.unbind_uid('on_key_down', self.__bound_down)
-        if self.__bound_up:
-            self.keyboard.unbind_uid('on_key_up', self.__bound_up)
-        self.__bound_down = None
-        self.__bound_up = None
-
-    def register(self, action, key=None, callback=None):
-        if key is not None:
-            self.__actions[action].keys.add(key)
-            self._refresh_all_keys()
-        if callback is not None:
-            self.__actions[action].on_press.add(callback)
-        self.logger(f'Input manager registering {action}: {self.__actions[action]}')
-
-    def register_callbacks(self, action, callbacks):
-        self.__actions[action].on_press.update(callbacks)
-        self.logger(f'Input manager registering {action}: {self.__actions[action]}')
-
-    def register_keys(self, action, keys):
-        self.__actions[action].keys.update(keys)
-        self.logger(f'Input manager registering {action}: {self.__actions[action]}')
-        self._refresh_all_keys()
-
-    def remove_actions(self, actions):
-        for action in actions:
-            if action in self.__actions:
-                del self.__actions[action]
-        self._refresh_all_keys()
-
-    def remove_action(self, action):
-        if action in self.__actions:
-            del self.__actions[action]
-            self._refresh_all_keys()
-
-    def clear_all(self, app_control_defaults=False):
-        self.__actions = defaultdict(lambda: KeyCalls(set(), set()))
-        self._refresh_all_keys()
-        if app_control_defaults:
-            self.register_app_control_defaults()
-
-    def record(self, on_release=None, on_press=None):
-        self.__recording_release = on_release
-        self.__recording_press = on_press
-
-    def stop_record(self):
-        self.record()
-
+    MODIFIER_SORT = "^!+#"
     MODIFIERS = {
-        'ctrl': '^',
-        'alt-gr': '!',
-        'alt': '!',
-        'shift': '+',
-        'super': '#',
-        'meta': '#',
-        'control': '^',
-        'lctrl': '^',
-        'rctrl': '^',
-        'lalt': '!',
-        'ralt': '!',
-        'lshift': '+',
-        'rshift': '+',
-        'numlock': '',
-        'capslock': '',
+        "ctrl": "^",
+        "alt-gr": "!",
+        "alt": "!",
+        "shift": "+",
+        "super": "#",
+        "meta": "#",
+        "control": "^",
+        "lctrl": "^",
+        "rctrl": "^",
+        "lalt": "!",
+        "ralt": "!",
+        "lshift": "+",
+        "rshift": "+",
+        "numlock": "",
+        "capslock": "",
     }
     KEY2MODIFIER = {
-        '^': 'ctrl',
-        '!': 'alt',
-        '+': 'shift',
-        '#': 'super',
+        "^": "ctrl",
+        "!": "alt",
+        "+": "shift",
+        "#": "super",
     }
 
-    @property
-    def debug_summary(self):
-        s = []
-        for action, kc in self.__actions.items():
-            k = ', '.join(_ for _ in kc.keys)
-            s.append(f'{action:<20} «{k}» {kc.on_press}')
-        return '\n'.join(s)
+    def __init__(
+        self,
+        name: str = "Unnamed InputManager",
+        active: bool = True,
+        app_control_defaults: bool = False,
+        logger: Optional[Callable[[str], Any]] = None,
+        **kwargs,
+    ):
+        """Initialize the class.
 
-    def __init__(self, app_control_defaults=False, logger=None, **kwargs):
-        super().__init__(**kwargs)
-        if logger is None:
-            logger = logger.info
-        self.logger = logger
+        Args:
+            name: Display name.
+            active: Enable the InputManager.
+            app_control_defaults: Automatically call
+                `InputManager.register_app_control_defaults`.
+            logger: Function to call for debug logging.
+        """
+        self.name = name
+        self.active = active
+        self.logger = consume_args if logger is None else logger
         self.__all_keys = set()
         self.__actions = defaultdict(lambda: KeyCalls(set(), set()))
         self.__last_key_code = -1
-        self.__last_keys_down = ''
+        self.__last_keys_down = ""
         self.__recording_release = None
         self.__recording_press = None
         self.block_repeat = True
         self.repeat_cooldown = 25
         self.__last_key_down_ping = ping() - self.repeat_cooldown
-        self.keyboard = kvWindow.request_keyboard(lambda: None, self)
-        self.activate()
-        if app_control_defaults is True:
+        self._bound_down = None
+        self._bound_up = None
+        super().__init__(**kwargs)
+        self.keyboard = kv.Window.request_keyboard(lambda: None, self)
+        if self.active:
+            self.activate()
+        if app_control_defaults:
             self.register_app_control_defaults()
 
+    @property
+    def currently_pressed(self) -> str:
+        """The keys that are currently pressed."""
+        return self.__last_keys_down
+
+    @property
+    def currently_pressed_mods(self) -> str:
+        """The modifier keys that are currently pressed."""
+        last_keys = self.__last_keys_down
+        if " " not in last_keys:
+            return ""
+        mods = last_keys.split(" ")[0]
+        return mods
+
+    @property
+    def actions(self):
+        """List of registered actions."""
+        return list(self.__actions.keys())
+
+    def activate(self):
+        """Enable the InputManager."""
+        self._bound_down = self.keyboard.fbind("on_key_down", self._on_key_down)
+        self._bound_up = self.keyboard.fbind("on_key_up", self._on_key_up)
+        self.active = True
+        self.logger(f"Activated {self}")
+
+    def deactivate(self):
+        """Disable the InputManager."""
+        if self._bound_down is not None:
+            self.keyboard.unbind_uid("on_key_down", self._bound_down)
+        if self._bound_up is not None:
+            self.keyboard.unbind_uid("on_key_up", self._bound_up)
+        self._bound_down = None
+        self._bound_up = None
+        self.active = False
+        self.logger(f"Deactivated {self}")
+
+    def register(
+        self,
+        action: str,
+        key: Optional[str] = None,
+        callback: Optional[Callable[[str], Any]] = None,
+    ):
+        """Register an action.
+
+        Args:
+            action: Name of action.
+            key: The key press that will invoke the action.
+            callback: The function to be called when invoked. Must take a string
+                as an argument (the action name).
+        """
+        if key is not None:
+            self.__actions[action].keys.add(key)
+            self._refresh_all_keys()
+        if callback is not None:
+            self.__actions[action].on_press.add(callback)
+        self.logger(f'{self} registering "{action}": {self.__actions[action]}')
+
+    def register_callbacks(self, action: str, callbacks: list[Callable[[str], Any]]):
+        """Register callbacks for an action.
+
+        Args:
+            action: Name of action.
+            callbacks: List of functions to be called when invoked. See
+                `InputManager.register.`
+        """
+        self.__actions[action].on_press.update(callbacks)
+        self.logger(f"Input manager registering {action}: {self.__actions[action]}")
+
+    def register_keys(self, action: str, keys: list[str]):
+        """Register keys for an action.
+
+        Args:
+            action: Name of action.
+            keys: List of keys to invoke the action. See `InputManager.register.`
+        """
+        self.__actions[action].keys.update(keys)
+        self.logger(f"Input manager registering {action}: {self.__actions[action]}")
+        self._refresh_all_keys()
+
+    def remove_actions(self, actions: list[str]):
+        """Unregister a list of actions."""
+        for action in actions:
+            if action in self.__actions:
+                del self.__actions[action]
+        self._refresh_all_keys()
+
+    def clear_all(self, app_control_defaults: bool = False):
+        """Unregister all actions.
+
+        Will call `InputManager.register_app_control_defaults` if
+        *app_control_defaults* is True.
+        """
+        self.__actions = defaultdict(lambda: KeyCalls(set(), set()))
+        self._refresh_all_keys()
+        if app_control_defaults:
+            self.register_app_control_defaults()
+
+    def record(
+        self,
+        on_press: Callable[[str], Any] = None,
+        on_release: Callable[[str], Any] = None,
+    ):
+        """Start recording key presses.
+
+        Args:
+            on_press: Function to be called to take the key presses as they
+                happen.
+            on_release: Function to be called to take the key presses when they
+                are released.
+        """
+        self.__recording_release = on_release
+        self.__recording_press = on_press
+
+    def stop_record(self):
+        """Stop recording keys from `InputManager.record`."""
+        self.record()
+
+    @property
+    def _debug_summary(self):
+        s = []
+        for action, kc in self.__actions.items():
+            k = ", ".join(_ for _ in kc.keys)
+            s.append(f"{action:<20} «{k}» {kc.on_press}")
+        return "\n".join(s)
+
     def register_app_control_defaults(self):
-        self.register('Debug input', '^!+ f12', lambda *a: self.record(on_release=self.start_debug_record))
-        self.register('Restart', '^ w', lambda *a: restart_script())
-        self.register('Quit', '^ q', lambda *a: quit())
+        """Add actions for restarting and quitting the app."""
+        self.register(
+            "Debug input",
+            "^!+ f12",
+            lambda *a: self.record(on_release=self.start_debug_record),
+        )
+        self.register("Restart", "^+ w", lambda *a: restart_script())
+        self.register("Quit", "^+ q", lambda *a: quit())
 
     def _refresh_all_keys(self):
         self.__all_keys = set()
         for action, kc in self.__actions.items():
             self.__all_keys.update(kc.keys)
 
-    def _convert_keys(self, modifiers, key_name):
+    def _convert_keys(self, modifiers: str, key_name: str) -> str:
         modifiers = set(self.MODIFIERS[mod] for mod in modifiers)
-        if '' in modifiers: modifiers.remove('')
-        if len(modifiers) == 0: return key_name
+        if "" in modifiers:
+            modifiers.remove("")
+        if len(modifiers) == 0:
+            return key_name
         sorted_modifiers = sorted(modifiers, key=lambda x: self.MODIFIER_SORT.index(x))
-        mod_str = ''.join(sorted_modifiers)
-        r = f'{mod_str} {key_name}'
+        mod_str = "".join(sorted_modifiers)
+        r = f"{mod_str} {key_name}"
         return r
 
-    def _do_calls(self, keys):
+    def _do_calls(self, keys: list[str]):
         all_callbacks = defaultdict(lambda: set())
         for action, kc in self.__actions.items():
             if keys in kc.keys:
                 all_callbacks[action].update(kc.on_press)
         for action in all_callbacks:
-            self.logger(f'InputManager making calls: {all_callbacks[action]}')
+            self.logger(f"{self} making calls: {all_callbacks[action]}")
             for c in all_callbacks[action]:
                 c(action)
 
-    def _on_key_up(self, keyboard, key):
+    def _on_key_up(self, keyboard, key: str):
         key_code, key_name = key
         if key_code == self.__last_key_code:
             self.__last_key_code = -1
@@ -340,9 +562,15 @@ class InputManager(Widget):
             if continue_recording is not True:
                 self.record(None, None)
             return
-        self.__last_keys_down = ''
+        self.__last_keys_down = ""
 
-    def _on_key_down(self, keyboard, key, key_hex, modifiers):
+    def _on_key_down(
+        self,
+        keyboard,
+        key: tuple[str, str],
+        key_hex: str,
+        modifiers: list[str],
+    ):
         key_code, key_name = key
         if key_code == self.__last_key_code:
             if self.block_repeat:
@@ -352,7 +580,10 @@ class InputManager(Widget):
         self.__last_key_down_ping = ping()
         self.__last_key_code = key_code
         self.__last_keys_down = self._convert_keys(modifiers, key_name)
-        self.logger(f'Keys pressed: {self.__last_keys_down} ( {self.humanize_keys(self.__last_keys_down)} )')
+        self.logger(
+            f"{self} sees keys pressed: {self.__last_keys_down} "
+            f"( {self.humanize_keys(self.__last_keys_down)} )"
+        )
         if self.__recording_press:
             stop_recording = self.__recording_press(self.__last_keys_down)
             if stop_recording is True:
@@ -362,17 +593,23 @@ class InputManager(Widget):
             self._do_calls(self.__last_keys_down)
 
     def start_debug_record(self, *a):
-        self.logger(f'InputManager recording input...')
-        kvClock.schedule_once(lambda *a: self.record(on_release=self.debug_record), 1)
+        """Start recording key presses with the logger."""
+        m = "InputManager recording input..."
+        self.logger(m)
+        print(m)
+        kv.Clock.schedule_once(lambda *a: self.record(on_release=self._debug_record), 1)
 
-    def debug_record(self, keys):
-        self.logger(f'InputManager recorded input: <{keys}> ({self.humanize_keys(keys)})')
+    def _debug_record(self, keys):
+        m = f"InputManager recorded input: <{keys}> ({self.humanize_keys(keys)})"
+        self.logger(m)
+        print(m)
 
     @classmethod
-    def humanize_keys(cls, keys):
-        if ' ' not in keys:
+    def humanize_keys(cls, keys: str) -> str:
+        """Return a human-readable repr from an internal repr of keys."""
+        if " " not in keys:
             return keys
-        mods, key = keys.split(' ')
+        mods, key = keys.split(" ")
         ignore_mods = set()
         if key in cls.MODIFIERS:
             if len(mods) == 1:
@@ -383,797 +620,421 @@ class InputManager(Widget):
             if mod in ignore_mods:
                 continue
             dstr.append(cls.KEY2MODIFIER[mod])
-        if key != '':
+        if key != "":
             dstr.append(key)
-        return ' + '.join(dstr)
+        return " + ".join(dstr)
 
-# LAYOUTS
-class BoxLayout(kvBoxLayout, KexWidget):
-    def split(self, count=2, orientation=None):
-        if orientation:
-            self.orientation = orientation
-        return (self.add(BoxLayout()) for _ in range(count))
-
-
-class GridLayout(kvGridLayout, KexWidget):
-    pass
-
-
-class AnchorLayout(kvAnchorLayout, KexWidget):
-    pass
-
-
-class StackLayout(kvStackLayout, KexWidget):
-    pass
-
-
-class RelativeLayout(kvStackLayout, KexWidget):
-    pass
-
-
-class ModalView(kvModalView, KexWidget):
-    pass
-
-
-class ScrollView(kvScrollView, KexWidget):
-    def __init__(self, view, scroll_dir='vertical', scroll_amount=200, **kwargs):
-        super().__init__(**kwargs)
-        self.scroll_dir = scroll_dir
-        self.scroll_amount = scroll_amount
-        self.bar_width = 15
-        self.scroll_type = ['bars']
-        self.view = self.add(view)
-        self.bind(on_touch_down=self._on_touch_down)
-        self.bind(size=self.on_size, pos=self.on_size)
-        self.view.bind(size=self.on_size, pos=self.on_size)
-
-    @property
-    def scroll_dir(self):
-        return self.__scroll_dir
-
-    @scroll_dir.setter
-    def scroll_dir(self, v):
-        self.__scroll_dir = v
-        self.do_scroll_x = (v == 'horizontal')
-        self.do_scroll_y = (v == 'vertical')
-
-    def on_size(self, *a):
-        self.do_scroll_x = self.view.size[0] > self.size[0] and self.scroll_dir == 'horizontal'
-        self.do_scroll_y = self.view.size[1] > self.size[1] and self.scroll_dir == 'vertical'
-
-    def _on_touch_down(self, w, m):
-        if m.button not in {'scrollup', 'scrolldown'}: return False
-        if not any((self.do_scroll_x, self.do_scroll_y)): return False
-        if not self.collide_point(*m.pos): return False
-
-        dir = -1 if m.button == 'scrollup' else 1
-        if self.scroll_dir == 'horizontal':
-            scroll_pixels = self.scroll_amount / self.width
-            self.scroll_x = min(1, max(0, self.scroll_x - dir * scroll_pixels))
-        elif self.scroll_dir == 'vertical':
-            scroll_pixels = self.scroll_amount / self.height
-            self.scroll_y = min(1, max(0, self.scroll_y + dir * scroll_pixels))
-        return True
-
-
-class DynamicHeight(GridLayout):
-    def __init__(self, cols=1, **kwargs):
-        super().__init__(cols=cols, **kwargs)
-
-    def add(self, w, *args, **kwargs):
-        w.bind(size=self._resize)
-        r = super().add(w, *args, **kwargs)
-        kvClock.schedule_once(self._resize, 0)
-        return r
-
-    def remove_widget(self, *a, **k):
-        super().remove_widget(*a, **k)
-        self._resize()
-
-    def _resize(self, *a):
-        self.set_size(hx=1, y=sum([_.height for _ in self.children]))
-
-
-class FlipZIndex(GridLayout):
-    def __init__(self, orientation, **kwargs):
-        self.__orientation = orientation
-        if orientation == 'horizontal':
-            kwargs['orientation'] = 'rl-tb'
-            kwargs['rows'] = 1
-        elif orientation == 'vertical':
-            kwargs['orientation'] = 'lr-bt'
-            kwargs['cols'] = 1
-        else:
-            raise ValueError(f'FlipZIndex orientation must be "horizontal" or "vertical"')
-        super().__init__(**kwargs)
-
-    def add(self, *args, **kwargs):
-        return super().add(*args, reverse_index=0, **kwargs)
+    def __repr__(self):
+        """Repr."""
+        active_str = "active" if self.active else "inactive"
+        return f"<XInputManager {self.name} ({active_str}) {len(self.actions)} actions>"
 
 
 # BASIC WIDGETS
-class Label(kvLabel, KexWidget):
-    def __init__(self, *a, halign='center', valign='center', **k):
-        super().__init__(*a, halign=halign, valign=valign, **k)
-        self.bind(size=self._on_resize)
+class XLabel(XWidget, kv.Label):
+    def __init__(
+        self,
+        markup: bool = True,
+        halign: str = "center",
+        valign: str = "center",
+        fixed_width: bool = False,
+        **kwargs,
+    ):
+        super().__init__(markup=markup, halign=halign, valign=valign, **kwargs)
+        if fixed_width:
+            self.bind(size=self._fix_height, text=self._fix_height)
 
-    def _on_resize(self, *a):
-        self.text_size = self.size
-
-
-class MLabel(Label):
-    def __init__(self, *a, **k):
-        k['markup'] = True
-        super().__init__(*a, **k)
-
-
-class FixedWidthLabel(kvLabel, KexWidget):
-    def __init__(self, *a, halign='left', valign='top', **k):
-        super().__init__(*a, halign=halign, valign=valign, **k)
-        self.bind(size=self.fix_height, text=self.fix_height)
-
-    def fix_height(self, *a):
+    def _fix_height(self, *a):
         self.text_size = self.size[0], None
         self.texture_update()
         self.set_size(hx=1, y=self.texture_size[1])
 
+    def on_size(self, *a):
+        self.text_size = self.size
 
-class Button(kvButton, KexWidget):
-    def __init__(self, **kwargs):
+
+class XLabelClick(kv.ButtonBehavior, XLabel):
+    pass
+
+
+class XCheckBox(XWidget, kv.CheckBox):
+    def toggle(self, *a):
+        self.active = not self.active
+
+
+class XCheckBoxText(XBox):
+    def __init__(self, text: str = "", **kwargs):
         super().__init__(**kwargs)
-        self.background_color = 0.2, 0.35, 0.5, 1
+        self.checkbox = XCheckBox()
+        self.label = XLabelClick(
+            text=text,
+            on_release=self.checkbox.toggle,
+        )
+        self.checkbox.set_size(y=30)
+        checkbox_anchor = XAnchor.from_widget(self.checkbox)
+        checkbox_anchor.set_size(x=30)
+        self.add(self.label, checkbox_anchor)
+
+
+class XButton(XWidget, kv.Button):
+    def __init__(
+        self,
+        markup: bool = True,
+        halign: str = "center",
+        background_color: ColorType = XColor.from_name("blue", 0.5).rgba,
+        **kwargs,
+    ):
+        """Same arguments as kivy Button."""
+        super().__init__(markup=markup, halign=halign, **kwargs)
+        self.background_color = background_color
 
     def on_touch_down(self, m):
-        if m.button != 'left':
-            return
+        """Overrides base class method to only react to left clicks."""
+        if m.button != "left":
+            return False
         return super().on_touch_down(m)
 
 
-class IButton(AnchorLayout):
-    def __init__(self,
-            source, text='', left_button_only=False,
-            on_press=None, on_release=None,
-            **kwargs,
-        ):
-        super().__init__()
-        self.left_button_only = left_button_only
-        self.image = self.add(Image(source=source, **kwargs))
-        self.label = self.add(Label(text=text))
-        self.on_press = on_press
-        self.on_release = on_release
+class XToggleButton(XWidget, kv.ToggleButton):
+    def __init__(
+        self,
+        markup: bool = True,
+        **kwargs,
+    ):
+        """Same arguments as kivy Button."""
+        super().__init__(markup=markup, **kwargs)
 
-    def on_touch_up(self, m):
-        if not callable(self.on_release):
-            return False
-        if m.button != 'left' and self.left_button_only:
-            return False
-        if not self.collide_point(*m.pos):
-            return False
-        self.on_release(m)
-        return True
-
-    def on_touch_down(self, m):
-        if not callable(self.on_press):
-            return False
-        if m.button != 'left' and self.left_button_only:
-            return False
-        if not self.collide_point(*m.pos):
-            return False
-        self.on_press(m)
-        return True
-
-
-class Spinner(kvSpinner, KexWidget):
-    pass
-
-
-class CheckBox(kvCheckBox, KexWidget):
-    pass
-
-
-class ToggleButton(kvToggleButton, KexWidget):
     def toggle(self):
+        """Toggles the active state of the button."""
         self.active = not self.active
 
     @property
     def active(self):
-        return self.state == 'down'
+        """If the button is down."""
+        return self.state == "down"
 
     @active.setter
-    def active(self, x):
-        self.state = 'down' if x else 'normal'
+    def active(self, value: bool):
+        self.state = "down" if value else "normal"
 
 
-class Slider(kvSlider, KexWidget):
-    def __init__(self, on_value=None, range=(0,1), step=0.01, **kwargs):
-        super().__init__(range=range, step=step, **kwargs)
-        self.__on_value = on_value
-        if callable(on_value):
-            self.__mouse_hold = False
-            self.bind(on_touch_down=self._on_touch_down, on_touch_up=self._on_touch_up)
+class XImageButton(XWidget, kv.ButtonBehavior, kv.Image):
+    """Image with ButtonBehavior mixin."""
 
-    def _on_touch_down(self, w, m):
-        if self.__on_value is None:
-            return False
-        if not self.collide_point(*m.pos):
-            return False
-        self.__mouse_hold = True
-
-    def _on_touch_up(self, w, m):
-        if self.__mouse_hold is True:
-            self.__mouse_hold = False
-            return self.__on_value(self.value)
-        return False
-
-
-class SliderText(BoxLayout):
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-        if 'on_value' in kwargs:
-            kwargs['on_value'] = self.on_value_wrapper(kwargs['on_value'])
-        else:
-            kwargs['on_value'] = self.on_value
-        self.slider = Slider(**kwargs)
-        self.label = Label(text=str(self.slider.value))
-        self.add(self.label).set_size(hx=0.2)
-        self.add(self.slider)
-
-    def on_value_wrapper(self, f):
-        def on_value(value):
-            self.on_value(value)
-            f(value)
-        return on_value
-
-    def on_value(self, value):
-        self.label.text = str(round(value * 10**3, 3) / 10**3)
-
-
-class DropDownFrame(kvDropDown, KexWidget):
     pass
 
 
-class DropDownSelect(Button):
-    def __init__(self, callback, invoke_set_label=True, **kwargs):
-        super().__init__(**kwargs)
-        self.__invoke_set_label = invoke_set_label
-        assert callable(callback)
-        self.callback = callback
-        self.dropdown = DropDownFrame()
-        self.dropdown.make_bg((0,0,0,0.75))
-        self.__labels = []
-        self.bind(on_press=self.dropdown.open)
+class XEntry(XWidget, kv.TextInput):
+    """TextInput with sane defaults."""
 
-    def invoke_label(self, label):
-        idx = self.__labels.index(label)
-        self.invoke_option(idx, label)
-
-    def invoke_index(self, index):
-        self.invoke_option(index, self.__labels[index])
-
-    def invoke_option(self, index, label):
-        if self.__invoke_set_label:
-            self.text = label
-        self.callback(index, label)
-        self.dropdown.dismiss()
-
-    def set_options(self, options, **kwargs):
-        for index, label in enumerate(options):
-            btn = Button(text=label, **kwargs)
-            btn.background_color = 0.3, 0.5, 0.5, 1
-            btn.set_size(y=40)
-            btn.bind(on_release=lambda w, i=index, l=label: self.invoke_option(i, l))
-            self.dropdown.add_widget(btn)
-            self.__labels.append(label)
-
-
-class DropDownMenu(DropDownSelect):
-    def __init__(self, *args, **kwargs):
-        kwargs['invoke_set_label'] = False
-        super().__init__(*args, **kwargs)
-
-
-class ColorSelect(kvLabel, KexWidget):
-    def __init__(self, callback, size=(300, 300), *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        assert callable(callback)
-        self.callback = callback
-        self.dropdown = kvDropDown(auto_width=False)
-        self.bind(on_touch_down=self._on_touch_down)
-        self.picker = ColorPick(callback=self._callback)
-        self.picker.set_size(*size)
-        self.dropdown.add_widget(self.picker)
-        kex.set_size(self.dropdown, *size)
-
-    def _on_touch_down(self, w, m):
-        if m.button != 'left' or not self.collide_point(*m.pos):
-            return False
-        self.dropdown.open(w)
-
-    def _callback(self, color):
-        self.callback(color)
-        self.make_bg(color)
-        self.text = ', '.join(f'{round(_*255)}' for _ in color)
-
-    def set_color(self, color, set_text=True):
-        self.picker.set_color(color)
-        self.make_bg(color)
-        self.text = ', '.join(f'{round(_*255)}' for _ in color)
-
-
-# INPUT WIDGETS
-class Entry(kvTextInput, KexWidget):
     def __init__(
-            self, on_text=None,
-            on_text_delay=0,
-            defocus_on_validate=True,
-            background_color=(1, 1, 1, 0.2),
-            foreground_color=(1, 1, 1, 1),
-            tab_focus=True,
-            multiline=False,
-            **kwargs):
-        self.__on_text = None
-        self.__on_text_delay = on_text_delay
-        self.__tab_focus = tab_focus
-        if callable(on_text):
-            self.__on_text = on_text
+        self,
+        multiline: bool = False,
+        background_color: XColor = XColor(0.2, 0.2, 0.2, 1),
+        foreground_color: XColor = XColor(1, 1, 1, 1),
+        text_validate_unfocus: bool = True,
+        **kwargs,
+    ):
+        """Initialize the class.
+
+        Args:
+            multiline: If should allow multiple lines.
+            background_color: Color of the background.
+            foreground_color: Color of the foreground.
+            text_validate_unfocus: If focus should be removed after validation
+                (pressing enter on a single-line widget).
+            kwargs: keyword arguments for TextInput.
+        """
         super().__init__(
-            background_color=background_color,
-            foreground_color=foreground_color,
-            multiline=multiline, **kwargs)
+            background_color=background_color.rgba,
+            foreground_color=foreground_color.rgba,
+            multiline=multiline,
+            text_validate_unfocus=text_validate_unfocus,
+            **kwargs,
+        )
         if not multiline:
             self.set_size(y=35)
-        self.text_validate_unfocus = defocus_on_validate
-
-    def keyboard_on_key_down(self, win, keycode, text, modifiers):
-        """Overwrites the tab and shift tab keys, as they are expected to be used to switch widget focus."""
-        if self.__tab_focus:
-            if keycode[1] == 'tab' and modifiers == []:
-                if self.focus_next:
-                    kex.set_focus(self.focus_next)
-            elif keycode[1] == 'tab' and modifiers == ['shift']:
-                if self.focus_previous:
-                    kex.set_focus(self.focus_previous)
-            else:
-                super().keyboard_on_key_down(win, keycode, text, modifiers)
-        else:
-            super().keyboard_on_key_down(win, keycode, text, modifiers)
-
-    def set_focus(self, focus=True):
-        kex.Clock.schedule_once(self.entry_focus, 0.05)
-
-    def entry_focus(self, *args):
-        self.focus = True
-
-    def __on_text_call(self):
-        if callable(self.__on_text):
-            kex.Clock.schedule_once(lambda dt: self.__on_text(self.text), self.__on_text_delay)
-
-    def delete_selection(self, *args, **kwargs):
-        super().delete_selection(*args, **kwargs)
-        self.__on_text_call()
-
-    def insert_text(self, *args, **kwargs):
-        super().insert_text(*args, **kwargs)
-        self.__on_text_call()
-
-    def _refresh_text(self, *args, **kwargs):
-        super()._refresh_text(*args, **kwargs)
-        self.__on_text_call()
 
     def _on_textinput_focused(self, *args, **kwargs):
+        """Overrides base method to select all text when focused."""
         value = args[1]
         super()._on_textinput_focused(*args, **kwargs)
         if value:
             self.select_all()
 
-    def set_text(self, text):
-        self.text = str(text)
-        kvClock.schedule_once(self.reset, 0)
-
-    def reset(self, *a):
+    def reset_cursor_selection(self, *a):
+        """Resets the cursor position and selection."""
         self.cancel_selection()
         self.cursor = 0, 0
         self.scroll_x = 0
         self.scroll_y = 0
 
 
-class Image(kvImage, KexWidget):
+class XSlider(XWidget, kv.Slider):
     pass
 
 
-# PREMADE WIDGETS
-class ListBox(ScrollView):
-    def __init__(self,
-            on_modified=None,
-            add_img='', remove_img='', drag_img='',
-            **kwargs,
-        ):
-        super().__init__(view=DynamicHeight(), **kwargs)
-        self.on_modified = on_modified
-        self.__last_list = []
-        self.add_img = add_img
-        self.remove_img = remove_img
-        self.drag_img = drag_img
-        self.__dragging = None
-        self.make_widgets()
+class XSliderText(XBox):
+    def __init__(
+        self,
+        box_kwargs: Optional[Mapping[str, Any]] = None,
+        label_kwargs: Optional[Mapping[str, Any]] = None,
+        prefix: str = "",
+        rounding: int = 3,
+        cursor_size: tuple[int, int] = (25, 25),
+        **kwargs,
+    ) -> XBox:
+        box_kwargs = {} if box_kwargs is None else box_kwargs
+        label_kwargs = {} if label_kwargs is None else label_kwargs
+        label_kwargs = {"halign": "left"} | label_kwargs
+        super().__init__(**box_kwargs)
+        self.rounding = rounding
+        self.prefix = prefix
+        self.label = XLabel(**label_kwargs)
+        self.label.set_size(hx=0.2)
+        self.slider = XSlider(cursor_size=cursor_size, **kwargs)
+        self.add(self.label)
+        self.add(self.slider)
+        self.slider.bind(value=self._set_text)
+        self._set_text(self, self.slider.value)
 
-    def _update(self, *a):
-        new_list = [w.textinput.text for w in reversed(self.list_frame.children)]
-        if self.__last_list == new_list:
-            return
-        logger.info(f'ListBox modified: {new_list} (from: {self.__last_list})')
-        self.__last_list = new_list
-        if callable(self.on_modified):
-            self.on_modified(self.__last_list)
-
-    def set_items(self, items):
-        if self.__last_list == items:
-            return
-        logger.info(f'ListBox setting new list: {items}')
-        self.__last_list = items
-        self.list_frame.clear_widgets()
-        for item in items:
-            self.add_item(text=item, do_update=False)
-
-    @property
-    def list(self):
-        return self.__last_list
-
-    def make_widgets(self):
-        self.new_item_frame = self.view.add(BoxLayout())
-        self.new_item_frame.set_size(y=30)
-        self.new_item_frame.make_bg((0.2,0.5,0.3,0.5))
-        self.textinput = Entry(on_text_validate=self.add_item)
-        self.textinput.set_size(y=30)
-        self.new_item_frame.add(self.textinput)
-        add_btn = IButton(source=str(self.add_img), on_release=self.click_add)
-        add_btn.set_size(x=30, y=30)
-        self.new_item_frame.add(add_btn)
-        self.list_frame = self.view.add(DynamicHeight())
-
-    def click_add(self, m):
-        if m.button == 'left':
-            self.add_item()
-
-    def add_item(self, *a, text=None, do_update=True):
-        text = self.textinput.text if text is None else text
-        logger.info(f'ListBox adding item: {text}')
-        self.list_frame.add(ListBoxItem(
-            remove_callback=self.remove_item,
-            drag_callback=self.drag_item,
-            text=text,
-            remove_img=self.remove_img,
-            drag_img=self.drag_img,
-            on_modified=self._update,
-        ))
-        self.list_frame._trigger_layout()
-        self.textinput.select_all()
-        self.textinput.set_focus()
-        if do_update:
-            self._update()
-
-    def remove_item(self, w):
-        self.list_frame.remove_widget(w)
-        self._update()
-
-    def do_bind(self):
-        self.__bound_up = self.fbind('on_touch_up', self._on_touch_up)
-        self.__bound_move = self.fbind('on_touch_move', self._on_touch_move)
-
-    def do_unbind(self):
-        self.unbind_uid('on_touch_up', self.__bound_up)
-        self.unbind_uid('on_touch_move', self.__bound_move)
-
-    def drag_item(self, w):
-        assert w in self.list_frame.children
-        if self.__dragging is not None:
-            logger.warning(f'Drag callback called by {w}, but already dragging {self.__dragging}. Ignored.')
-            return
-        self.__dragging = w
-        self.do_bind()
-
-    def _on_touch_move(self, w, m):
-        local = self.to_local(*m.pos)
-        self.__dragging.pos = local[0]-15, local[1]-15
-        return True
-
-    def _on_touch_up(self, w, m):
-        self.do_unbind()
-        self.reorder_widget(self.__dragging, m.pos)
-        self.__dragging = None
-        return True
-
-    def reorder_widget(self, w, pos):
-        local_pos = self.to_local(*pos)
-        for i, child in enumerate(self.list_frame.children):
-            if w is child:
-                continue
-            if child.collide_point(*local_pos):
-                break
-        else:
-            self.list_frame._trigger_layout()
-            return
-        self.list_frame.remove_widget(w)
-        self.list_frame.add(w, index=i)
-        self._update()
+    def _set_text(self, w, value):
+        if isinstance(value, float):
+            value = round(value, self.rounding)
+        if value == round(value):
+            value = int(value)
+        self.label.text = str(f"{self.prefix}{value}")
 
 
-class ListBoxItem(BoxLayout):
-    def __init__(self,
-            on_modified, remove_callback, drag_callback,
-            text='', remove_img='', drag_img='',
-            **kwargs,
-        ):
+class XSpinner(XWidget, kv.Spinner):
+    value = kv.StringProperty("")
+
+    def __init__(self, update_main_text: bool = True, **kwargs):
         super().__init__(**kwargs)
-        self.remove_callback = remove_callback
-        self.drag_callback = drag_callback
-        self.set_size(y=30)
-        self.drag_btn = self.add(IButton(
-            source=str(drag_img), allow_stretch=True, keep_ratio=False,
-            on_press=self.on_drag,
-        ))
-        self.drag_btn.set_size(x=30, y=30)
-        self.textinput = self.add(Entry(text=text, on_text=on_modified))
-        self.textinput.set_text(text)
-        self.textinput.set_size(y=30)
-        self.remove_btn = self.add(IButton(
-            source=str(remove_img),
-            on_release=self.on_click,
-        )).set_size(x=30, y=30)
+        self.update_main_text = update_main_text
+        if update_main_text:
+            self.text_autoupdate = True
 
-    def on_click(self, m):
-        if m.button == 'left':
-            self.remove_callback(self)
+    def on_select(self, data):
+        pass
 
-    def on_drag(self, m):
-        if m.button == 'left':
-            self.drag_callback(self)
+    def _on_dropdown_select(self, instance, data, *largs):
+        if self.update_main_text:
+            self.text = data
+        self.value = data
+        self.is_open = False
+        self.on_select(data)
 
 
-class Sound:
-    @classmethod
-    def load(cls, filename, *a, **kw):
-        return cls(kvSoundLoader.load(str(filename)), *a, **kw)
-
-    def __init__(self, s, volume=1, loop=False, pitch=1):
-        self.__sound = s
-        self.__sound.volume = volume
-        self.__sound.loop = loop
-        self.__sound.pitch = pitch
-        self.__last_pos = None
-
-    @property
-    def sound(self):
-        return self.__sound
-
-    def set_volume(self, volume=1):
-        self.__sound.volume = volume
-
-    def play(self, volume=None, loop=False, replay=True):
-        self.__sound.loop = loop
-        if not replay and self.__sound.get_pos() != 0:
-            return None
-        if replay and self.__sound.get_pos() != 0:
-            self.__sound.stop()
-        if volume is not None:
-            self.__sound.volume = volume
-        r = self.__sound.play()
-        if self.__last_pos is not None and self.__last_pos != 0:
-            self.__sound.seek(self.__last_pos)
-        return r
-
-    def stop(self, *a, **k):
-        self.__last_pos = None
-        return self.__sound.stop(*a, **k)
-
-    def pause(self):
-        if self.__sound.state != 'play':
-            return
-        self.__last_pos = self.__sound.get_pos()
-        self.__sound.stop()
+class XDropDown(XWidget, kv.DropDown):
+    pass
 
 
-class ScreenManager(kvScreenManager, KexWidget):
-    def __init__(self, screens=None, transition=None, **kwargs):
-        transition = kvFadeTransition(duration=0) if transition is None else transition
-        super().__init__(transition=transition, **kwargs)
-        self.bind(pos=self.reposition, size=self.reposition)
+class XPickColor(XBox):
+    color = kv.ObjectProperty(XColor(0.5, 0.5, 0.5, 1))
 
-    def add_screen(self, sname, view):
-        new_screen = self.add(Screen(name=sname))
-        new_screen.view = view
-        new_screen.add(view)
-        return new_screen
-
-    def remove_screen(self, sname):
-        self.remove_widget(self.get_screen(sname))
-
-    def switch_screen(self, sname):
-        self.current = sname
-
-    def reposition(self, *a):
-        # Uh... Kivy?
-        # If the manager isn't showing (e.g. when part of a non-showing screen
-        # in another screen manager), and then it shows, it will trigger on_pos
-        # for itself but not for it's current screen? Only when the screen
-        # is switched to will kivy reposition.
-        if not self.current_screen:
-            return
-        self.current_screen.pos = self.pos
-        # Haven't tested if setting size is required, but adding for good measure
-        self.current_screen.size = self.size
-
-
-class ScreenManagerTabs(BoxLayout):
-    def __init__(self, **kwargs):
-        super().__init__(orientation='vertical')
-        self.top_frame = self.add(BoxLayout())
-        self.top_frame.set_size(y=30)
-        self.top_frame.make_bg((1,0,0,0.2))
-        self.screen_label = self.top_frame.add(MLabel())
-        self.screen_label.set_size(x=100)
-        self.tab_frame = self.top_frame.add(BoxLayout(spacing=5, padding=2))
-        self.screen_manager = self.add(ScreenManager(**kwargs))
-        self.screen_manager.bind(current=self.refresh_label)
-        self.screen_manager.bind(screens=self.refresh_tabs)
-
-    def add_screen(self, *a, **k):
-        self.screen_manager.add_screen(*a, **k)
-
-    def remove_screen(self, *a, **k):
-        self.screen_manager.remove_screen(*a, **k)
-
-    def switch_screen(self, *a, **k):
-        self.screen_manager.switch_screen(*a, **k)
-
-    def refresh_label(self, *a):
-        self.screen_label.text = f'[b]{self.screen_manager.current}[/b]'
-
-    def refresh_tabs(self, *a):
-        self.tab_frame.clear_widgets()
-        for screen in self.screen_manager.screens:
-            btn = Button(
-                text=screen.name,
-                on_release=lambda *a, s=screen: self.tab_click(s)
+    def __init__(self, step=0.01, **kwargs):
+        super().__init__(orientation="vertical")
+        self.set_size(x=300, y=100)
+        update_color = self._update_from_sliders
+        self.sliders = []
+        for i, c in enumerate("RGBA"):
+            s = self.add(
+                SliderText(
+                    range=(0, 1),
+                    step=step,
+                    value_track=True,
+                    value_track_color=XColor(**{c.lower(): 0.75}).rgba,
+                    value_track_width="6dp",
+                    cursor_size=(0, 0),
+                    **kwargs,
+                )
             )
-            self.tab_frame.add(btn)
+            s.slider.bind(value=update_color)
+            self.sliders.append(s)
+        self.r, self.g, self.b, self.a = self.sliders
+        self.set_color(self.color)
 
-    def tab_click(self, screen):
-        logger.info(f'ScreenManagerTabs tab_click(): {screen}')
-        self.screen_manager.switch_screen(screen.name)
+    def set_color(self, color: XColor):
+        self.r.slider.value = color.r
+        self.g.slider.value = color.g
+        self.b.slider.value = color.b
+        self.a.slider.value = color.a
+
+    def _update_from_sliders(self, *a):
+        color = XColor(
+            self.r.slider.value,
+            self.g.slider.value,
+            self.b.slider.value,
+            self.a.slider.value,
+        )
+        is_bright = sum(color.rgb) > 1.5
+        for s in self.sliders:
+            s.label.color = (0, 0, 0, 1) if is_bright else (1, 1, 1, 1)
+        self.make_bg(color)
+        self.color = color
 
 
-class Screen(kvScreen, KexWidget):
-    pass
-
-
-class Popup(kvPopup, KexWidget):
-    def __init__(self, **kwargs):
+class XSelectColor(XLabelClick):
+    def __init__(
+        self,
+        prefix: str = "[u]Color:[/u]\n",
+        show_color_text: bool = True,
+        **kwargs,
+    ):
+        self.prefix = prefix
+        self.show_color_text = show_color_text
         super().__init__(**kwargs)
-        self.background = ''
-        self.background_color = (0.1,0.2,0.2,1)
-        self.__is_open = False
+        self.picker = XPickColor()
+        self.dropdown = XDropDown(auto_width=False, on_dismiss=self.on_color)
+        self.dropdown.set_size(*self.picker.size)
+        self.dropdown.add(self.picker)
+        self.picker.bind(size=lambda w, s: self.dropdown.set_size(*s))
+        self.bind(on_release=self.dropdown.open)
+        self.on_color()
 
-    @property
-    def is_open(self):
-        return self.__is_open
-
-    def on_open(self, *a):
-        super().on_open(*a)
-        self.__is_open = True
-
-    def on_dismiss(self, *a):
-        r = super().on_dismiss(*a)  # returns true to cancel dismiss
-        self.__is_open = r
-        return r
-
-    def toggle(self, *a):
-        if self.is_open:
-            self.dismiss()
-        else:
-            self.open()
-
-
-class Progress(Widget):
-    def __init__(self,
-            source=None,
-            bg_color=(0, 0, 0, 1),
-            fg_color=(1, 0, 1, 1),
-            text='',
-            **kwargs):
-        super().__init__(**kwargs)
-
-        with self.canvas.before:
-            self._bg_color = kvColor()
-            self._bg_rect = kvRectangle(pos=self.pos, size=self.size)
-            self._fg_color = kvColor()
-            self._fg_rect = kvRectangle(source=source, pos=self.pos, size=(0, 0))
-        self._label = self.add(Label(halign='center', valign='middle'))
-
-        self.bg_color = bg_color
-        self.fg_color = fg_color
-        self.progress = 0
+    def on_color(self, *args):
+        color = self.picker.color
+        self.make_bg(color)
+        text = self.prefix
+        if self.show_color_text:
+            text += " , ".join(str(round(c, 2)) for c in color.rgba)
         self.text = text
 
-        self.bind(pos=self.reposition, size=self.reposition)
+
+class XScreen(XWidget, kv.Screen):
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.view = None
+
+    def add(self, *args, **kwargs) -> XWidget:
+        self.view = super().add(*args, **kwargs)
+        if len(self.children) > 1:
+            raise RuntimeError(
+                f"Cannot add more than 1 widget to XScreen: {self.children=}"
+            )
+
+
+class XScreenManager(XWidget, kv.ScreenManager):
+    def __init__(self, auto_transtion_speed: float = 0.4, **kwargs):
+        self.auto_transition = "transition" not in kwargs
+        self.auto_transtion_speed = auto_transtion_speed
+        super().__init__(**kwargs)
+
+    def add_screen(self, name: str, widget: XWidget) -> XScreen:
+        screen = self.add(XScreen(name=name))
+        screen.add(widget)
+        return screen
+
+    def switch_name(self, name: str):
+        if self.mid_transition or name == self.current:
+            return False
+        if name not in self.screen_names:
+            raise ValueError(f'Found no screen by name "{name}" in {self.screen_names}')
+        old_transition = self.transition
+        if self.auto_transition:
+            old_index = self.screen_names.index(self.current)
+            new_index = self.screen_names.index(name)
+            dir = "left" if old_index < new_index else "right"
+            self.transition = kv.SlideTransition(
+                direction=dir,
+                duration=self.auto_transtion_speed,
+            )
+        self.current = name
+        if self.auto_transition:
+            self.transition = old_transition
+        return True
 
     @property
-    def bg_color(self):
-        return self.__bg_color
+    def mid_transition(self):
+        return 0 < self.current_screen.transition_progress < 1
 
-    @property
-    def fg_color(self):
-        return self.__fg_color
-
-    @property
-    def progress(self):
-        return self.__progress
-
-    @property
-    def text(self):
-        return self.__text
-
-    @bg_color.setter
-    def bg_color(self, x):
-        self.__bg_color = x
-        self._bg_color.rgba = self.__bg_color
-
-    @fg_color.setter
-    def fg_color(self, x):
-        self.__fg_color = x
-        self._fg_color.rgba = self.__fg_color
-
-    @progress.setter
-    def progress(self, x):
-        self.__progress = x
-        self._fg_rect.size = self.size[0]*self.__progress, self.size[1]
-
-    @text.setter
-    def text(self, x):
-        self.__text = x
-        self._label.text = self.__text
-
-    def reposition(self, *args):
-        self._fg_rect.pos = self.pos
-        self._fg_rect.size = self.size[0]*self.__progress, self.size[1]
-        self._bg_rect.pos = self.pos
-        self._bg_rect.size = self.size
-        self._label.pos = self.pos
-        self._label.size = self.size
-        self._label.text_size = self.size
+    @classmethod
+    def from_widgets(cls, widgets: Mapping[str, XWidget], **kwargs) -> "XScreenManager":
+        sm = cls(**kwargs)
+        for n, w in widgets.items():
+            screen = XScreen(name=n)
+            screen.add(w)
+            sm.add(screen)
+        return sm
 
 
-class ColorPick(GridLayout):
-    def __init__(self, callback, *args, **kwargs):
-        super().__init__(*args, cols=2, **kwargs)
-        assert callable(callback)
-        self.callback = callback
-        self.add(Label(text='R')).set_size(x=30)
-        self.r = self.add(Slider(on_value=self._on_color))
-        self.add(Label(text='G')).set_size(x=30)
-        self.g = self.add(Slider(on_value=self._on_color))
-        self.add(Label(text='B')).set_size(x=30)
-        self.b = self.add(Slider(on_value=self._on_color))
-        self.add(Label(text='A')).set_size(x=30)
-        self.a = self.add(Slider(on_value=self._on_color))
-        self.__color = 0, 0, 0, 0
-
-    @property
-    def color(self):
-        return self.__color
-
-    def set_color(self, color):
-        self.__color = color
-        self.r.value, self.g.value, self.b.value, self.a.value = color
-        self.make_bg(color)
-
-    def _on_color(self, *a):
-        self.__color = self.r.value, self.g.value, self.b.value, self.a.value
-        self.make_bg(self.__color)
-        self.callback(self.__color)
-
-
-def text_texture(text, **kwargs):
-    label = CoreLabel(text=text, **kwargs)
-    label.refresh()
-    return label.texture
+Box = XBox
+ZBox = XZBox
+DBox = XDBox
+Grid = XGrid
+Stack = XStack
+Relative = XRelative
+Anchor = XAnchor
+Scroll = XScroll
+App = XApp
+InputManager = XInputManager
+Label = XLabel
+CheckBox = XCheckBox
+CheckBoxText = XCheckBoxText
+Button = XButton
+ToggleButton = XToggleButton
+ImageButton = XImageButton
+Entry = XEntry
+Slider = XSlider
+SliderText = XSliderText
+Spinner = XSpinner
+DropDown = XDropDown
+PickColor = XPickColor
+SelectColor = XSelectColor
+ScreenManager = XScreenManager
+Screen = XScreen
+NoTransition = kv.NoTransition
+FadeTransition = kv.FadeTransition
+CardTransition = kv.CardTransition
+SlideTransition = kv.SlideTransition
+SwapTransition = kv.SwapTransition
+WipeTransition = kv.WipeTransition
+ShaderTransition = kv.ShaderTransition
+InstructionGroup = kv.InstructionGroup
+Color = kv.Color
+Rectangle = kv.Rectangle
+Rotate = kv.Rotate
+PushMatrix = kv.PushMatrix
+PopMatrix = kv.PopMatrix
+__all__ = [
+    "Box",
+    "ZBox",
+    "DBox",
+    "Grid",
+    "Stack",
+    "Relative",
+    "Anchor",
+    "Scroll",
+    "App",
+    "frozen_overlay",
+    "InputManager",
+    "Label",
+    "CheckBox",
+    "CheckBoxText",
+    "Button",
+    "ToggleButton",
+    "ImageButton",
+    "Entry",
+    "Slider",
+    "SliderText",
+    "Spinner",
+    "DropDown",
+    "PickColor",
+    "SelectColor",
+    "ScreenManager",
+    "Screen",
+    "NoTransition",
+    "FadeTransition",
+    "CardTransition",
+    "SlideTransition",
+    "SwapTransition",
+    "WipeTransition",
+    "ShaderTransition",
+    "InstructionGroup",
+    "Color",
+    "Rectangle",
+    "Rotate",
+    "PushMatrix",
+    "PopMatrix",
+]

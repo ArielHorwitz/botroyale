@@ -8,7 +8,6 @@ from botroyale.api.gui import (
     BattleAPI,
     Tile,
     Control,
-    ControlMenu,
 )
 from botroyale.logic import get_tile_info, get_tile_info_unit, PLATE_RESET_COLOR
 
@@ -164,54 +163,52 @@ class MapEditor(MapCreator, BattleAPI):
         else:
             self.first_round_state = self.state.increment_round()
 
-    def get_controls(self) -> ControlMenu:
+    def get_controls(self) -> list[Control]:
         """Returns `botroyale.api.gui.Control`s for map editing tools.
 
         Overrides: `botroyale.api.gui.BattleAPI.get_controls`.
         """
-        return {
-            "Editor": [
+        return [
+            # Editor
+            Control(
+                "Editor.Increase death radius",
+                lambda: self.increment_death_radius(1),
+                "+ =",
+            ),
+            Control(
+                "Editor.Decrease death radius",
+                lambda: self.increment_death_radius(-1),
+                "+ -",
+            ),
+            Control("Editor.Clear selected", self._clear_selected, "^ c"),
+            Control("Editor.Clear all", self.clear_all, "^+ c"),
+            Control("Editor.Save", self.save, "^+ s"),
+            Control("Editor.Load", self.load, "^+ l"),
+            # Brush
+            *[
                 Control(
-                    "Increase death radius",
-                    lambda: self.increment_death_radius(1),
-                    "+ =",
-                ),
-                Control(
-                    "Decrease death radius",
-                    lambda: self.increment_death_radius(-1),
-                    "+ -",
-                ),
-                Control("Clear selected", self._clear_selected, "^ c"),
-                Control("Clear all", self.clear_all, "^+ c"),
-                Control("Save", self.save, "^+ s"),
-                Control("Load", self.load, "^+ l"),
+                    f"Brush.{bt.name.capitalize()}",
+                    lambda bt=bt: self._set_brush(bt),
+                    BRUSH_HOTKEYS[i],
+                )
+                for i, bt in enumerate(BrushType)
             ],
-            "Brush": [
-                *[
-                    Control(
-                        bt.name.capitalize(),
-                        lambda bt=bt: self._set_brush(bt),
-                        BRUSH_HOTKEYS[i],
-                    )
-                    for i, bt in enumerate(BrushType)
-                ],
-                Control("Toggle brush", lambda: self._toggle_brush(), "tab"),
-                Control("Add pressure", lambda: self._add_pressure(), "r"),
-                Control("Reduce pressure", lambda: self._add_pressure(-1), "f"),
-                Control(
-                    "Toggle pressure reset", lambda: self._toggle_pressure_reset(), "v"
-                ),
-            ],
-            "Mirror Mode": [
-                Control("Mirror off", lambda: self.set_mirror_mode(1), "1"),
-                Control("Mirror 2", lambda: self.set_mirror_mode(2), "2"),
-                Control("Mirror 3", lambda: self.set_mirror_mode(3), "3"),
-                Control("Mirror 6", lambda: self.set_mirror_mode(6), "4"),
-            ],
-            "Debug": [
-                Control("Map coordinates", self._toggle_coords, "^+ d"),
-            ],
-        }
+            Control("Brush.Toggle brush", lambda: self._toggle_brush(), "tab"),
+            Control("Brush.Add pressure", lambda: self._add_pressure(), "r"),
+            Control("Brush.Reduce pressure", lambda: self._add_pressure(-1), "f"),
+            Control(
+                "Brush.Toggle pressure reset",
+                lambda: self._toggle_pressure_reset(),
+                "v",
+            ),
+            # Mirror mode
+            Control("Mirror Mode.Mirror off", lambda: self.set_mirror_mode(1), "1"),
+            Control("Mirror Mode.Mirror 2", lambda: self.set_mirror_mode(2), "2"),
+            Control("Mirror Mode.Mirror 3", lambda: self.set_mirror_mode(3), "3"),
+            Control("Mirror Mode.Mirror 6", lambda: self.set_mirror_mode(6), "4"),
+            # Debug
+            Control("Debug.Map coordinates", self._toggle_coords, "^+ d"),
+        ]
 
     def get_info_panel_text(self) -> str:
         """Multiline summary of the map at the current state.

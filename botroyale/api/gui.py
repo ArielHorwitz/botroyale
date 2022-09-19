@@ -14,20 +14,19 @@ from typing import (
     Callable,
 )
 from collections import deque
-from itertools import chain
 from dataclasses import dataclass, asdict as dataclass_asdict
 from botroyale.util.hexagon import Hexagon, ORIGIN
 from botroyale.api.logging import logger as glogger
 
 
 PALETTE = (
-    (0.73, 0.97, 0.92),  # bright cyan
-    (0.68, 0.85, 0.88),  # dark cyan
-    (0.62, 0.63, 0.76),  # purple blue
     (0.24, 0.32, 0.48),  # dark blue
+    (0.68, 0.85, 0.88),  # dark cyan
+    (0.73, 0.97, 0.92),  # bright cyan
+    (0.62, 0.63, 0.76),  # purple blue
     (0.86, 0.60, 0.35),  # orange
 )
-PALETTE_BG = tuple(tuple(_ / 2 for _ in c) for c in PALETTE)
+PALETTE_BG = tuple(tuple(_ / 3 for _ in c) for c in PALETTE)
 
 
 class Control(NamedTuple):
@@ -62,52 +61,6 @@ class Control(NamedTuple):
 
     `^+ a` - Control + Shift + a
     """
-
-
-# The ControlMenu type is a dictionary of menu names and Control lists
-ControlMenu = dict[str, list[Control]]
-
-
-class ControlMenu_:
-    """A type alias for `dict[str, list[Control]]`.
-
-    Represents a dictionary mapping a menu name to a list of `Control` objects
-    for that menu.
-
-    See also: `combine_control_menus`.
-
-    ```python
-    def get_control_menu() -> ControlMenu:
-        return {
-            'Actions': [
-                Control('Idle', _do_idle, hotkey='^ i'),
-                Control('Move', _do_move, hotkey='^ m'),
-            ],
-            'Cheats': [
-                Control('God mode', _cheat_god_mode, hotkey='^+ g'),
-                Control('Inifinte AP', _cheat_inf_ap),
-            ],
-        }
-    ```
-
-    .. admonition:: Note
-        Documented under `ControlMenu_` instead of `ControlMenu` because assigning
-            docstrings to nested type aliases will break the docs.
-    """
-
-
-def combine_control_menus(
-    control_menu1: ControlMenu,
-    control_menu2: ControlMenu,
-) -> ControlMenu:
-    """Return a `ControlMenu_` with items from *control_menu1* and *control_menu2*."""
-    new_control_menu = {}
-    for menu_name, controls in chain(control_menu1.items(), control_menu2.items()):
-        if menu_name in new_control_menu:
-            new_control_menu[menu_name].extend(controls)
-        else:
-            new_control_menu[menu_name] = [*controls]
-    return new_control_menu
 
 
 @dataclass
@@ -218,14 +171,12 @@ class BattleAPI:
         """In-game time. Used by the GUI to determine when vfx need to expire."""
         return 0
 
-    def get_controls(self) -> ControlMenu:
-        """Returns a `ControlMenu_` for buttons and hotkeys in GUI."""
-        return {
-            "Battle": [
-                Control("Foo", lambda: glogger("foo"), "f"),
-                Control("Bar", lambda: glogger("bar"), "b"),
-            ]
-        }
+    def get_controls(self) -> list[Control]:
+        """Returns a list of Controls for buttons and hotkeys in GUI."""
+        return [
+            Control("Battle.Foo", lambda: glogger("foo"), "f"),
+            Control("Battle.Bar", lambda: glogger("bar"), "b"),
+        ]
 
     # Info panel
     def get_info_panel_text(self) -> str:
@@ -373,9 +324,9 @@ class GameAPI:
         """
         return []
 
-    def get_controls(self) -> ControlMenu:
-        """Returns a `ControlMenu_` for buttons and hotkeys in GUI."""
-        return {}
+    def get_controls(self) -> list[Control]:
+        """Returns a list of `Control` for buttons and hotkeys in GUI."""
+        return []
 
     def handle_menu_widget(
         self,

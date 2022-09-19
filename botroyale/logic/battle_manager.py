@@ -1,7 +1,7 @@
 """Home of `botroyale.logic.battle_manager.BattleManager`."""
 from typing import Optional, Literal
 from botroyale.logic.battle import Battle
-from botroyale.api.gui import BattleAPI, Tile, Control, ControlMenu
+from botroyale.api.gui import BattleAPI, Tile, Control
 from botroyale.util.time import ping, pong
 from botroyale.util import settings
 from botroyale.util.hexagon import Hex, Hexagon
@@ -361,57 +361,59 @@ class BattleManager(Battle, BattleAPI):
         """
         return self.replay_state.step_count
 
-    def get_controls(self) -> ControlMenu:
+    def get_controls(self) -> list[Control]:
         """Return controls for playing, autoplaying, replay index, and more.
 
         Overrides: `botroyale.api.gui.BattleAPI.get_controls`.
         """
-        return {
-            "Battle": [
-                Control("Autoplay", self.toggle_autoplay, "spacebar"),
-                Control("Preplay <!!!>", self.preplay, "^+ p"),
-                *[
-                    Control(
-                        f"Set speed {r}", lambda r=r: self.set_step_rate(r), f"{i + 1}"
-                    )
-                    for i, r in enumerate(STEP_RATES[:5])
-                ],
+        return [
+            Control("Battle.Autoplay", self.toggle_autoplay, "spacebar"),
+            Control("Battle.Preplay <!!!>", self.preplay, "^+ p"),
+            *[
+                Control(
+                    f"Battle.Set speed {r}",
+                    lambda r=r: self.set_step_rate(r),
+                    f"{i + 1}",
+                )
+                for i, r in enumerate(STEP_RATES[:5])
             ],
-            "Replay": [
-                Control("Battle start", lambda: self.set_replay_index(0), "^+ left"),
-                Control("Battle end <!!!>", lambda: self.play_all(), "^+ right"),
-                Control("Live", lambda: self.set_replay_index(), "^ l"),
-                Control(
-                    "Next step", lambda: self.set_replay_index(index_delta=1), "right"
-                ),
-                Control(
-                    "Prev step", lambda: self.set_replay_index(index_delta=-1), "left"
-                ),
-                Control(
-                    "+10 steps",
-                    lambda: self.set_replay_index(index_delta=10),
-                    "+ right",
-                ),
-                Control(
-                    "-10 steps",
-                    lambda: self.set_replay_index(index_delta=-10),
-                    "+ left",
-                ),
-                Control("Next round", lambda: self.set_to_next_round(), "^ right"),
-                Control(
-                    "Prev round",
-                    lambda: self.set_to_next_round(backwards=True),
-                    "^ left",
-                ),
-            ],
-            "Display": [
-                Control("Turn order", lambda: self.set_panel_mode("turns"), "^ o"),
-                Control(
-                    "Calculation timers", lambda: self.set_panel_mode("timers"), "^ p"
-                ),
-                Control("Map coordinates", self.toggle_coords, "^+ d"),
-            ],
-        }
+            Control("Replay.Battle start", lambda: self.set_replay_index(0), "^+ left"),
+            Control("Replay.Battle end <!!!>", lambda: self.play_all(), "^+ right"),
+            Control("Replay.Live", lambda: self.set_replay_index(), "^ l"),
+            Control(
+                "Replay.Next step",
+                lambda: self.set_replay_index(index_delta=1),
+                "right",
+            ),
+            Control(
+                "Replay.Prev step",
+                lambda: self.set_replay_index(index_delta=-1),
+                "left",
+            ),
+            Control(
+                "Replay.+10 steps",
+                lambda: self.set_replay_index(index_delta=10),
+                "+ right",
+            ),
+            Control(
+                "Replay.-10 steps",
+                lambda: self.set_replay_index(index_delta=-10),
+                "+ left",
+            ),
+            Control("Replay.Next round", lambda: self.set_to_next_round(), "^ right"),
+            Control(
+                "Replay.Prev round",
+                lambda: self.set_to_next_round(backwards=True),
+                "^ left",
+            ),
+            Control("Display.Turn order", lambda: self.set_panel_mode("turns"), "^ o"),
+            Control(
+                "Display.Calculation timers",
+                lambda: self.set_panel_mode("timers"),
+                "^ p",
+            ),
+            Control("Display.Map coordinates", self.toggle_coords, "^+ d"),
+        ]
 
     # Info panel
     def get_info_panel_text(self) -> str:
