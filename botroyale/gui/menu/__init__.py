@@ -5,8 +5,13 @@ the ability to create a new `botroyale.api.gui.BattleAPI` object for the
 `Battle` class.
 """
 from typing import Callable
-from botroyale.api.gui import GameAPI, BattleAPI, Control, PALETTE_BG
-from botroyale.gui import im_register_controls, hotkey_logger, kex as kx
+from botroyale.api.gui import GameAPI, BattleAPI, Control
+from botroyale.gui import (
+    kex as kx,
+    widget_defaults as defaults,
+    im_register_controls,
+    hotkey_logger,
+)
 from botroyale.gui.menubar import MenuBar
 from botroyale.gui.menu.menuwidget import get_menu_widget
 
@@ -60,7 +65,6 @@ class MenuFrame(kx.Anchor):
     def __init__(self, api: GameAPI, start_new_battle: NewBattleCall, **kwargs):
         """See module documentation for details."""
         super().__init__(**kwargs)
-        self.make_bg(kx.XColor(*PALETTE_BG[0]))
         self.api = api
         self.start_new_battle = start_new_battle
         self.menu_widgets = {}
@@ -81,7 +85,11 @@ class MenuFrame(kx.Anchor):
     def _make_widgets(self):
         self.clear_widgets()
         # Info panel
-        self.info_panel = kx.Label(valign="top", halign="left")
+        self.info_panel = kx.Label(
+            valign="top",
+            halign="left",
+            **defaults.TEXT_MONO,
+        )
         self.info_panel.set_size(hx=0.9, hy=0.9)
         info_panel_frame = kx.Anchor()
         info_panel_frame.add(self.info_panel)
@@ -89,21 +97,22 @@ class MenuFrame(kx.Anchor):
         new_battle_btn = kx.Button(
             text="Start New Battle ([i]spacebar[/i])",
             on_release=self._try_new_battle,
+            **defaults.BUTTON,
         )
         new_battle_btn.set_size(hx=0.8, hy=0.5)
         new_battle_frame = kx.Anchor()
         new_battle_frame.set_size(y=100)
         new_battle_frame.add(new_battle_btn)
-        # Lef Panel
+        # Left Panel
         left_panel = kx.Box(orientation="vertical")
         left_panel.set_size(hx=0.3)
-        left_panel.make_bg(kx.XColor(*PALETTE_BG[1]))
+        left_panel.make_bg(defaults.COLORS["aux"].bg)
         left_panel.add(info_panel_frame, new_battle_frame)
         # Menu frame
         self.menu_widgets_container = kx.Box()
         self.menu_widgets_container.set_size(hx=0.95, hy=0.95)
         menu_widgets_frame = kx.Anchor()
-        menu_widgets_frame.make_bg(kx.XColor(*PALETTE_BG[0]))
+        menu_widgets_frame.make_bg(defaults.COLORS["default"].bg)
         menu_widgets_frame.add(self.menu_widgets_container)
         # Populate menu widgets frame
         self._remake_menu_widgets()

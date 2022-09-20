@@ -2,7 +2,12 @@
 import math
 import itertools
 import numpy as np
-from botroyale.gui import kex as kx, logger, ASSETS_DIR
+from botroyale.gui import (
+    kex as kx,
+    widget_defaults as defaults,
+    logger,
+    ASSETS_DIR,
+)
 from botroyale.api.gui import Control
 from botroyale.util import settings
 from botroyale.util.hexagon import Hex, ORIGIN, WIDTH_HEIGHT_RATIO, SQRT3
@@ -14,8 +19,6 @@ MAX_MAP_TILES = settings.get("gui.tilemap.max_draw_tiles")
 TILE_PADDING = settings.get("gui.tilemap.tile_padding")
 MAX_TILE_RADIUS = settings.get("gui.tilemap.max_tile_radius")
 UNIT_SIZE = settings.get("gui.tilemap.unit_size")
-font = settings.get("gui.fonts.tilemap")
-FONT = str(ASSETS_DIR / "fonts" / f"{font}.ttf")
 FONT_SCALE = settings.get("gui.tilemap.font_scale")
 MAX_FONT_SIZE = settings.get("gui.tilemap.max_font_size")
 REDRAW_COOLDOWN = settings.get("gui.tilemap.redraw_cooldown")
@@ -459,7 +462,7 @@ class _Tile(kx.InstructionGroup):
         outline_width = font_size / 10
         self._text.texture = t = kx.text_texture(
             text,
-            font_name=FONT,
+            font_name=defaults.FONT,
             font_size=font_size,
             outline_width=outline_width,
         )

@@ -247,7 +247,7 @@ class MapEditor(MapCreator, BattleAPI):
             ]
         )
 
-    def get_info_panel_color(self) -> tuple[float, float, float]:
+    def _get_info_panel_color(self) -> int:
         """Color based on the current `MapCreator.brush`.
 
         Overrides: `botroyale.api.gui.BattleAPI.get_info_panel_color`.

@@ -426,18 +426,12 @@ class BattleManager(Battle, BattleAPI):
         """
         return self.get_info_str(self.replay_index)
 
-    def get_info_panel_color(self) -> tuple[float, float, float]:
-        """Green-ish color when live, blue-ish color when in replay mode.
-
-        See: `BattleManager.replay_mode`.
+    def get_info_panel_color(self) -> str:
+        """Changes color depending on `BattleManager.replay_mode`.
 
         Overrides: `botroyale.api.gui.BattleAPI.get_info_panel_color`.
         """
-        if self.replay_mode:
-            # Blue-ish
-            return 0.1, 0.25, 0.2
-        # Green-ish
-        return 0.15, 0.3, 0.05
+        return "default" if self.autoplay else "aux"
 
     # Tile map
     def get_gui_tile_info(self, hex: Hexagon) -> Tile:

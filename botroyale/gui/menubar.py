@@ -1,22 +1,19 @@
 """Top menu bar widget."""
-from botroyale.gui import ASSETS_DIR, FONT, FONT_SIZE, categorize_controls, kex as kx
+from botroyale.gui import (
+    kex as kx,
+    widget_defaults as defaults,
+    categorize_controls,
+)
+from botroyale.api.gui import Control
 from botroyale.util import settings
-from botroyale.api.gui import Control, PALETTE_BG
 
 
-font = settings.get("gui.fonts.menubar")
-FONT_MENU = str(ASSETS_DIR / "fonts" / f"{font}.ttf")
-BTN_COLOR = kx.XColor(*PALETTE_BG[1])
+DEBUG_COLORS = settings.get("gui.debug_colors")
 
 
 def _get_spinner_btn(**kwargs):
-    btn = kx.Button(
-        font_size=FONT_SIZE,
-        font_name=FONT,
-        background_color=BTN_COLOR.rgba,
-        **kwargs,
-    )
-    btn.set_size(y=35)
+    btn = kx.Button(**defaults.BUTTON_AUX, **kwargs)
+    btn.set_size(y=defaults.LINE_HEIGHT)
     return btn
 
 
@@ -36,6 +33,8 @@ class MenuBar(kx.Box):
         self.controls = {c.label: c for c in controls}
         self.clear_widgets()
         self.add(*self._get_spinner_widgets(controls))
+        if DEBUG_COLORS:
+            self.add(self._get_palette_box())
 
     def _get_spinner_widgets(self, controls: list[Control]):
         spinners = []
@@ -55,13 +54,35 @@ class MenuBar(kx.Box):
             spinner = kx.Spinner(
                 text=category,
                 values=control_labels,
-                background_color=BTN_COLOR.rgba,
+                **defaults.BUTTON,
                 update_main_text=False,
                 option_cls=_get_spinner_btn,
             )
             spinner.on_select = lambda l, c=category: self._invoke_control(c, l)
             spinners.append(spinner)
         return spinners
+
+    def _get_palette_box(self):
+        palette_box = kx.Box()
+        total_width = 0
+        for name, color in defaults.COLORS.items():
+            w = kx.Label(text=name.capitalize(), color=color.fg.rgba)
+            w.set_size(x=60)
+            total_width += 60
+            w.make_bg(color.bg)
+            palette_box.add(w)
+        for i in range(5):
+            fg = kx.Label(text=str(i), color=kx.get_color("black").rgba)
+            fg.make_bg(defaults.PALETTE[i])
+            bg = kx.Label(text=str(5 + i), color=kx.get_color("white").rgba)
+            bg.make_bg(defaults.PALETTE_BG[i])
+            w = kx.Box(orientation="vertical")
+            w.add(fg, bg)
+            w.set_size(x=50)
+            total_width += 50
+            palette_box.add(w)
+        palette_box.set_size(x=total_width)
+        return palette_box
 
     def _invoke_control(self, category, label):
         label = label.split(" ([i]", 1)[0]

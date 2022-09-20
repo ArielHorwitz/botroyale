@@ -19,16 +19,6 @@ from botroyale.util.hexagon import Hexagon, ORIGIN
 from botroyale.api.logging import logger as glogger
 
 
-PALETTE = (
-    (0.24, 0.32, 0.48),  # dark blue
-    (0.68, 0.85, 0.88),  # dark cyan
-    (0.73, 0.97, 0.92),  # bright cyan
-    (0.62, 0.63, 0.76),  # purple blue
-    (0.86, 0.60, 0.35),  # orange
-)
-PALETTE_BG = tuple(tuple(_ / 3 for _ in c) for c in PALETTE)
-
-
 class Control(NamedTuple):
     """Represents a control the user may use to invoke a callback.
 
@@ -186,9 +176,12 @@ class BattleAPI:
         """
         return "Panel text placeholder"
 
-    def get_info_panel_color(self) -> tuple[float, float, float]:
-        """Color of the info panel in GUI."""
-        return (0.1, 0.1, 0.1)
+    def get_info_panel_color(self) -> str:
+        """Color scheme name of the info panel in GUI.
+
+        Return value must be a name in settings "gui.colors".
+        """
+        return "default"
 
     # Tile map
     def get_gui_tile_info(self, hex: Hexagon) -> Tile:

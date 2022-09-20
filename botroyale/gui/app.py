@@ -19,6 +19,7 @@ ICON = str(PACKAGE_DIR / "icon.ico")
 FPS = settings.get("gui.fps")
 WINDOW_SIZE = settings.get("gui.window_size")
 START_MAXIMIZED = settings.get("gui.window_maximize")
+TRANSITION_SPEED = settings.get("gui.transtion_speed")
 LOG_HOTKEYS = settings.get("logging.hotkeys")
 
 
@@ -46,7 +47,7 @@ class App(kx.App):
         self.game_api = game_api
         self.fps_counter = RateCounter(sample_size=FPS, starting_elapsed=1000 / FPS)
         # Make widgets
-        self.sm = self.add(kx.ScreenManager())
+        self.sm = self.add(kx.ScreenManager(auto_transtion_speed=TRANSITION_SPEED))
         self.menu = MainMenu(
             app_controls=self.get_controls(),
             api=self.game_api,

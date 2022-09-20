@@ -5,16 +5,12 @@ window on the desktop.
 """
 from collections import defaultdict
 from botroyale.api.logging import logger as glogger
-from botroyale.util import PACKAGE_DIR
-from botroyale.util import settings
+from botroyale.util import PACKAGE_DIR, settings
 
 
+ASSETS_DIR = PACKAGE_DIR / "assets"
 GUI_DEBUG = settings.get("logging.gui")
 HOTKEY_DEBUG = settings.get("logging.hotkeys")
-ASSETS_DIR = PACKAGE_DIR / "assets"
-DEFAULT_FONT_NAME = settings.get("gui.fonts.default")
-FONT = str(ASSETS_DIR / "fonts" / f"{DEFAULT_FONT_NAME}.ttf")
-FONT_SIZE = settings.get("gui.fonts.size")
 
 
 def categorize_controls(controls, default_category="App", separator="."):

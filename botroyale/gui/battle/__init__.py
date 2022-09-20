@@ -5,24 +5,34 @@ If so, will display the `BattleFrame`. Otherwise will display a placeholder with
 the option to return to the main menu.
 """
 from typing import Callable
-from botroyale.api.gui import Control, BattleAPI, PALETTE_BG
-from botroyale.gui import kex as kx, im_register_controls, hotkey_logger, logger
+from botroyale.api.gui import Control, BattleAPI
+from botroyale.gui import (
+    kex as kx,
+    widget_defaults as defaults,
+    im_register_controls,
+    hotkey_logger,
+    logger,
+)
 from botroyale.gui.battle.tilemap import TileMap
 from botroyale.gui.menubar import MenuBar
 
 
 def _get_placeholder(return_to_menu):
     anchor = kx.Anchor()
+    anchor.make_bg(defaults.COLORS["default"].bg)
     box = anchor.add(kx.Box(orientation="vertical"))
-    box.set_size(x=500, y=500)
-    label = kx.Label(text="No battle in progress.\nStart a new battle in the menu.")
+    box.set_size(x=300, y=300)
+    label = kx.Label(
+        text="No battle in progress.\nStart a new battle in the menu.",
+        **(defaults.TEXT | {"color": defaults.COLORS["default"].fg.rgba}),
+    )
     label.set_size(hy=4)
     button = kx.Button(
         text="Return to menu",
         on_release=lambda *a: return_to_menu(),
+        **defaults.BUTTON,
     )
     box.add(label, button)
-    box.make_bg(kx.get_color("orange", 0.3))
     return anchor
 
 
@@ -104,23 +114,24 @@ class Panel(kx.Box):
     def __init__(self, api, **kwargs):
         """See module documentation for details."""
         super().__init__(orientation="vertical")
-        self.make_bg()
+        self.make_bg(defaults.COLORS["dark"].bg)
         self.api = api
         text_frame = self.add(
             kx.Anchor(anchor_x="left", anchor_y="top", padding=(15, 15))
         )
         self.main_text = text_frame.add(
-            kx.Label(valign="top", halign="left"),
+            kx.Label(
+                valign="top",
+                halign="left",
+                **defaults.TEXT_MONO,
+            ),
         )
 
     def update(self):
         """Update the panel text."""
         text = self.api.get_info_panel_text()
         self.main_text.text = text
-        color_index = self.api.get_info_panel_color()
-        # TODO remove this backwards-compatiblity reassignment
-        if not isinstance(color_index, int):
-            color_index = 3
-        assert isinstance(color_index, int)
-        assert 0 <= color_index <= 4
-        self.make_bg(kx.XColor(*PALETTE_BG[color_index]))
+        color_name = self.api.get_info_panel_color()
+        color = defaults.COLORS[color_name]
+        self.main_text.color = color.fg.rgba
+        self.make_bg(color.bg)
