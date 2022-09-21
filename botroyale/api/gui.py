@@ -9,7 +9,6 @@ from typing import (
     Union,
     Literal,
     Sequence,
-    NamedTuple,
     Any,
     Callable,
 )
@@ -19,38 +18,37 @@ from botroyale.util.hexagon import Hexagon, ORIGIN
 from botroyale.api.logging import logger as glogger
 
 
-class Control(NamedTuple):
+@dataclass
+class Control:
     """Represents a control the user may use to invoke a callback.
 
-    Used for buttons and hotkeys.
+    Used for buttons and hotkeys. The hotkey is a string with a simple format:
+
+    `f"{key}"` or `f"{mods} {key}"`
+
+    Where *key* is the keyboard character and *mods* is a string with a
+    combination of `"^"` for control, `"+"` for shift, `"!"` for alt, and
+    `"#"` for super (winkey). To inspect key presses, enable hotkey logging in
+    settings.
+
+    E.g.
+
+    `"g"` - g key
+
+    `"spacebar"` - Spacebar key
+
+    `"f1"` - F1 key
+
+    `"^+ a"` - Control + Shift + a
     """
 
     label: str
-    """Name of the control function (e.g. 'Start new battle')."""
+    """Name of the control function (e.g. "Start new battle")."""
     callback: Callable[[], None]
     """Callback when the control is invoked."""
     hotkey: Optional[str] = None
     """
-    Optionally specify to allow invoking this control with the hotkey.
-
-    The hotkey is a string with a simple format:
-
-    `f'{key}'` or `f'{mods} {key}'`
-
-    Where *key* is the keyboard character and *mods* is a string with a
-    combination of `'^'` for control, `'+'` for shift, `'!'` for alt, and
-    `'#'` for super (winkey).
-
-    E.g.
-
-    `g` - The "g" key
-
-    `spacebar` - The spacebar
-
-    `f1` - The "F1" key
-
-    `^+ a` - Control + Shift + a
-    """
+    Optionally specify to allow invoking this control with the hotkey."""
 
 
 @dataclass

@@ -17,10 +17,9 @@ def categorize_controls(controls, default_category="App", separator="."):
     """Organize a list of controls into a dictionary of categories of controls."""
     d = defaultdict(list)
     for control in controls:
-        name, callback, key = control
         category = default_category
-        if separator in name:
-            category, name = name.split(separator, 1)
+        if separator in control.label:
+            category = control.label.split(separator, 1)[0]
         d[category].append(control)
     return d
 
@@ -28,10 +27,14 @@ def categorize_controls(controls, default_category="App", separator="."):
 def im_register_controls(im, controls):
     """Register the hotkeys in a list of Controls to a kex.InputManager."""
     im.clear_all()
-    for control, callback, key in controls:
-        if key is None:
+    for control in controls:
+        if control.hotkey is None:
             continue
-        im.register(control, key, callback=lambda *a, c=callback: c())
+        im.register(
+            control.label,
+            control.hotkey,
+            callback=lambda *a, c=control.callback: c(),
+        )
 
 
 def logger(message: str):
