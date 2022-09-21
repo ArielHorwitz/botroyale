@@ -18,6 +18,7 @@ from botroyale.gui.battle import BattleContainer
 ICON = str(PACKAGE_DIR / "icon.ico")
 FPS = settings.get("gui.fps")
 WINDOW_SIZE = settings.get("gui.window_size")
+WINDOW_POS = settings.get("gui.window_pos")
 START_MAXIMIZED = settings.get("gui.window_maximize")
 TRANSITION_SPEED = settings.get("gui.transtion_speed")
 LOG_HOTKEYS = settings.get("logging.hotkeys")
@@ -39,6 +40,8 @@ class App(kx.App):
         self.title = "Bot Royale"
         self.icon = ICON
         kx.Window.set_size(*WINDOW_SIZE)
+        if any(c >= 0 for c in WINDOW_POS):
+            kx.Window.set_position(*WINDOW_POS)
         if START_MAXIMIZED:
             # Schedule maximizing so that the resize happens first, otherwise
             # the resize has no effect.

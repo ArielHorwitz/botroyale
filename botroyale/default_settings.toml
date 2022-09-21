@@ -15,6 +15,7 @@ hotkeys = false
 fps = 30
 window_maximize = true
 window_size = [1280, 720]
+window_pos = [-1, -1]
 transtion_speed = 0.4
 font_size = 16
 font = "liberation"
