@@ -65,10 +65,14 @@ class BattleContainer(kx.ZBox):
     def activate(self, *args):
         """Activate the Battle GUI."""
         self.im.activate()
+        if self.battle_in_progress:
+            self.battle_in_progress.set_visible(True)
 
     def deactivate(self, *args):
         """Deactivate the Battle GUI."""
         self.im.deactivate()
+        if self.battle_in_progress:
+            self.battle_in_progress.set_visible(False)
 
     def start_new_battle(self, api: BattleAPI):
         """Start a new battle."""
@@ -100,6 +104,10 @@ class BattleFrame(kx.Anchor):
         map_controls = self.map.get_controls()
         api_controls = self.api.get_controls()
         return map_controls + api_controls
+
+    def set_visible(self, visible):
+        """Declare the widget's visibility."""
+        self.api.set_visible(visible)
 
     def update(self):
         """Refresh all things battle-related."""

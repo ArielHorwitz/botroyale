@@ -10,7 +10,13 @@ from botroyale.util import PACKAGE_DIR
 from botroyale.util import settings
 from botroyale.util.time import RateCounter
 from botroyale.api.gui import GameAPI, BattleAPI, Control
-from botroyale.gui import kex as kx, logger, im_register_controls, hotkey_logger
+from botroyale.gui import (
+    kex as kx,
+    im_register_controls,
+    HOTKEY_DEBUG,
+    logger,
+    hotkey_logger,
+)
 from botroyale.gui.menu import MainMenu
 from botroyale.gui.battle import BattleContainer
 
@@ -50,6 +56,8 @@ class App(kx.App):
         self.game_api = game_api
         self.fps_counter = RateCounter(sample_size=FPS, starting_elapsed=1000 / FPS)
         # Make widgets
+        self.im = kx.InputManager(name="App", logger=hotkey_logger)
+        im_register_controls(self.im, self.get_controls())
         self.sm = self.add(kx.ScreenManager(auto_transtion_speed=TRANSITION_SPEED))
         self.menu = MainMenu(
             app_controls=self.get_controls(),
@@ -62,20 +70,18 @@ class App(kx.App):
         )
         self.sm.add_screen("menu", self.menu)
         self.sm.add_screen("battle", self.battle)
-        self.im = kx.InputManager(name="App", logger=hotkey_logger)
-        im_register_controls(self.im, self.get_controls())
-        self.show_menu(force=True)
+        self.screen_frames = {
+            "menu": self.menu,
+            "battle": self.battle,
+        }
+        self._activate_current_screen()
         # Start mainloop
         logger("GUI initialized, starting mainloop.")
         self.hook(self.update, FPS)
 
     def _start_new_battle(self, api: BattleAPI):
-        if self.sm.mid_transition:
-            logger("Cannot start new battle, trying again in 50ms...")
-            kx.schedule_once(lambda *args, api=api: self._start_new_battle(api), 0.05)
-            return
         self.battle.start_new_battle(api)
-        self.show_battle()
+        self.switch_screen("battle", force=True)
 
     def update(self, dt):
         """Called every frame."""
@@ -87,26 +93,80 @@ class App(kx.App):
 
     def show_menu(self, *args, force=False):
         """Switch to main menu."""
-        if not self.sm.switch_name("menu") and not force:
-            return
-        logger("Switching to main menu.")
-        self.battle.deactivate()
-        self.menu.activate()
+        self.switch_screen("menu", force=force)
 
-    def show_battle(self, *args):
+    def show_battle(self, *args, force=False):
         """Switch to battle."""
-        if not self.sm.switch_name("battle"):
+        self.switch_screen("battle", force=force)
+
+    def switch_screen(
+        self,
+        screen: str,
+        force: bool = False,
+        _attempt: int = 0,
+    ):
+        """Switch screen and de/activate InputManagers."""
+        interval = 50
+        timeout = 2000
+        if (_attempt * interval) > timeout:
+            logger(f"Attempted to switch to screen {screen} but timed out.")
             return
-        logger("Switching to battle.")
-        self.menu.deactivate()
-        self.battle.activate()
+        switch_success = self.sm.switch_name(screen)
+        if not switch_success:
+            if force:
+                logger(
+                    f"Cannot switch screen {self.sm.mid_transition=}, "
+                    f"trying again in 50ms (attempt: {_attempt})..."
+                )
+                kx.schedule_once(
+                    lambda *args: self.switch_screen(
+                        screen=screen,
+                        force=force,
+                        _attempt=_attempt + 1,
+                    ),
+                    0.05,
+                )
+            return
+        kx.schedule_once(self._activate_current_screen)
+        logger(f"Switched to screen: {screen}")
+
+    def _activate_current_screen(self, *args):
+        current_screen = self.sm.current
+        for screen_name, frame in self.screen_frames.items():
+            if screen_name == current_screen:
+                frame.activate()
+            else:
+                frame.deactivate()
+        if HOTKEY_DEBUG:
+            self.hotkey_debug()
 
     def get_controls(self):
         """Global app controls."""
-        return [
+        controls = [
             Control("App.Main Menu", self.show_menu, "escape"),
             Control("App.Main Menu", self.show_menu, "f1"),
             Control("App.Battle", self.show_battle, "f2"),
             Control("App.Restart", kx.restart_script, "^+ w"),
             Control("App.Quit", quit, "^+ q"),
         ]
+        if HOTKEY_DEBUG:
+            controls.insert(
+                0,
+                Control("App.Hotkey debug", self.hotkey_debug, "^!+ d"),
+            )
+        return controls
+
+    def hotkey_debug(self, *args):
+        """Debug logs."""
+        hotkey_logger(
+            "\n".join(
+                [
+                    "=" * 50,
+                    f"Current screen: {self.sm.current}",
+                    self.im._debug_summary,
+                    self.menu.im._debug_summary,
+                    self.battle.im._debug_summary,
+                    "=" * 50,
+                ]
+            )
+        )

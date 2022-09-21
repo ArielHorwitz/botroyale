@@ -200,6 +200,10 @@ class BattleAPI:
             Control("Battle.Bar", lambda: glogger("bar"), "b"),
         ]
 
+    def set_visible(self, visible: bool):
+        """Called when the GUI is shown or hidden from view."""
+        pass
+
     # Info panel
     def get_info_panel_text(self) -> str:
         """Multiline string to display in the info panel.

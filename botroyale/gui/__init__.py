@@ -33,7 +33,7 @@ def im_register_controls(im, controls):
         im.register(
             control.label,
             control.hotkey,
-            callback=lambda *a, c=control.callback: c(),
+            callback=control.callback,
         )
 
 

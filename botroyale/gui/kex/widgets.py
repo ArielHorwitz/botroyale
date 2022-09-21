@@ -357,7 +357,7 @@ class XInputManager(kv.Widget):
         self,
         name: str = "Unnamed InputManager",
         active: bool = True,
-        app_control_defaults: bool = False,
+        default_controls: bool = False,
         logger: Optional[Callable[[str], Any]] = None,
         **kwargs,
     ):
@@ -366,8 +366,8 @@ class XInputManager(kv.Widget):
         Args:
             name: Display name.
             active: Enable the InputManager.
-            app_control_defaults: Automatically call
-                `InputManager.register_app_control_defaults`.
+            default_controls: Automatically call
+                `InputManager.register_defaults`.
             logger: Function to call for debug logging.
         """
         self.name = name
@@ -377,43 +377,27 @@ class XInputManager(kv.Widget):
         self.__actions = defaultdict(lambda: KeyCalls(set(), set()))
         self.__last_key_code = -1
         self.__last_keys_down = ""
+        self.__last_key_down_ping = -1
         self.__recording_release = None
         self.__recording_press = None
         self.block_repeat = True
         self.repeat_cooldown = 25
-        self.__last_key_down_ping = ping() - self.repeat_cooldown
         self._bound_down = None
         self._bound_up = None
         super().__init__(**kwargs)
         self.keyboard = kv.Window.request_keyboard(lambda: None, self)
         if self.active:
             self.activate()
-        if app_control_defaults:
-            self.register_app_control_defaults()
-
-    @property
-    def currently_pressed(self) -> str:
-        """The keys that are currently pressed."""
-        return self.__last_keys_down
-
-    @property
-    def currently_pressed_mods(self) -> str:
-        """The modifier keys that are currently pressed."""
-        last_keys = self.__last_keys_down
-        if " " not in last_keys:
-            return ""
-        mods = last_keys.split(" ")[0]
-        return mods
-
-    @property
-    def actions(self):
-        """List of registered actions."""
-        return list(self.__actions.keys())
+        if default_controls:
+            self.register_defaults()
 
     def activate(self):
         """Enable the InputManager."""
         self._bound_down = self.keyboard.fbind("on_key_down", self._on_key_down)
         self._bound_up = self.keyboard.fbind("on_key_up", self._on_key_up)
+        self.__last_key_code = -1
+        self.__last_keys_down = ""
+        self.__last_key_down_ping = -1
         self.active = True
         self.logger(f"Activated {self}")
 
@@ -425,6 +409,9 @@ class XInputManager(kv.Widget):
             self.keyboard.unbind_uid("on_key_up", self._bound_up)
         self._bound_down = None
         self._bound_up = None
+        self.__last_key_code = -1
+        self.__last_keys_down = ""
+        self.__last_key_down_ping = -1
         self.active = False
         self.logger(f"Deactivated {self}")
 
@@ -447,7 +434,7 @@ class XInputManager(kv.Widget):
             self._refresh_all_keys()
         if callback is not None:
             self.__actions[action].on_press.add(callback)
-        self.logger(f'{self} registering "{action}": {self.__actions[action]}')
+        self.logger(f'    {self} registering "{action}": {self.__actions[action]}')
 
     def register_callbacks(self, action: str, callbacks: list[Callable[[str], Any]]):
         """Register callbacks for an action.
@@ -471,6 +458,16 @@ class XInputManager(kv.Widget):
         self.logger(f"Input manager registering {action}: {self.__actions[action]}")
         self._refresh_all_keys()
 
+    def register_defaults(self):
+        """Add actions for restarting and quitting the app."""
+        self.register(
+            "Debug input",
+            "^!+ f12",
+            lambda *a: self.record(on_release=self.start_debug_record),
+        )
+        self.register("Restart", "^+ w", lambda *a: restart_script())
+        self.register("Quit", "^+ q", lambda *a: quit())
+
     def remove_actions(self, actions: list[str]):
         """Unregister a list of actions."""
         for action in actions:
@@ -478,16 +475,10 @@ class XInputManager(kv.Widget):
                 del self.__actions[action]
         self._refresh_all_keys()
 
-    def clear_all(self, app_control_defaults: bool = False):
-        """Unregister all actions.
-
-        Will call `InputManager.register_app_control_defaults` if
-        *app_control_defaults* is True.
-        """
+    def clear_all(self):
+        """Unregister all actions."""
         self.__actions = defaultdict(lambda: KeyCalls(set(), set()))
         self._refresh_all_keys()
-        if app_control_defaults:
-            self.register_app_control_defaults()
 
     def record(
         self,
@@ -510,22 +501,43 @@ class XInputManager(kv.Widget):
         self.record()
 
     @property
-    def _debug_summary(self):
-        s = []
-        for action, kc in self.__actions.items():
-            k = ", ".join(_ for _ in kc.keys)
-            s.append(f"{action:<20} «{k}» {kc.on_press}")
-        return "\n".join(s)
+    def currently_pressed(self) -> str:
+        """The keys that are currently pressed."""
+        return self.__last_keys_down
 
-    def register_app_control_defaults(self):
-        """Add actions for restarting and quitting the app."""
-        self.register(
-            "Debug input",
-            "^!+ f12",
-            lambda *a: self.record(on_release=self.start_debug_record),
-        )
-        self.register("Restart", "^+ w", lambda *a: restart_script())
-        self.register("Quit", "^+ q", lambda *a: quit())
+    @property
+    def currently_pressed_mods(self) -> str:
+        """The modifier keys that are currently pressed."""
+        last_keys = self.__last_keys_down
+        if " " not in last_keys:
+            return ""
+        mods = last_keys.split(" ")[0]
+        return mods
+
+    @property
+    def actions(self):
+        """List of registered actions."""
+        return list(self.__actions.keys())
+
+    @classmethod
+    def humanize_keys(cls, keys: str) -> str:
+        """Return a human-readable repr from an internal repr of keys."""
+        if " " not in keys:
+            return keys
+        mods, key = keys.split(" ")
+        ignore_mods = set()
+        if key in cls.MODIFIERS:
+            if len(mods) == 1:
+                return key
+            ignore_mods.add(cls.MODIFIERS[key])
+        dstr = []
+        for mod in mods:
+            if mod in ignore_mods:
+                continue
+            dstr.append(cls.KEY2MODIFIER[mod])
+        if key != "":
+            dstr.append(key)
+        return " + ".join(dstr)
 
     def _refresh_all_keys(self):
         self.__all_keys = set()
@@ -549,9 +561,10 @@ class XInputManager(kv.Widget):
             if keys in kc.keys:
                 all_callbacks[action].update(kc.on_press)
         for action in all_callbacks:
-            self.logger(f"{self} making calls: {all_callbacks[action]}")
-            for c in all_callbacks[action]:
-                c(action)
+            calls = all_callbacks[action]
+            self.logger(f"{self} making {len(calls)} calls: {calls}")
+            for c in calls:
+                c()
 
     def _on_key_up(self, keyboard, key: str):
         key_code, key_name = key
@@ -571,6 +584,8 @@ class XInputManager(kv.Widget):
         key_hex: str,
         modifiers: list[str],
     ):
+        if not self.active:
+            return
         key_code, key_name = key
         if key_code == self.__last_key_code:
             if self.block_repeat:
@@ -581,7 +596,7 @@ class XInputManager(kv.Widget):
         self.__last_key_code = key_code
         self.__last_keys_down = self._convert_keys(modifiers, key_name)
         self.logger(
-            f"{self} sees keys pressed: {self.__last_keys_down} "
+            f"KEYS PRESSED: {self.__last_keys_down:<25} seen by {self} "
             f"( {self.humanize_keys(self.__last_keys_down)} )"
         )
         if self.__recording_press:
@@ -604,25 +619,15 @@ class XInputManager(kv.Widget):
         self.logger(m)
         print(m)
 
-    @classmethod
-    def humanize_keys(cls, keys: str) -> str:
-        """Return a human-readable repr from an internal repr of keys."""
-        if " " not in keys:
-            return keys
-        mods, key = keys.split(" ")
-        ignore_mods = set()
-        if key in cls.MODIFIERS:
-            if len(mods) == 1:
-                return key
-            ignore_mods.add(cls.MODIFIERS[key])
-        dstr = []
-        for mod in mods:
-            if mod in ignore_mods:
-                continue
-            dstr.append(cls.KEY2MODIFIER[mod])
-        if key != "":
-            dstr.append(key)
-        return " + ".join(dstr)
+    @property
+    def _debug_summary(self):
+        s = [f"{self}"]
+        for action, kc in self.__actions.items():
+            k = ", ".join(_ for _ in kc.keys)
+            s.append(
+                f"    {action:<30} {k:<25} {len(kc.on_press):>2} calls: {kc.on_press}"
+            )
+        return "\n".join(s)
 
     def __repr__(self):
         """Repr."""
@@ -926,8 +931,10 @@ class XScreenManager(XWidget, kv.ScreenManager):
         screen.add(widget)
         return screen
 
-    def switch_name(self, name: str):
-        if self.mid_transition or name == self.current:
+    def switch_name(self, name: str) -> bool:
+        if name == self.current:
+            return True
+        if self.mid_transition:
             return False
         if name not in self.screen_names:
             raise ValueError(f'Found no screen by name "{name}" in {self.screen_names}')

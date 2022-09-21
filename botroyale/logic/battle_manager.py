@@ -415,6 +415,10 @@ class BattleManager(Battle, BattleAPI):
             Control("Display.Map coordinates", self.toggle_coords, "^+ d"),
         ]
 
+    def set_visible(self, visible: bool):
+        """Overrides base method."""
+        self.autoplay = False
+
     # Info panel
     def get_info_panel_text(self) -> str:
         """Multiline summary of the game at the current `BattleManager.replay_index`.
