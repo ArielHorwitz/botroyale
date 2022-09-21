@@ -26,7 +26,7 @@ FPS = settings.get("gui.fps")
 WINDOW_SIZE = settings.get("gui.window_size")
 WINDOW_POS = settings.get("gui.window_pos")
 START_MAXIMIZED = settings.get("gui.window_maximize")
-TRANSITION_SPEED = settings.get("gui.transtion_speed")
+TRANSITION_SPEED = settings.get("gui.transition_speed")
 LOG_HOTKEYS = settings.get("logging.hotkeys")
 
 

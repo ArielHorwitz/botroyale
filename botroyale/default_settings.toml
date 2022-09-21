@@ -16,7 +16,7 @@ fps = 30
 window_maximize = true
 window_size = [1280, 720]
 window_pos = [-1, -1]
-transtion_speed = 0.4
+transition_speed = 0.4
 font_size = 16
 font = "liberation"
 font_mono = "firacode-mono-bold"
@@ -31,6 +31,8 @@ palette = [
 debug_colors = false
 
 [gui.colors]
+# Color schemes [background, foreground]
+# To see colors by number, enable color debugging
 default = [5, 4]
 aux = [6, 4]
 normal = [6, -3]
