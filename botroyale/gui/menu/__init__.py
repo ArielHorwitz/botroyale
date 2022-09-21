@@ -5,15 +5,16 @@ the ability to create a new `botroyale.api.gui.BattleAPI` object for the
 `Battle` class.
 """
 from typing import Callable
-from botroyale.api.gui import GameAPI, BattleAPI, Control
+from botroyale.api.gui import GameAPI, BattleAPI, Control, MENU_UPDATE_RESPONSES
 from botroyale.gui import (
     kex as kx,
     widget_defaults as defaults,
     im_register_controls,
+    logger,
     hotkey_logger,
 )
 from botroyale.gui.menubar import MenuBar
-from botroyale.gui.menu.menuwidget import get_menu_widget
+from botroyale.gui.menu.menuwidget import get_menu_widget, WIDGETS_FRAME_BG
 
 
 NewBattleCall = Callable[[BattleAPI], None]
@@ -75,12 +76,15 @@ class MenuFrame(kx.Anchor):
         """Controls for menu."""
         return [
             Control("Battle.New battle", self._try_new_battle, "spacebar"),
-            Control("Battle.Refresh menu", self._handle_changes, "enter"),
-            Control("Battle.Refresh menu", self._handle_changes, "numpadenter"),
+            Control("Battle.Refresh menu", lambda *a: self.update(force=True), "enter"),
         ]
 
     def _update_info_panel(self, *args):
         self.info_panel.text = self.api.get_info_panel_text()
+        self.new_battle_btn.text = (
+            f"{self.api.get_new_battle_text()}"
+            f"\n([i]{kx.InputManager.humanize_keys('spacebar')}[/i])"
+        )
 
     def _make_widgets(self):
         self.clear_widgets()
@@ -89,20 +93,21 @@ class MenuFrame(kx.Anchor):
             valign="top",
             halign="left",
             **defaults.TEXT_MONO,
+            text=self.api.get_info_panel_text(),
         )
         self.info_panel.set_size(hx=0.9, hy=0.9)
         info_panel_frame = kx.Anchor()
         info_panel_frame.add(self.info_panel)
         # New battle button
-        new_battle_btn = kx.Button(
-            text="Start New Battle ([i]spacebar[/i])",
+        self.new_battle_btn = kx.Button(
             on_release=self._try_new_battle,
-            **defaults.BUTTON,
+            **defaults.BUTTON_LIGHT,
         )
-        new_battle_btn.set_size(hx=0.8, hy=0.5)
+        self._update_info_panel()
+        self.new_battle_btn.set_size(hx=0.8, hy=0.75)
         new_battle_frame = kx.Anchor()
         new_battle_frame.set_size(y=100)
-        new_battle_frame.add(new_battle_btn)
+        new_battle_frame.add(self.new_battle_btn)
         # Left Panel
         left_panel = kx.Box(orientation="vertical")
         left_panel.set_size(hx=0.3)
@@ -112,7 +117,7 @@ class MenuFrame(kx.Anchor):
         self.menu_widgets_container = kx.Box()
         self.menu_widgets_container.set_size(hx=0.95, hy=0.95)
         menu_widgets_frame = kx.Anchor()
-        menu_widgets_frame.make_bg(defaults.COLORS["default"].bg)
+        menu_widgets_frame.make_bg(WIDGETS_FRAME_BG)
         menu_widgets_frame.add(self.menu_widgets_container)
         # Populate menu widgets frame
         self._remake_menu_widgets()
@@ -121,6 +126,7 @@ class MenuFrame(kx.Anchor):
         main_frame.add(left_panel, menu_widgets_frame)
 
     def _remake_menu_widgets(self):
+        logger("Creating menu widgets.")
         menu_widgets = self.api.get_menu_widgets()
         self.menu_widgets = {}
         self.menu_widgets_container.clear_widgets()
@@ -133,6 +139,7 @@ class MenuFrame(kx.Anchor):
 
         stack = new_stack()
         for idx, iw in enumerate(menu_widgets):
+            logger(f"    Creating new widget: {iw}")
             menu_widget = get_menu_widget(iw)
             if menu_widget.type == "divider" and idx > 0:
                 stack = new_stack()
@@ -149,10 +156,26 @@ class MenuFrame(kx.Anchor):
         """Try creating a new battle from current menu values."""
         menu_values = self._get_menu_values()
         new_api = self.api.get_new_battle(menu_values)
+        self._update_info_panel()
         if new_api:
             self.start_new_battle(new_api)
 
-    def _handle_changes(self, *args, force=False):
+    def _refresh_values(self):
+        logger("Refreshing menu widget values.")
+        for widget in self.api.get_menu_widgets():
+            sendto = widget.sendto
+            if sendto not in self.menu_widgets:
+                continue
+            old_value = self.menu_widgets[sendto].get_value()
+            new_value = widget.default
+            if old_value == new_value:
+                continue
+            logger(f"    Updating {sendto=} {old_value=} {new_value=}")
+            self.menu_widgets[sendto].set_value(new_value)
+        self.last_menu_values = self._get_menu_values()
+
+    def update(self, force=False):
+        """Handle changes of menu widget values and update info panel text."""
         changes = set()
         new_values = self._get_menu_values()
         for sendto, value in new_values.items():
@@ -160,15 +183,19 @@ class MenuFrame(kx.Anchor):
                 sendto in self.last_menu_values
                 and value != self.last_menu_values[sendto]
             ):
+                logger(f'    User set "{sendto}" in main menu to {value=}')
                 changes.add(sendto)
         self.last_menu_values = new_values
         if not changes and not force:
             return
-        do_update = self.api.handle_menu_widget(list(changes), new_values)
-        if do_update:
+        menu_update = self.api.handle_menu_widget(list(changes), new_values)
+        assert menu_update in MENU_UPDATE_RESPONSES
+        if menu_update == "nothing":
+            return
+        if menu_update == "values":
+            self._refresh_values()
+        elif menu_update == "widgets":
             self._make_widgets()
-
-    def update(self):
-        """Handle changes of menu widget values and update info panel text."""
-        self._handle_changes()
-        self.info_panel.text = self.api.get_info_panel_text()
+        else:
+            raise NotImplementedError(f"Unknown menu update response: {menu_update}")
+        self._update_info_panel()
