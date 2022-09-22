@@ -57,15 +57,15 @@ class TileMap(kx.Relative):
     def get_controls(self):
         """Get Controls for tilemap."""
         return [
-            Control("Map.Zoom in", self.zoom_in, "+ pageup"),
-            Control("Map.Zoom out", self.zoom_out, "+ pagedown"),
-            Control("Map.Reset view", self.reset_view, "+ home"),
-            Control("Map.Clear VFX", self._clear_vfx, "^+ c"),
-            Control("Map.Pan up", lambda: self.pan(y=1), "+ i"),
-            Control("Map.Pan down", lambda: self.pan(y=-1), "+ k"),
-            Control("Map.Pan right", lambda: self.pan(x=1), "+ l"),
-            Control("Map.Pan left", lambda: self.pan(x=-1), "+ j"),
-            Control("Map.Debug", self.debug),
+            Control("Map", "Zoom in", self.zoom_in, "+ pageup"),
+            Control("Map", "Zoom out", self.zoom_out, "+ pagedown"),
+            Control("Map", "Reset view", self.reset_view, "+ home"),
+            Control("Map", "Clear VFX", self._clear_vfx, "^+ c"),
+            Control("Map", "Pan up", lambda: self.pan(y=1), "+ i"),
+            Control("Map", "Pan down", lambda: self.pan(y=-1), "+ k"),
+            Control("Map", "Pan right", lambda: self.pan(x=1), "+ l"),
+            Control("Map", "Pan left", lambda: self.pan(x=-1), "+ j"),
+            Control("Map", "Debug", self.debug),
         ]
 
     def on_touch_down(self, w, m=None):

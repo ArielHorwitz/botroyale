@@ -44,6 +44,8 @@ class Control:
     `"^+ a"` - Control + Shift + a
     """
 
+    category: str
+    """Name of the category of the control (e.g. "App")."""
     label: str
     """Name of the control function (e.g. "Start new battle")."""
     callback: Callable[[], None]
@@ -196,8 +198,8 @@ class BattleAPI:
     def get_controls(self) -> list[Control]:
         """Returns a list of Controls for buttons and hotkeys in GUI."""
         return [
-            Control("Battle.Foo", lambda: glogger("foo"), "f"),
-            Control("Battle.Bar", lambda: glogger("bar"), "b"),
+            Control("Battle", "Foo", lambda: glogger("foo"), "f"),
+            Control("Battle", "Bar", lambda: glogger("bar"), "b"),
         ]
 
     def set_visible(self, visible: bool):

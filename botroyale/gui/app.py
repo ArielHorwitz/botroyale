@@ -148,17 +148,18 @@ class App(kx.App):
     def get_controls(self):
         """Global app controls."""
         controls = [
-            Control("App.Main Menu", self.show_menu, "escape"),
-            Control("App.Main Menu", self.show_menu, "f1"),
-            Control("App.Battle", self.show_battle, "f2"),
-            Control("App.User folder", self.show_usrdir, None),
-            Control("App.Restart", kx.restart_script, "^+ w"),
-            Control("App.Quit", quit, "^+ q"),
+            Control("App", "Main Menu", self.show_menu, "escape"),
+            Control("App", "Main Menu", self.show_menu, "f1"),
+            Control("App", "Battle", self.show_battle, "f2"),
+            Control("App", "User folder", self.show_usrdir, "^+ f"),
+            Control("App", "Debug", self.debug, "!+ d"),
+            Control("App", "Restart", kx.restart_script, "^+ w"),
+            Control("App", "Quit", quit, "^+ q"),
         ]
         if HOTKEY_DEBUG:
             controls.insert(
                 0,
-                Control("App.Hotkey debug", self.hotkey_debug, "^!+ d"),
+                Control("App", "Hotkey debug", self.hotkey_debug, "^!+ d"),
             )
         return controls
 

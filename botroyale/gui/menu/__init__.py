@@ -75,8 +75,10 @@ class MenuFrame(kx.Anchor):
     def get_controls(self):
         """Controls for menu."""
         return [
-            Control("Battle.New battle", self._try_new_battle, "spacebar"),
-            Control("Battle.Refresh menu", lambda *a: self.update(force=True), "enter"),
+            Control("Battle", "New battle", self._try_new_battle, "spacebar"),
+            Control(
+                "Battle", "Refresh menu", lambda *a: self.update(force=True), "enter"
+            ),
         ]
 
     def _update_info_panel(self, *args):

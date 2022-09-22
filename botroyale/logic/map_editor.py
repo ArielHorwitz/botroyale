@@ -171,43 +171,47 @@ class MapEditor(MapCreator, BattleAPI):
         return [
             # Editor
             Control(
-                "Editor.Increase death radius",
+                "Editor",
+                "Increase death radius",
                 lambda: self.increment_death_radius(1),
                 "+ =",
             ),
             Control(
-                "Editor.Decrease death radius",
+                "Editor",
+                "Decrease death radius",
                 lambda: self.increment_death_radius(-1),
                 "+ -",
             ),
-            Control("Editor.Clear selected", self._clear_selected, "^ c"),
-            Control("Editor.Clear all", self.clear_all, "^+ c"),
-            Control("Editor.Save", self.save, "^+ s"),
-            Control("Editor.Load", self.load, "^+ l"),
+            Control("Editor", "Clear selected", self._clear_selected, "^ c"),
+            Control("Editor", "Clear all", self.clear_all, "^+ c"),
+            Control("Editor", "Save", self.save, "^+ s"),
+            Control("Editor", "Load", self.load, "^+ l"),
             # Brush
             *[
                 Control(
-                    f"Brush.{bt.name.capitalize()}",
+                    "Brush",
+                    bt.name.capitalize(),
                     lambda bt=bt: self._set_brush(bt),
                     BRUSH_HOTKEYS[i],
                 )
                 for i, bt in enumerate(BrushType)
             ],
-            Control("Brush.Toggle brush", lambda: self._toggle_brush(), "tab"),
-            Control("Brush.Add pressure", lambda: self._add_pressure(), "r"),
-            Control("Brush.Reduce pressure", lambda: self._add_pressure(-1), "f"),
+            Control("Brush", "Toggle brush", lambda: self._toggle_brush(), "tab"),
+            Control("Brush", "Add pressure", lambda: self._add_pressure(), "r"),
+            Control("Brush", "Reduce pressure", lambda: self._add_pressure(-1), "f"),
             Control(
-                "Brush.Toggle pressure reset",
+                "Brush",
+                "Toggle pressure reset",
                 lambda: self._toggle_pressure_reset(),
                 "v",
             ),
             # Mirror mode
-            Control("Mirror Mode.Mirror off", lambda: self.set_mirror_mode(1), "1"),
-            Control("Mirror Mode.Mirror 2", lambda: self.set_mirror_mode(2), "2"),
-            Control("Mirror Mode.Mirror 3", lambda: self.set_mirror_mode(3), "3"),
-            Control("Mirror Mode.Mirror 6", lambda: self.set_mirror_mode(6), "4"),
+            Control("Mirror Mode", "Mirror off", lambda: self.set_mirror_mode(1), "1"),
+            Control("Mirror Mode", "Mirror 2", lambda: self.set_mirror_mode(2), "2"),
+            Control("Mirror Mode", "Mirror 3", lambda: self.set_mirror_mode(3), "3"),
+            Control("Mirror Mode", "Mirror 6", lambda: self.set_mirror_mode(6), "4"),
             # Debug
-            Control("Debug.Map coordinates", self._toggle_coords, "^+ d"),
+            Control("Debug", "Map coordinates", self._toggle_coords, "^+ d"),
         ]
 
     def get_info_panel_text(self) -> str:

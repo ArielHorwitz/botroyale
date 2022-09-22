@@ -1,8 +1,8 @@
 """Top menu bar widget."""
+from collections import defaultdict
 from botroyale.gui import (
     kex as kx,
     widget_defaults as defaults,
-    categorize_controls,
 )
 from botroyale.api.gui import Control
 from botroyale.util import settings
@@ -30,7 +30,7 @@ class MenuBar(kx.Box):
 
     def set_controls(self, controls: list[Control]):
         """Reset the controls."""
-        self.controls = {c.label: c for c in controls}
+        self.controls = _categorize_controls(controls)
         self.clear_widgets()
         self.add(*self._get_spinner_widgets(controls))
         if DEBUG_COLORS:
@@ -38,15 +38,10 @@ class MenuBar(kx.Box):
 
     def _get_spinner_widgets(self, controls: list[Control]):
         spinners = []
-        for category, controls in categorize_controls(controls).items():
+        for category, controls in self.controls.items():
             control_labels = []
             for c in controls:
-                if "." not in c.label:
-                    raise ValueError(
-                        "Control label must be categorized like so: "
-                        f'"Category name.Control name", got: {c.label}'
-                    )
-                label = c.label.split(".", 1)[-1]
+                label = c.label
                 if c.hotkey:
                     hotkey_label = kx.InputManager.humanize_keys(c.hotkey)
                     label = f"{label} ([i]{hotkey_label}[/i])"
@@ -58,7 +53,7 @@ class MenuBar(kx.Box):
                 update_main_text=False,
                 option_cls=_get_spinner_btn,
             )
-            spinner.on_select = lambda l, c=category: self._invoke_control(c, l)
+            spinner.on_select = lambda l, s=spinner: self._invoke_control(s, l)
             spinners.append(spinner)
         return spinners
 
@@ -84,8 +79,16 @@ class MenuBar(kx.Box):
         palette_box.set_size(x=total_width)
         return palette_box
 
-    def _invoke_control(self, category, label):
-        label = label.split(" ([i]", 1)[0]
-        original_label = f"{category}.{label}" if category else label
-        control = self.controls[original_label]
+    def _invoke_control(self, spinner, label):
+        category = spinner.text
+        cidx = spinner.values.index(label)
+        control = self.controls[category][cidx]
         control.callback()
+
+
+def _categorize_controls(controls):
+    """Organize a list of controls into a dictionary of categories of controls."""
+    d = defaultdict(list)
+    for c in controls:
+        d[c.category].append(c)
+    return d
