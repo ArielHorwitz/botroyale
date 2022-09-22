@@ -1,5 +1,5 @@
 """Home of `botroyale.logic.battle_manager.BattleManager`."""
-from typing import Optional, Literal
+from typing import Optional, Literal, Callable
 from botroyale.logic.battle import Battle
 from botroyale.api.gui import BattleAPI, Tile, Control
 from botroyale.util.time import ping, pong
@@ -12,6 +12,7 @@ from botroyale.logic import UNIT_COLORS, get_tile_info, get_tile_info_unit
 STEP_RATE = settings.get("battle.default_step_rate")
 STEP_RATES = settings.get("battle.toggle_step_rates")
 LOGIC_DEBUG = settings.get("logging.battle")
+BOT_CALC_DISCLAIMER = "This may take a while, depending on the map and bots."
 MAP_CENTER = Hex(0, 0)
 
 
@@ -61,10 +62,14 @@ class BattleManager(Battle, BattleAPI):
         index_delta: Optional[int] = None,
         apply_vfx: bool = True,
         disable_autoplay: bool = True,
+        overlay_text: str = "Bots playing...",
+        after: Optional[Callable[[], None]] = None,
+        force_overlay: bool = False,
     ):
         """Set the state index of the replay.
 
         Will play missing states until *index* is reached or the game is over.
+        If playing more than 1 state, will display an overlay.
 
         *index* defaults to the index of the last state in history, unless
         *index_delta* is provided in which case it defaults to the current
@@ -75,26 +80,45 @@ class BattleManager(Battle, BattleAPI):
             index_delta: Number to add to index.
             apply_vfx: Queue vfx of the state we are going to.
             disable_autoplay: Disables autoplay.
+            overlay_text: Text to display on overlay.
+            after: Function to call after.
+            force_overlay: Force displaying an overlay.
         """
         if index is None:
             if index_delta is None:
                 index = self.history_size - 1
             else:
                 index = self.replay_index
-        index = index % self.history_size
+        if index < 0:
+            index = index % self.history_size
         if index_delta:
             index += index_delta
         index = max(0, index)
-        # Play states until we reach the index (and cap index at last state)
+        missing_state_count = index - self.history_size + 1
+
+        if missing_state_count > 1 or force_overlay:
+            overlay_text = f"{overlay_text}\n\n{BOT_CALC_DISCLAIMER}"
+            self.add_overlay(
+                lambda: self._do_set_replay_index(index, apply_vfx, disable_autoplay),
+                text=overlay_text,
+                after=after,
+            )
+        else:
+            self._do_set_replay_index(index, apply_vfx, disable_autoplay)
+            if after is not None:
+                after()
+
+    def _do_set_replay_index(self, index, apply_vfx, disable_autoplay):
+        # Play states until we reach the index (and set cap index at last state)
+        missing_state_count = index - self.history_size + 1
         if self.history_size <= index:
-            missing_state_count = index - self.history_size + 1
             self.play_states(missing_state_count)
-            index = min(index, self.history_size - 1)
+        fixed_index = min(index, self.history_size - 1)
         # Set the index
-        apply_vfx = apply_vfx and index != self.__replay_index
-        self.__replay_index = index
-        if apply_vfx:
-            self.add_state_vfx(index, redraw_last_steps=True)
+        do_apply_vfx = apply_vfx and fixed_index != self.__replay_index
+        self.__replay_index = fixed_index
+        if do_apply_vfx:
+            self.add_state_vfx(fixed_index, redraw_last_steps=True)
             self._highlight_current_unit()
         if disable_autoplay:
             self.autoplay = False
@@ -118,14 +142,6 @@ class BattleManager(Battle, BattleAPI):
         """The state at index of `BattleManager.replay_index`."""
         return self.history[self.replay_index]
 
-    def play_all(self, *args, **kwargs):
-        """Overrides the parent method in order to set the replay_index.
-
-        See: `BattleManager.replay_index`.
-        """
-        super().play_all(*args, **kwargs)
-        self.set_replay_index()
-
     def set_to_next_round(self, backwards: bool = False):
         """Set the replay to the next "end of round" state (or game over).
 
@@ -133,20 +149,43 @@ class BattleManager(Battle, BattleAPI):
 
         See: `botroyale.logic.state.State.end_of_round`.
         """
-        delta = 1 if not backwards else -1
-        if self.replay_state.end_of_round:
-            self.set_replay_index(index_delta=1 if not backwards else -1)
-        while not self.replay_state.end_of_round:
-            if self.replay_state.game_over and not backwards:
-                break
-            self.set_replay_index(index_delta=delta)
+        target_exists = True
+        if not backwards and not self.state.game_over:
+            live_round = self.state.round_count + self.state.end_of_round
+            replay_round = (
+                self.replay_state.round_count + self.replay_state.end_of_round
+            )
+            target_exists = live_round > replay_round
+
+        def _do_set_to_next_round():
+            delta = 1 if not backwards else -1
+            if self.replay_state.end_of_round:
+                self.set_replay_index(index_delta=1 if not backwards else -1)
+            while not self.replay_state.end_of_round:
+                if self.replay_state.game_over and not backwards:
+                    break
+                self.set_replay_index(index_delta=delta)
+
+        if target_exists:
+            _do_set_to_next_round()
+        else:
+            self.add_overlay(
+                _do_set_to_next_round,
+                f"Playing to next round...\n\n{BOT_CALC_DISCLAIMER}",
+            )
 
     def preplay(self):
         """Play the entire battle, then set the replay index to the start.
 
         See: `BattleManager.replay_index`.
         """
-        self.play_all()
+        self.set_replay_index(
+            1_000_000,
+            overlay_text="Pre-playing full battle...",
+            after=self._reset_to_start,
+        )
+
+    def _reset_to_start(self, *args):
         self.flush_vfx()
         self.set_replay_index(0)
 
@@ -379,9 +418,17 @@ class BattleManager(Battle, BattleAPI):
                 for i, r in enumerate(STEP_RATES[:5])
             ],
             Control(
-                "Replay", "Battle start", lambda: self.set_replay_index(0), "^+ left"
+                "Replay",
+                "Battle start",
+                lambda: self.set_replay_index(0),
+                "^+ left",
             ),
-            Control("Replay", "Battle end <!!!>", lambda: self.play_all(), "^+ right"),
+            Control(
+                "Replay",
+                "Battle end <!!!>",
+                lambda: self.set_replay_index(1_000_000),
+                "^+ right",
+            ),
             Control("Replay", "Live", lambda: self.set_replay_index(), "^ l"),
             Control(
                 "Replay",
@@ -408,7 +455,10 @@ class BattleManager(Battle, BattleAPI):
                 "+ left",
             ),
             Control(
-                "Replay", "Next round", lambda: self.set_to_next_round(), "^ right"
+                "Replay",
+                "Next round",
+                lambda: self.set_to_next_round(),
+                "^ right",
             ),
             Control(
                 "Replay",

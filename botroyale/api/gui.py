@@ -174,6 +174,18 @@ class VFX:
         return dataclass_asdict(self)
 
 
+@dataclass
+class Overlay:
+    """Represents a function that should be called while displaying an overlay."""
+
+    func: Callable[[], None]
+    """Function to be called."""
+    text: str = "Loading..."
+    """Text to display on the overlay."""
+    after: Optional[Callable[[], None]] = None
+    """Function to call when completed."""
+
+
 class BattleAPI:
     """Base class for the API between the GUI's main menu and the logic.
 
@@ -183,6 +195,7 @@ class BattleAPI:
 
     def __init__(self):
         """Initialize the class."""
+        self.__overlay_queue = deque()
         self.__vfx_queue = deque()
         self.__clear_vfx_flag = False
 
@@ -205,6 +218,16 @@ class BattleAPI:
     def set_visible(self, visible: bool):
         """Called when the GUI is shown or hidden from view."""
         pass
+
+    def add_overlay(self, *args, **kwargs):
+        """Add an Overlay to the queue."""
+        self.__overlay_queue.append(Overlay(*args, **kwargs))
+
+    def flush_overlays(self) -> list[Overlay]:
+        """Clears and returns the overlays from queue."""
+        r = list(self.__overlay_queue)
+        self.__overlay_queue = deque()
+        return r
 
     # Info panel
     def get_info_panel_text(self) -> str:

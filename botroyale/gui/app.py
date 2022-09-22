@@ -6,10 +6,12 @@ responsible for running the internal mainloop, and switching between the modes.
 
 See: `MainMenu` and `BattleContainer`.
 """
+from typing import Optional
+from collections import deque
 from botroyale.util import PACKAGE_DIR, settings
 from botroyale.util.file import popen_path, get_usr_dir
 from botroyale.util.time import RateCounter
-from botroyale.api.gui import GameAPI, BattleAPI, Control
+from botroyale.api.gui import GameAPI, BattleAPI, Control, Overlay
 from botroyale.gui import (
     kex as kx,
     im_register_controls,
@@ -53,6 +55,8 @@ class App(kx.App):
             # the resize has no effect.
             kx.schedule_once(kx.Window.maximize)
         # Setup
+        self.queued_overlays = deque()
+        self._overlay_cooldown = 0
         self.game_api = game_api
         self.fps_counter = RateCounter(sample_size=FPS, starting_elapsed=1000 / FPS)
         # Make widgets
@@ -85,6 +89,16 @@ class App(kx.App):
 
     def update(self, dt):
         """Called every frame."""
+        if self.queued_overlays:
+            if self._overlay_cooldown > 0:
+                self._overlay_cooldown -= 1
+                return
+            self._overlay_cooldown += 1
+            overlay = self.queued_overlays.popleft()
+            assert isinstance(overlay, Overlay)
+            logger(f"Executing {overlay=}")
+            kx.with_overlay(text=overlay.text, after=overlay.after)(overlay.func)()
+            return
         self.fps_counter.tick()
         if self.sm.current == "menu":
             self.menu.update()
@@ -147,7 +161,7 @@ class App(kx.App):
 
     def get_controls(self):
         """Global app controls."""
-        controls = [
+        return [
             Control("App", "Main Menu", self.show_menu, "escape"),
             Control("App", "Main Menu", self.show_menu, "f1"),
             Control("App", "Battle", self.show_battle, "f2"),
@@ -156,12 +170,12 @@ class App(kx.App):
             Control("App", "Restart", kx.restart_script, "^+ w"),
             Control("App", "Quit", quit, "^+ q"),
         ]
-        if HOTKEY_DEBUG:
-            controls.insert(
-                0,
-                Control("App", "Hotkey debug", self.hotkey_debug, "^!+ d"),
-            )
-        return controls
+
+    def debug(self, *args):
+        """GUI Debug."""
+        logger("GUI DEBUG")
+        print(f"{self.current_focus=}")
+        self.hotkey_debug()
 
     def hotkey_debug(self, *args):
         """Debug logs."""
@@ -177,3 +191,9 @@ class App(kx.App):
                 ]
             )
         )
+
+    def overlay_calls(self, overlays: Optional[list[Overlay]]):
+        """Calls functions while displaying an overlay."""
+        if overlays is None:
+            return
+        self.queued_overlays.extend(overlays)

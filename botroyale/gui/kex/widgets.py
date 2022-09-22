@@ -15,6 +15,7 @@ from .util import (
 )
 
 
+SimpleCallable = Callable[[], None]
 logger = print
 get_app = kv.App.get_running_app
 
@@ -183,7 +184,7 @@ class XOverlay(kv.FocusBehavior, XAnchor):
         super().__init__(**kwargs)
         self.make_bg(XColor(a=alpha))
         self.label = self.add(XLabel(text=text))
-        self.label.set_size(x=300, y=75)
+        self.label.set_size(x=500, y=150)
         self.label.make_bg(XColor.from_name("red", 0.15))
         if block_input:
             self.bind(
@@ -195,8 +196,16 @@ class XOverlay(kv.FocusBehavior, XAnchor):
             self.keyboard_on_key_down = self.block_touch
             self.keyboard_on_key_up = self.block_touch
 
+    def set_focus(self, *args, **kwargs):
+        """An XOverlay should only ever get focus when it's created."""
+        pass
+
     def block_touch(self, *args):
         return True
+
+
+class XRoot(kv.FocusBehavior, XAnchor):
+    pass
 
 
 class XApp(XWidget, kv.App):
@@ -215,7 +224,8 @@ class XApp(XWidget, kv.App):
             enable_multitouch: Enable multitouch.
         """
         super().__init__(**kwargs)
-        self.root = XAnchor()
+        self.root = XRoot()
+        self.keyboard = kv.Window.request_keyboard(consume_args, self.root)
         XWindow.enable_escape_exit(escape_exits)
         if not enable_multitouch:
             XWindow.disable_multitouch()
@@ -253,6 +263,14 @@ class XApp(XWidget, kv.App):
         """Add a widget to the root widget."""
         return self.root.add
 
+    @property
+    def current_focus(self):
+        w = self.keyboard.target
+        if w is None:
+            w = self.root
+            self.root.set_focus(delay=0)
+        return w
+
     def _intercept_multitouch(self, w, m):
         if not hasattr(m, "multitouch_sim"):
             return False
@@ -261,61 +279,117 @@ class XApp(XWidget, kv.App):
         return False
 
 
-def frozen_overlay(**overlay_kwargs):
-    """Wrapper for creating an overlay for functions that block execution.
+def queue(
+    before: Optional[SimpleCallable] = None,
+    after: Optional[SimpleCallable] = None,
+):
+    """Decorator for queuing functions before and after drawing frames.
 
-    Used for functions that will block code execution for a significant period
-    of time, for user feedback. Will create an overlay on the app, call the
-    function, and remove the overlay.
+    Used for performing GUI operations before and after functions that will
+    block code execution for a significant period of time. Functions that would
+    otherwise freeze the GUI without feedback can be wrapped with this decorator
+    to give user feedback.
+
+    The following order of operations will be queued:
+
+    1. Call *before*
+    2. Draw GUI frame
+    3. Call the wrapped function
+    4. Call *after*
 
     ### Example usage:
     ```python
-    @frozen_overlay(text="Sleeping for 2 seconds")
+    @queue(
+        before=lambda: print("Drawing GUI frame then executing function..."),
+        after=lambda: print("Done executing..."),
+    )
     def do_sleep():
         time.sleep(2)
     ```
 
     Args:
-        overlay_kwargs: Keyword arguments for Overlay.
+        before: Call first, before drawing a frame.
+        after: Call last, after calling wrapped function.
     """
 
-    def frozen_overlay_inner(func):
-        def frozen_overlay_wrapper(*args, **kwargs):
-            app = kv.App.get_running_app()
-            if app is None:
-                func(*args, **kwargs)
-                return
+    def queue_inner(func):
+        def queue_wrapper(*args, **kwargs):
+            before()
             wrapped = partial(func, *args, **kwargs)
-            overlay = app.root.add(XOverlay(**overlay_kwargs))
             kv.Clock.schedule_once(
-                lambda dt: _call_then_remove(wrapped, overlay),
+                lambda dt: _call_with_after(wrapped, after),
                 0.05,
             )
 
-        return frozen_overlay_wrapper
+        return queue_wrapper
 
-    return frozen_overlay_inner
+    return queue_inner
 
 
-def _call_then_remove(func: Callable[[], Any], widget: XWidget):
+def _call_with_after(func: SimpleCallable, after: Optional[SimpleCallable] = None):
     func()
-    # In order to schedule properly, we must tick or else all the time spent
-    # calling func will be counted as time waited for scheduled callback
-    kv.Clock.tick()
-    kv.Clock.schedule_once(lambda dt: _final_remove(widget), 0.05)
+    if after is not None:
+        # In order to schedule properly, we must tick or else all the time spent
+        # calling func will be counted as time waited for scheduled callback
+        kv.Clock.tick()
+        kv.Clock.schedule_once(lambda dt: after(), 0.05)
 
 
-def _final_remove(widget):
-    next_focus = widget.get_focus_next()
-    if next_focus:
-        next_focus.focus = True
-    widget.parent.remove_widget(widget)
+def with_overlay(after: Optional[SimpleCallable] = None, **kwargs):
+    """Decorator to queue a function with a temporary XOverlay.
+
+    Uses the `queue` decorator to draw a frame before calling the function.
+
+    Example usage:
+    ```python
+    @with_overlay(text="my_func is executing...")
+    def my_func(seconds=2):
+        time.sleep(seconds)
+    ```
+
+    Or alternatively:
+    ```python
+    def my_func(seconds=2):
+        time.sleep(seconds)
+
+    with_overlay(text="my_func is executing...")(my_func)(seconds=1)
+
+    Args:
+        after: Optionally call after removing overlay.
+        kwargs: Keyword arguments for the XOverlay object.
+    ```
+    """
+    widgets = []
+
+    def create_overlay():
+        app = kv.App.get_running_app()
+        assert app is not None
+        widgets.append(app.current_focus)
+        overlay = XOverlay(**kwargs)
+        widgets.append(overlay)
+        app.root.add(overlay)
+
+    def destroy_overlay():
+        root, overlay = widgets
+        app = kv.App.get_running_app()
+        app.root.remove_widget(overlay)
+        if isinstance(root, XWidget):
+            root.set_focus()
+        if after is not None:
+            after()
+
+    def with_overlay_inner(func):
+        decorator = queue(before=create_overlay, after=destroy_overlay)
+        wrapped = decorator(func)
+        return wrapped
+
+    return with_overlay_inner
 
 
 KeyCalls = namedtuple("KeyCalls", ["keys", "on_press"])
 
 
-class XInputManager(kv.Widget):
+class XInputManager(XWidget, kv.Widget):
     """Object for handling keyboard presses.
 
     The characters representing the modifier keys:
@@ -1014,7 +1088,8 @@ __all__ = [
     "Anchor",
     "Scroll",
     "App",
-    "frozen_overlay",
+    "queue",
+    "with_overlay",
     "InputManager",
     "Label",
     "CheckBox",

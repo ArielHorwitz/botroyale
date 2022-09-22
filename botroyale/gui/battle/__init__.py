@@ -114,6 +114,7 @@ class BattleFrame(kx.Anchor):
         self.api.update()
         self.panel.update()
         self.map.update()
+        self.app.overlay_calls(self.api.flush_overlays())
 
 
 class Panel(kx.Box):

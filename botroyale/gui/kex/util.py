@@ -203,15 +203,20 @@ class XWidget:
         self.pos = int(x), int(y)
         return self
 
-    def set_focus(self, delay=0.05):
+    def set_focus(self, delay=0, debug=False):
         """Set to focus on this widget."""
         if delay:
-            kv.Clock.schedule_once(lambda w=self: w._do_set_focus(w), delay)
+            kv.Clock.schedule_once(lambda dt: self._do_set_focus(debug=debug), delay)
         else:
-            self._do_set_focus()
+            self._do_set_focus(debug=debug)
 
-    def _do_set_focus(self):
+    def _do_set_focus(self, *args, debug=False):
         self.focus = True
+        if debug:
+            kv.Clock.schedule_once(
+                lambda dt: print(f"{self} got focus. {self.app.current_focus=}"),
+                0.05,
+            )
 
     def make_bg(self, color: Optional[XColor] = None, source: Optional[str] = None):
         """Add or update an image below the widget."""
