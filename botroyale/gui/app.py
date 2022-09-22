@@ -6,8 +6,8 @@ responsible for running the internal mainloop, and switching between the modes.
 
 See: `MainMenu` and `BattleContainer`.
 """
-from botroyale.util import PACKAGE_DIR
-from botroyale.util import settings
+from botroyale.util import PACKAGE_DIR, settings
+from botroyale.util.file import popen_path, get_usr_dir
 from botroyale.util.time import RateCounter
 from botroyale.api.gui import GameAPI, BattleAPI, Control
 from botroyale.gui import (
@@ -130,6 +130,11 @@ class App(kx.App):
         kx.schedule_once(self._activate_current_screen)
         logger(f"Switched to screen: {screen}")
 
+    def show_usrdir(self, *args):
+        """Open the user's directory."""
+        usrdir = get_usr_dir("subfolder").parent
+        popen_path(usrdir)
+
     def _activate_current_screen(self, *args):
         current_screen = self.sm.current
         for screen_name, frame in self.screen_frames.items():
@@ -146,6 +151,7 @@ class App(kx.App):
             Control("App.Main Menu", self.show_menu, "escape"),
             Control("App.Main Menu", self.show_menu, "f1"),
             Control("App.Battle", self.show_battle, "f2"),
+            Control("App.User folder", self.show_usrdir, None),
             Control("App.Restart", kx.restart_script, "^+ w"),
             Control("App.Quit", quit, "^+ q"),
         ]
