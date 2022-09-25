@@ -1,26 +1,31 @@
-"""Main Menu GUI.
+"""Main menu screen.
 
-Associated with a `botroyale.api.gui.GameAPI`, to display a menu of widgets with
-the ability to create a new `botroyale.api.gui.BattleAPI` object for the
-`Battle` class.
+Displays a menu of widgets and is associated with a `botroyale.api.gui.GameAPI`.
+The purpose of these widgets is to allow configuring and customizing the
+creation of a new `botroyale.api.gui.BattleAPI` object (to be used by the
+`botroyale.gui.battle.BattleScreen`).
+
+The `MenuFrame` is responsible for displaying the menu widgets as well as
+relaying user interactions to the API and updating the menu accordingly.
 """
 from typing import Callable
 from botroyale.api.gui import GameAPI, BattleAPI, Control, MENU_UPDATE_RESPONSES
 from botroyale.gui import (
     kex as kx,
-    widget_defaults as defaults,
-    im_register_controls,
+    _defaults as defaults,
+    register_controls,
     logger,
     hotkey_logger,
 )
 from botroyale.gui.menubar import MenuBar
-from botroyale.gui.menu.menuwidget import get_menu_widget, WIDGETS_FRAME_BG
+from botroyale.gui.menu._menuwidget import get_menu_widget, WIDGETS_FRAME_BG
 
 
 NewBattleCall = Callable[[BattleAPI], None]
+NEW_BATTLE_HOTKEY = "spacebar"
 
 
-class MainMenu(kx.ZBox):
+class MainMenuScreen(kx.ZBox):
     """See module documentation for details."""
 
     def __init__(
@@ -30,7 +35,13 @@ class MainMenu(kx.ZBox):
         start_new_battle: NewBattleCall,
         **kwargs,
     ):
-        """See module documentation for details."""
+        """The container screen.
+
+        Args:
+            app_controls: A list of Controls for this screen.
+            api: The logic API object.
+            start_new_battle: The function to call for providing a new BattleAPI.
+        """
         super().__init__(orientation="vertical", **kwargs)
         assert isinstance(api, GameAPI)
         self.api = api
@@ -39,10 +50,11 @@ class MainMenu(kx.ZBox):
         self.bar = MenuBar(app_controls + controls)
         self.im = kx.InputManager(
             name="Main menu",
-            active=False,
+            default_controls=False,
             logger=hotkey_logger,
+            log_callback=True,
         )
-        im_register_controls(self.im, controls)
+        register_controls(self.im, controls)
         # Assemble widgets
         self.clear_widgets()
         self.add(self.bar, self.menu)
@@ -53,18 +65,18 @@ class MainMenu(kx.ZBox):
 
     def activate(self, *args):
         """Set the widget as being visible."""
-        self.im.activate()
+        self.im.active = True
 
     def deactivate(self, *args):
         """Set the widget as being invisible."""
-        self.im.deactivate()
+        self.im.active = False
 
 
 class MenuFrame(kx.Anchor):
-    """Builds the widgets menu for the GameAPI."""
+    """Container of menu widgets."""
 
     def __init__(self, api: GameAPI, start_new_battle: NewBattleCall, **kwargs):
-        """See module documentation for details."""
+        """Initialize with an API objcet and a new battle callback."""
         super().__init__(**kwargs)
         self.api = api
         self.start_new_battle = start_new_battle
@@ -75,7 +87,7 @@ class MenuFrame(kx.Anchor):
     def get_controls(self):
         """Controls for menu."""
         return [
-            Control("Battle", "New battle", self._try_new_battle, "spacebar"),
+            Control("Battle", "New battle", self._try_new_battle, NEW_BATTLE_HOTKEY),
             Control(
                 "Battle", "Refresh menu", lambda *a: self.update(force=True), "enter"
             ),
@@ -85,7 +97,7 @@ class MenuFrame(kx.Anchor):
         self.info_panel.text = self.api.get_info_panel_text()
         self.new_battle_btn.text = (
             f"{self.api.get_new_battle_text()}"
-            f"\n([i]{kx.InputManager.humanize_keys('spacebar')}[/i])"
+            f"\n([i]{kx.InputManager.humanize(NEW_BATTLE_HOTKEY)}[/i])"
         )
 
     def _make_widgets(self):

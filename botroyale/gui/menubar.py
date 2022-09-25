@@ -1,8 +1,11 @@
-"""Top menu bar widget."""
+"""Top menu bar widget.
+
+Is used by screens of the app, works well with `botroyale.api.gui.Control`.
+"""
 from collections import defaultdict
 from botroyale.gui import (
     kex as kx,
-    widget_defaults as defaults,
+    _defaults as defaults,
 )
 from botroyale.api.gui import Control
 from botroyale.util import settings
@@ -21,7 +24,7 @@ class MenuBar(kx.Box):
     """See module documentation for details."""
 
     def __init__(self, controls: list[Control], **kwargs):
-        """See module documentation for details."""
+        """Initialized with a list of Controls."""
         super().__init__(**kwargs)
         self.set_size(y=40)
         self.make_bg(kx.get_color("black"))
@@ -29,7 +32,7 @@ class MenuBar(kx.Box):
         self.set_controls(controls)
 
     def set_controls(self, controls: list[Control]):
-        """Reset the controls."""
+        """Reset the menu bar with a list of Controls."""
         self.controls = _categorize_controls(controls)
         self.clear_widgets()
         self.add(*self._get_spinner_widgets(controls))
@@ -42,8 +45,8 @@ class MenuBar(kx.Box):
             control_labels = []
             for c in controls:
                 label = c.label
-                if c.hotkey:
-                    hotkey_label = kx.InputManager.humanize_keys(c.hotkey)
+                if c.hotkeys:
+                    hotkey_label = kx.InputManager.humanize(c.hotkeys[0])
                     label = f"{label} ([i]{hotkey_label}[/i])"
                 control_labels.append(label)
             spinner = kx.Spinner(

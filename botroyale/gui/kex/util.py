@@ -1,6 +1,7 @@
 """Kex utilities."""
 
 from typing import Optional, Literal, Any, Callable, Union
+from functools import partial, wraps
 import time
 import os
 import sys
@@ -8,6 +9,8 @@ import random
 import numpy as np
 from . import kivy as kv
 
+
+SimpleCallable = Callable[[], None]
 
 COLORS = {
     "black": (0.0, 0.0, 0.0),
@@ -57,7 +60,15 @@ class XColor:
         a: float = 1,
         v: float = 1,
     ):
-        """Initialize the class."""
+        """Initialize the class.
+
+        Args:
+            r: Red component.
+            g: Green component.
+            b: Blue component.
+            a: Alpha component.
+            v: Value multiplier (multiplies `rgb` values).
+        """
         r, g, b = r * v, g * v, b * v
         self.__rgba = r, g, b, a
 
@@ -74,7 +85,7 @@ class XColor:
         return cls(*color, a)
 
     def alternate_color(self, drift: float = 0.5) -> "XColor":
-        """Return a color that is offset from us by *drift* amount."""
+        """Return a color that is offset from self by *drift* amount."""
         alt_rgb = [(c + drift) % 1 for c in self.rgb]
         return self.__class__(*alt_rgb, self.a)
 
@@ -110,8 +121,11 @@ class XColor:
 
 
 class XWindow:
+    """Window controls."""
+
     @classmethod
     def maximize(cls, *args):
+        """Maixmize the window."""
         kv.Window.maximize()
 
     @classmethod
@@ -154,6 +168,8 @@ class XWindow:
 
 
 class XWidget:
+    """A mixin for kivy widgets with useful methods."""
+
     def add(
         self,
         *children: tuple[kv.Widget, ...],
@@ -203,20 +219,9 @@ class XWidget:
         self.pos = int(x), int(y)
         return self
 
-    def set_focus(self, delay=0, debug=False):
-        """Set to focus on this widget."""
-        if delay:
-            kv.Clock.schedule_once(lambda dt: self._do_set_focus(debug=debug), delay)
-        else:
-            self._do_set_focus(debug=debug)
-
-    def _do_set_focus(self, *args, debug=False):
+    def set_focus(self, *args):
+        """Set the focus on this widget."""
         self.focus = True
-        if debug:
-            kv.Clock.schedule_once(
-                lambda dt: print(f"{self} got focus. {self.app.current_focus=}"),
-                0.05,
-            )
 
     def make_bg(self, color: Optional[XColor] = None, source: Optional[str] = None):
         """Add or update an image below the widget."""
@@ -274,29 +279,72 @@ class XWidget:
 
     @property
     def app(self):
+        """Get the running app."""
         return kv.App.get_running_app()
+
+    def logger(self, message: str):
+        """Log a message in the XApp's logger."""
+        kv.App.logger(message)
 
 
 get_color = XColor.from_name
 random_color = XColor.from_random
 
 
+def queue_around_frame(
+    func,
+    before: Optional[SimpleCallable] = None,
+    after: Optional[SimpleCallable] = None,
+):
+    """Decorator for queuing functions before and after drawing frames.
+
+    Used for performing GUI operations before and after functions that will
+    block code execution for a significant period of time. Functions that would
+    otherwise freeze the GUI without feedback can be wrapped with this decorator
+    to give user feedback.
+
+    The following order of operations will be queued:
+
+    1. Call *before*
+    2. Draw GUI frame
+    3. Call the wrapped function
+    4. Call *after*
+
+    ### Example usage:
+    ```python
+    @queue(
+        before=lambda: print("Drawing GUI frame then executing function..."),
+        after=lambda: print("Done executing..."),
+    )
+    def do_sleep():
+        time.sleep(2)
+    ```
+    """
+
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        if before is not None:
+            before()
+        wrapped = partial(func, *args, **kwargs)
+        kv.Clock.schedule_once(lambda dt: _call_with_after(wrapped, after), 0.05)
+
+    return wrapper
+
+
+def _call_with_after(func: SimpleCallable, after: Optional[SimpleCallable] = None):
+    func()
+    if after is not None:
+        # In order to schedule properly, we must tick or else all the time spent
+        # calling func will be counted as time waited on kivy's clock schedule.
+        kv.Clock.tick()
+        kv.Clock.schedule_once(lambda dt: after(), 0.05)
+
+
 def center_sprite(
     pos: tuple[float, float],
     size: tuple[float, float],
 ) -> tuple[int, int]:
-    """Find the offset required to center something of *size* on *pos*.
-
-    Given the center position *pos* and a size of *size*, return the position
-    of the bottom left corner.
-
-    Args:
-        pos: Position to center on.
-        size: Size of object.
-
-    Returns:
-        Position of bottom left corner.
-    """
+    """Given *size* and center position *pos*, return the bottom left corner."""
     assert len(pos) == 2 and len(size) == 2
     return int(pos[0] - (size[0] / 2)), int(pos[1] - (size[1] / 2))
 
@@ -327,29 +375,20 @@ def placeholder(
     """Create a placeholder function that can consume all arguments passed to it."""
 
     def placeholder_inner(*args, **kwargs):
-        if verbose:
-            print(
-                "\n".join(
-                    [
-                        f"Placeholder function called: {wrapper_args}{wrapper_kwargs}",
-                        f"  {args=}",
-                        f"  {kwargs=}",
-                    ]
-                )
-            )
-        else:
-            print("Placeholder function", end="")
-            print(f": {wrapper_args}{wrapper_kwargs}" if args else " called.")
+        print(
+            f"Placeholder function {wrapper_args}{wrapper_kwargs} : "
+            f"{args}{kwargs} -> {returns=}"
+        )
         return returns
 
     return placeholder_inner
 
 
-def ping():
+def _ping():
     return time.time() * 1000
 
 
-def pong(ping_):
+def _pong(ping_):
     return time.time() * 1000 - ping_
 
 
@@ -357,19 +396,7 @@ schedule_once = kv.Clock.schedule_once
 schedule_interval = kv.Clock.schedule_interval
 
 
-Window = XWindow
-Widget = XWidget
-__all__ = [
-    "Window",
-    "Widget",
-    "XColor",
-    "get_color",
-    "random_color",
-    "center_sprite",
-    "text_texture",
-    "restart_script",
-    "consume_args",
-    "placeholder",
-    "schedule_once",
-    "schedule_interval",
-]
+__pdoc__ = {
+    "schedule_once": False,
+    "schedule_interval": False,
+}

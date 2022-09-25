@@ -99,16 +99,20 @@ class BattleManager(Battle, BattleAPI):
         if missing_state_count > 1 or force_overlay:
             overlay_text = f"{overlay_text}\n\n{BOT_CALC_DISCLAIMER}"
             self.add_overlay(
-                lambda: self._do_set_replay_index(index, apply_vfx, disable_autoplay),
+                lambda: self._do_set_replay_index(
+                    index,
+                    apply_vfx,
+                    disable_autoplay,
+                    after,
+                ),
                 text=overlay_text,
-                after=after,
             )
         else:
             self._do_set_replay_index(index, apply_vfx, disable_autoplay)
             if after is not None:
                 after()
 
-    def _do_set_replay_index(self, index, apply_vfx, disable_autoplay):
+    def _do_set_replay_index(self, index, apply_vfx, disable_autoplay, after=None):
         # Play states until we reach the index (and set cap index at last state)
         missing_state_count = index - self.history_size + 1
         if self.history_size <= index:
@@ -122,6 +126,8 @@ class BattleManager(Battle, BattleAPI):
             self._highlight_current_unit()
         if disable_autoplay:
             self.autoplay = False
+        if after is not None:
+            after()
 
     @property
     def replay_mode(self) -> bool:

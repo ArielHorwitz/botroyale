@@ -4,7 +4,7 @@ from kivy.app import App
 from kivy.clock import Clock
 from kivy.config import Config
 from kivy.core.text import Label as CoreLabel
-from kivy.core.window import Window
+from kivy.core.window import Window, Keyboard
 from kivy.properties import (
     ObjectProperty,
     AliasProperty,
@@ -36,9 +36,12 @@ from kivy.uix.togglebutton import ToggleButton
 from kivy.uix.textinput import TextInput
 from kivy.uix.image import Image
 
-# Mixings
-from kivy.uix.behaviors import ButtonBehavior
-from kivy.uix.behaviors import FocusBehavior
+# Mixins
+from kivy.uix.behaviors import (
+    ButtonBehavior,
+    FocusBehavior,
+    ToggleButtonBehavior,
+)
 
 # Animation
 from kivy.uix.screenmanager import (

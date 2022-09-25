@@ -1,5 +1,8 @@
-"""Default colors and Kex widget arguments."""
-from collections import namedtuple
+"""A module containing defaults for Kex widgets.
+
+Used internally for resolving color schemes and other arguments for widgets.
+"""
+from typing import NamedTuple
 from botroyale.util import settings
 from botroyale.gui import kex as kx, ASSETS_DIR
 
@@ -13,7 +16,13 @@ FONT_MONO = str(ASSETS_DIR / "fonts" / f"{FONT_NAME_MONO}.ttf")
 
 
 # Colors
-ColorPair = namedtuple("ColorPair", ["bg", "fg"])
+class ColorScheme(NamedTuple):
+    """A color scheme."""
+
+    bg: kx.XColor
+    fg: kx.XColor
+
+
 USER_COLORS = settings.get("gui.colors")
 BLACK = kx.get_color("black")
 GREY = kx.get_color("grey")
@@ -25,7 +34,7 @@ FULL_PALETTE = tuple(list(PALETTE) + list(PALETTE_BG) + [WHITE, GREY, BLACK])
 
 def _get_user_color(name):
     color = USER_COLORS[name]
-    return ColorPair(
+    return ColorScheme(
         FULL_PALETTE[color[0]],
         FULL_PALETTE[color[1]],
     )

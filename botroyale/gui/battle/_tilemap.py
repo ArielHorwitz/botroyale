@@ -1,10 +1,10 @@
-"""Tilemap GUI."""
+"""Battle Tilemap."""
 import math
 import itertools
 import numpy as np
 from botroyale.gui import (
     kex as kx,
-    widget_defaults as defaults,
+    _defaults as defaults,
     logger,
     ASSETS_DIR,
 )
@@ -86,7 +86,7 @@ class TileMap(kx.Relative):
             pos = np.asarray(m.pos) - self.screen_center
             pos = self.to_widget(*pos, relative=True)
             hex = self.real_center.pixel_position_to_hex(self.tile_radius_padded, pos)
-            mods = self.app.im.currently_pressed_mods
+            mods = self.app.im.pressed_mods
             logger(f"Clicked {btn=} with {mods=} : {pos} -> {hex}")
             self.handle_hex_click(hex, btn, mods=mods)
             return True

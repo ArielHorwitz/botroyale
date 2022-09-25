@@ -8,12 +8,10 @@ from botroyale.api import *  # noqa: F401,F403
 
 __all__ = api.__all__
 __pdoc__ = {
-    # The GUI backend needs no public documentation
-    "gui": False,
     # The bots subpackage contains the built-in bots
     "bots": False,
     # The run subpackage has arg parsing for help
     "run": False,
-    # Filtering out undocumented items raises a warning
+    # Filter out attributes that would be documented because of the start import
     **{n: False for n in api.DOCUMENTED_API},
 }

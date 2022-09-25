@@ -1,26 +1,29 @@
-"""GUI App.
+"""The GUI application itself.
 
-Has two modes: main menu, and battle. Each is associated with an API (GameAPI,
-and BattleAPI respectively), and fills the entire window. The `App` is mostly
-responsible for running the internal mainloop, and switching between the modes.
+Has two screens: main menu, and battle. Each is associated with an API object
+(GameAPI, and BattleAPI respectively) provided by the game logic that instructs
+the GUI. Each screen fills the entire window and manages its own
+`botroyale.gui.kex.widgets.input_manager.XInputManager` and menu bar. The `App`
+is mostly responsible for running the internal mainloop, and switching between
+the screens (allowing them to de/activate).
 
-See: `MainMenu` and `BattleContainer`.
+See: `botroyale.gui.menu.MainMenuScreen` and `botroyale.gui.battle.BattleScreen`.
 """
 from typing import Optional
 from collections import deque
+from functools import partial
 from botroyale.util import PACKAGE_DIR, settings
 from botroyale.util.file import popen_path, get_usr_dir
 from botroyale.util.time import RateCounter
 from botroyale.api.gui import GameAPI, BattleAPI, Control, Overlay
 from botroyale.gui import (
     kex as kx,
-    im_register_controls,
-    HOTKEY_DEBUG,
+    register_controls,
     logger,
     hotkey_logger,
 )
-from botroyale.gui.menu import MainMenu
-from botroyale.gui.battle import BattleContainer
+from botroyale.gui.menu import MainMenuScreen
+from botroyale.gui.battle import BattleScreen
 
 
 ICON = str(PACKAGE_DIR / "icon.ico")
@@ -29,18 +32,13 @@ WINDOW_SIZE = settings.get("gui.window_size")
 WINDOW_POS = settings.get("gui.window_pos")
 START_MAXIMIZED = settings.get("gui.window_maximize")
 TRANSITION_SPEED = settings.get("gui.transition_speed")
-LOG_HOTKEYS = settings.get("logging.hotkeys")
 
 
 class App(kx.App):
     """See module documentation for details."""
 
-    def __init__(self, game_api, **kwargs):
-        """See module documentation for details.
-
-        Args:
-            game_api: Instance of `botroyale.api.gui.GameAPI`.
-        """
+    def __init__(self, game_api: GameAPI, **kwargs):
+        """Initialize with a *game_api*."""
         logger("Starting app...")
         assert isinstance(game_api, GameAPI)
         # Kivy app configuration
@@ -60,17 +58,23 @@ class App(kx.App):
         self.game_api = game_api
         self.fps_counter = RateCounter(sample_size=FPS, starting_elapsed=1000 / FPS)
         # Make widgets
-        self.im = kx.InputManager(name="App", logger=hotkey_logger)
-        im_register_controls(self.im, self.get_controls())
-        self.sm = self.add(kx.ScreenManager(auto_transtion_speed=TRANSITION_SPEED))
-        self.menu = MainMenu(
+        self.im = kx.InputManager(
+            name="App",
+            logger=hotkey_logger,
+            log_callback=True,
+            log_press=True,
+            log_release=True,
+        )
+        register_controls(self.im, self.get_controls())
+        self.sm = self.add(kx.ScreenManager(transition_speed=TRANSITION_SPEED))
+        self.menu = MainMenuScreen(
             app_controls=self.get_controls(),
             api=self.game_api,
             start_new_battle=self._start_new_battle,
         )
-        self.battle = BattleContainer(
+        self.battle = BattleScreen(
             app_controls=self.get_controls(),
-            return_to_menu=self.show_menu,
+            return_to_menu=partial(self.switch_screen, "menu"),
         )
         self.sm.add_screen("menu", self.menu)
         self.sm.add_screen("battle", self.battle)
@@ -90,14 +94,12 @@ class App(kx.App):
     def update(self, dt):
         """Called every frame."""
         if self.queued_overlays:
-            if self._overlay_cooldown > 0:
-                self._overlay_cooldown -= 1
+            if self.overlay is not None:
                 return
-            self._overlay_cooldown += 1
             overlay = self.queued_overlays.popleft()
             assert isinstance(overlay, Overlay)
             logger(f"Executing {overlay=}")
-            kx.with_overlay(text=overlay.text, after=overlay.after)(overlay.func)()
+            self.with_overlay(overlay.func, text=overlay.text, after=overlay.after)
             return
         self.fps_counter.tick()
         if self.sm.current == "menu":
@@ -105,23 +107,15 @@ class App(kx.App):
         elif self.sm.current == "battle":
             self.battle.update()
 
-    def show_menu(self, *args, force=False):
-        """Switch to main menu."""
-        self.switch_screen("menu", force=force)
-
-    def show_battle(self, *args, force=False):
-        """Switch to battle."""
-        self.switch_screen("battle", force=force)
-
     def switch_screen(
         self,
         screen: str,
         force: bool = False,
         _attempt: int = 0,
     ):
-        """Switch screen and de/activate InputManagers."""
-        interval = 50
-        timeout = 2000
+        """Switch and activate a screen, deactivating others."""
+        interval = 0.05
+        timeout = 2
         if (_attempt * interval) > timeout:
             logger(f"Attempted to switch to screen {screen} but timed out.")
             return
@@ -138,16 +132,11 @@ class App(kx.App):
                         force=force,
                         _attempt=_attempt + 1,
                     ),
-                    0.05,
+                    interval,
                 )
             return
         kx.schedule_once(self._activate_current_screen)
         logger(f"Switched to screen: {screen}")
-
-    def show_usrdir(self, *args):
-        """Open the user's directory."""
-        usrdir = get_usr_dir("subfolder").parent
-        popen_path(usrdir)
 
     def _activate_current_screen(self, *args):
         current_screen = self.sm.current
@@ -156,44 +145,56 @@ class App(kx.App):
                 frame.activate()
             else:
                 frame.deactivate()
-        if HOTKEY_DEBUG:
-            self.hotkey_debug()
+        self._hotkey_debug()
 
     def get_controls(self):
         """Global app controls."""
         return [
-            Control("App", "Main Menu", self.show_menu, "escape"),
-            Control("App", "Main Menu", self.show_menu, "f1"),
-            Control("App", "Battle", self.show_battle, "f2"),
-            Control("App", "User folder", self.show_usrdir, "^+ f"),
-            Control("App", "Debug", self.debug, "!+ d"),
+            Control(
+                "App",
+                "Main Menu",
+                partial(self.switch_screen, "menu"),
+                ["f1", "escape"],
+            ),
+            Control("App", "Battle", partial(self.switch_screen, "battle"), "f2"),
+            Control("App", "User folder", _show_usrdir, "^+ f"),
+            Control("App", "Debug", self._debug, "!+ d"),
             Control("App", "Restart", kx.restart_script, "^+ w"),
             Control("App", "Quit", quit, "^+ q"),
         ]
 
-    def debug(self, *args):
+    def _debug(self, *args):
         """GUI Debug."""
         logger("GUI DEBUG")
         print(f"{self.current_focus=}")
-        self.hotkey_debug()
+        self._hotkey_debug()
 
-    def hotkey_debug(self, *args):
+    def _hotkey_debug(self, *args):
         """Debug logs."""
         hotkey_logger(
             "\n".join(
                 [
                     "=" * 50,
                     f"Current screen: {self.sm.current}",
-                    self.im._debug_summary,
-                    self.menu.im._debug_summary,
-                    self.battle.im._debug_summary,
+                    "",
+                    self.im._debug_str,
+                    "",
+                    self.menu.im._debug_str,
+                    "",
+                    self.battle.im._debug_str,
                     "=" * 50,
                 ]
             )
         )
 
     def overlay_calls(self, overlays: Optional[list[Overlay]]):
-        """Calls functions while displaying an overlay."""
+        """Queue calling functions while displaying an overlay."""
         if overlays is None:
             return
         self.queued_overlays.extend(overlays)
+
+
+def _show_usrdir(self, *args):
+    """Open the user's directory."""
+    usrdir = get_usr_dir("subfolder").parent
+    popen_path(usrdir)

@@ -50,9 +50,16 @@ class Control:
     """Name of the control function (e.g. "Start new battle")."""
     callback: Callable[[], None]
     """Callback when the control is invoked."""
-    hotkey: Optional[str] = None
-    """
-    Optionally specify to allow invoking this control with the hotkey."""
+    hotkeys: Optional[Union[str, list[str]]] = None
+    """Optionally specify to allow invoking this control with hotkeys."""
+
+    def __post_init__(self):
+        """Dataclass post init."""
+        if self.hotkeys is None:
+            self.hotkeys = []
+        if not isinstance(self.hotkeys, list):
+            assert isinstance(self.hotkeys, str)
+            self.hotkeys = [self.hotkeys]
 
 
 InputWidgetType = Literal[
@@ -212,7 +219,7 @@ class BattleAPI:
         """Returns a list of Controls for buttons and hotkeys in GUI."""
         return [
             Control("Battle", "Foo", lambda: glogger("foo"), "f"),
-            Control("Battle", "Bar", lambda: glogger("bar"), "b"),
+            Control("Battle", "Bar", lambda: glogger("bar"), ["b", "^ b"]),
         ]
 
     def set_visible(self, visible: bool):
