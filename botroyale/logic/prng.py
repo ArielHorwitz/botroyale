@@ -61,6 +61,8 @@ class PRNG:
     ```
     """
 
+    MAX_SEED_VALUE = MOD - 1
+
     def __init__(self, seed: Optional[int] = None):
         """Initialize the class."""
         if seed is None:
@@ -91,10 +93,10 @@ class PRNG:
         """The last value that was generated."""
         return self.__current_value
 
-    @staticmethod
-    def get_random_seed() -> int:
+    @classmethod
+    def get_random_seed(cls) -> int:
         """A random seed that is valid as `PRNG.seed`."""
-        return random.randint(0, MOD - 1)
+        return random.randint(0, cls.MAX_SEED_VALUE)
 
     def copy(self) -> "PRNG":
         """A copy of *self* with the same `PRNG.seed`."""

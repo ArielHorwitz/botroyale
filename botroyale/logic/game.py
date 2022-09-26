@@ -298,7 +298,6 @@ class StandardGameAPI(GameAPI):
 
         See: `botroyale.api.gui.GameAPI.get_new_battle`.
         """
-        logger(f"get_new_battle {menu_values=}")
         map_name = menu_values["map"]
         if menu_values["editor"]:
             return MapEditor(load_map=map_name)

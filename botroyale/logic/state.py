@@ -389,13 +389,13 @@ class State:
         ```
         """
         if not self.end_of_round:
-            return self.round_remaining_turns[0]
+            return int(self.round_remaining_turns[0])
         return None
 
     @property
     def game_over(self) -> bool:
         """If the game is over."""
-        return self.alive_mask.sum() <= 1
+        return bool(self.alive_mask.sum() <= 1)
 
     @property
     def winner(self) -> Optional[int]:

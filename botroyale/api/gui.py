@@ -169,9 +169,9 @@ class VFX:
     """Hex of image center."""
     direction: Hexagon
     """Hex to indicate direction for image rotation."""
-    start_step: Union[int, float]
+    start_step: float
     """In-game time before which the vfx expires."""
-    expire_step: Union[int, float]
+    expire_step: float
     """In-game time after which the vfx expires."""
     expire_seconds: float
     """Real-time seconds after which the vfx expires."""
@@ -283,7 +283,6 @@ class BattleAPI:
                 - `#` meta ("win" key)
                 - `^+` control + shift
         """
-        glogger(f"Clicked {button} on: {hex}")
         if button == "left":
             vfx = "mark-green"
         elif button == "right":

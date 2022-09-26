@@ -59,7 +59,7 @@ UNITTEST_PROFILES = {
     "dev": dict(max_examples=20),
     "debug": dict(max_examples=20, verbosity=Verb.verbose),
     "normal": dict(max_examples=100, verbosity=Verb.normal),
-    "extensive": dict(max_examples=500, verbosity=Verb.quiet),
+    "more": dict(max_examples=500, verbosity=Verb.quiet),
     "ci": dict(max_examples=2_000, verbosity=Verb.quiet),
 }
 
@@ -165,7 +165,7 @@ def run_test_suite(
     if "format" in test_names:
         add_result("black formatting (format)", _run_black(check_only=True) == 0)
     if "docs" in test_names:
-        add_result("pdoc3 documentation (docs)", test_docs())
+        add_result("pdoc3 documentation (docs)", _test_docs())
 
     assert len(outputs) == total_tests
     errors = total_tests - sum(results)
@@ -174,8 +174,10 @@ def run_test_suite(
         print(output)
     if errors > 0:
         print(f"FAIL. {errors}/{total_tests} tests failed.")
+        return False
     else:
         print(f"Pass. All {total_tests} tests passed.")
+        return True
 
 
 def _run_unittests(
@@ -308,12 +310,17 @@ def _run_black(
     return r.returncode
 
 
+def _test_docs() -> bool:
+    print("≡≡≡≡≡ Running docs test...")
+    return test_docs()
+
+
 def _collect_test_modules(dir=None):
     dir = dir if dir is not None else PROJ_DIR / "tests"
     for child in dir.iterdir():
-        if child.stem.startswith("_") or child.suffix != ".py":
+        if child.stem.startswith("_"):
             continue
         if child.is_dir():
             yield from _collect_test_modules(child)
-        elif child.is_file():
+        elif child.is_file() and child.suffix == ".py":
             yield child
