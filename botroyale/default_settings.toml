@@ -15,6 +15,33 @@ hotkeys = false
 fps = 30
 window_maximize = true
 window_size = [1280, 720]
+window_pos = [-1, -1]
+transition_speed = 0.4
+font_size = 16
+font = "liberation"
+font_mono = "firacode-mono-bold"
+line_height = 35
+palette = [
+  [0.24, 0.32, 0.48],  # dark blue
+  [0.62, 0.63, 0.76],  # purple blue
+  [0.68, 0.85, 0.88],  # darker cyan
+  [0.73, 0.97, 0.92],  # brighter cyan
+  [0.86, 0.60, 0.35],  # orange
+]
+debug_colors = false
+
+[gui.colors]
+# Color schemes [background, foreground]
+# To see colors by number, enable color debugging
+default = [5, 4]
+aux = [6, 4]
+normal = [6, -3]
+alt = [9, 2]
+light = [3, -1]
+dark = [5, -3]
+button = [6, 2]
+button_aux = [7, 2]
+button_light = [3, 5]
 
 [gui.menu]
 # Size of main menu widgets
@@ -59,11 +86,3 @@ units = [
   [0.7, 0.0, 0.5],
 ]
 walls = [0.6, 0.65, 0.6]
-
-[gui.fonts]
-size = 16
-default = "liberation"
-menubar = "liberation-bold"
-panel = "firacode-mono-bold"
-menu = "firacode-mono-bold"
-tilemap = "liberation-mono"

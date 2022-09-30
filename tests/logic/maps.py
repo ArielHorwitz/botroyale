@@ -6,12 +6,18 @@ from botroyale.logic.state import State
 
 
 MAPS = tuple(_find_maps(use_custom=False).keys())
-st_map = st.sampled_from(MAPS)
+st_map_name = st.sampled_from(MAPS)
+st_map = st.builds(get_map_state, st_map_name)
+
+
+@given(st_map_name)
+def test_get_map_state(map_name):
+    initial_state = get_map_state(map_name)
+    assert isinstance(initial_state, State)
 
 
 @given(st_map)
-def test_get_map_state(map):
-    state = get_map_state(map)
+def test_get_map_state(state):
     assert isinstance(state, State)
     assert not state.game_over
     assert state.end_of_round

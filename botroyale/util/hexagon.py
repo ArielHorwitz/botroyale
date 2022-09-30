@@ -111,9 +111,10 @@ class Hexagon:
         The arguments "q", "r", and "s" are components of the cube coordinates.
         """
         self.__cube: tuple[int, int, int] = (q, r, s)
-        assert all(isinstance(c, int) for c in self.__cube)
-        assert sum(self.__cube) == 0
         self.__offset: tuple[int, int] = convert_cube2offset(q, r, s)
+        assert all(isinstance(c, int) for c in self.__cube)
+        if not sum(self.__cube) == 0:
+            raise ValueError(f"Cube sum must equal to 0, got: {self.__cube}")
 
     @functools.cache
     def get_distance(self, hex: "Hexagon") -> int:

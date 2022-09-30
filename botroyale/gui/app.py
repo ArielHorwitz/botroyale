@@ -1,114 +1,200 @@
-from botroyale.util import PACKAGE_DIR
-from botroyale.util import settings
+"""The GUI application itself.
+
+Has two screens: main menu, and battle. Each is associated with an API object
+(GameAPI, and BattleAPI respectively) provided by the game logic that instructs
+the GUI. Each screen fills the entire window and manages its own
+`botroyale.gui.kex.widgets.input_manager.XInputManager` and menu bar. The `App`
+is mostly responsible for running the internal mainloop, and switching between
+the screens (allowing them to de/activate).
+
+See: `botroyale.gui.menu.MainMenuScreen` and `botroyale.gui.battle.BattleScreen`.
+"""
+from typing import Optional
+from collections import deque
+from functools import partial
+from botroyale.util import PACKAGE_DIR, settings
+from botroyale.util.file import popen_path, get_usr_dir
 from botroyale.util.time import RateCounter
-from botroyale.api.logging import logger as glogger
-from botroyale.api.gui import GameAPI, BattleAPI, Control, combine_control_menus
-from botroyale.gui import kex, logger
-from botroyale.gui.kex import widgets
-from botroyale.gui.menubar import MenuBar
-from botroyale.gui.game.game import GameScreen
-from botroyale.gui.battle.battle import BattleScreen
+from botroyale.api.gui import GameAPI, BattleAPI, Control, Overlay
+from botroyale.gui import (
+    kex as kx,
+    register_controls,
+    logger,
+    hotkey_logger,
+)
+from botroyale.gui.menu import MainMenuScreen
+from botroyale.gui.battle import BattleScreen
 
 
-ICON = str(PACKAGE_DIR / 'icon.ico')
-# User-configurable settings
-FPS = settings.get('gui.fps')
-WINDOW_SIZE = settings.get('gui.window_size')
-START_MAXIMIZED = settings.get('gui.window_maximize')
-LOG_HOTKEYS = settings.get('logging.hotkeys')
+ICON = str(PACKAGE_DIR / "icon.ico")
+FPS = settings.get("gui.fps")
+WINDOW_SIZE = settings.get("gui.window_size")
+WINDOW_POS = settings.get("gui.window_pos")
+START_MAXIMIZED = settings.get("gui.window_maximize")
+TRANSITION_SPEED = settings.get("gui.transition_speed")
 
 
-class App(widgets.App):
-    def __init__(self, game_api, **kwargs):
-        logger('Starting app...')
+class App(kx.App):
+    """See module documentation for details."""
+
+    def __init__(self, game_api: GameAPI, **kwargs):
+        """Initialize with a *game_api*."""
+        logger("Starting app...")
         assert isinstance(game_api, GameAPI)
-        # Kivy App widget configuration
+        # Kivy app configuration
         super().__init__(**kwargs)
-        self.title = 'Bot Royale'
+        self.title = "Bot Royale"
         self.icon = ICON
-        kex.resize_window(WINDOW_SIZE)
+        kx.Window.set_size(*WINDOW_SIZE)
+        if any(c >= 0 for c in WINDOW_POS):
+            kx.Window.set_position(*WINDOW_POS)
         if START_MAXIMIZED:
             # Schedule maximizing so that the resize happens first, otherwise
             # the resize has no effect.
-            widgets.kvClock.schedule_once(lambda *a: widgets.kvWindow.maximize())
+            kx.schedule_once(kx.Window.maximize)
         # Setup
+        self.queued_overlays = deque()
+        self._overlay_cooldown = 0
         self.game_api = game_api
-        self.fps_counter = RateCounter(sample_size=FPS, starting_elapsed=1000/FPS)
-        self.im = widgets.InputManager(
-            logger=glogger if LOG_HOTKEYS else lambda *a: None)
+        self.fps_counter = RateCounter(sample_size=FPS, starting_elapsed=1000 / FPS)
         # Make widgets
-        self.main_frame = self.add(widgets.FlipZIndex(orientation='vertical'))
-        self.game = GameScreen(self.game_api)
-        self.battle = None
-        self.set_menu_mode(force=True)
+        self.im = kx.InputManager(
+            name="App",
+            logger=hotkey_logger,
+            log_callback=True,
+            log_press=True,
+            log_release=True,
+        )
+        register_controls(self.im, self.get_controls())
+        self.sm = self.add(kx.ScreenManager(transition_speed=TRANSITION_SPEED))
+        self.menu = MainMenuScreen(
+            app_controls=self.get_controls(),
+            api=self.game_api,
+            start_new_battle=self._start_new_battle,
+        )
+        self.battle = BattleScreen(
+            app_controls=self.get_controls(),
+            return_to_menu=partial(self.switch_screen, "menu"),
+        )
+        self.sm.add_screen("menu", self.menu)
+        self.sm.add_screen("battle", self.battle)
+        self.screen_frames = {
+            "menu": self.menu,
+            "battle": self.battle,
+        }
+        self._activate_current_screen()
         # Start mainloop
-        self.hook_mainloop(FPS)
-        logger('GUI initialized.')
+        logger("GUI initialized, starting mainloop.")
+        self.hook(self.update, FPS)
 
-    def mainloop_hook(self, dt):
+    def _start_new_battle(self, api: BattleAPI):
+        self.battle.start_new_battle(api)
+        self.switch_screen("battle", force=True)
+
+    def update(self, dt):
         """Called every frame."""
-        # Count FPS
+        if self.queued_overlays:
+            if self.overlay is not None:
+                return
+            overlay = self.queued_overlays.popleft()
+            assert isinstance(overlay, Overlay)
+            logger(f"Executing {overlay=}")
+            self.with_overlay(overlay.func, text=overlay.text, after=overlay.after)
+            return
         self.fps_counter.tick()
-        self.bar.set_text(f'{self.fps_counter.rate:.2f} FPS')
-
-        # Update game or battle (depending on mode)
-        if not self.battle:
-            new_battle_api = self.game.update()
-            # Game update may return a BattleAPI if a new battle is to start
-            if new_battle_api:
-                assert isinstance(new_battle_api, BattleAPI)
-                self.set_battle_mode(new_battle_api)
-        if self.battle:
+        if self.sm.current == "menu":
+            self.menu.update()
+        elif self.sm.current == "battle":
             self.battle.update()
 
-    def set_menu_mode(self, force=False):
-        if not force and self.battle is None:
+    def switch_screen(
+        self,
+        screen: str,
+        force: bool = False,
+        _attempt: int = 0,
+    ):
+        """Switch and activate a screen, deactivating others."""
+        interval = 0.05
+        timeout = 2
+        if (_attempt * interval) > timeout:
+            logger(f"Attempted to switch to screen {screen} but timed out.")
             return
-        logger('GUI creating game menu...')
-        self.battle = None
-        # Recreate menu bar
-        game_controls = self.game.get_controls()
-        game_controls = combine_control_menus({'App': []}, game_controls)
-        app_controls = self.get_controls(include_menu_return=False)
-        controls = combine_control_menus(game_controls, app_controls)
-        self.bar = MenuBar(controls)
-        self.register_controls(controls)
-        # Assemble widgets
-        self.main_frame.clear_widgets()
-        self.main_frame.add(self.bar)
-        self.main_frame.add(self.game)
+        switch_success = self.sm.switch_name(screen)
+        if not switch_success:
+            if force:
+                logger(
+                    f"Cannot switch screen {self.sm.mid_transition=}, "
+                    f"trying again in 50ms (attempt: {_attempt})..."
+                )
+                kx.schedule_once(
+                    lambda *args: self.switch_screen(
+                        screen=screen,
+                        force=force,
+                        _attempt=_attempt + 1,
+                    ),
+                    interval,
+                )
+            return
+        kx.schedule_once(self._activate_current_screen)
+        logger(f"Switched to screen: {screen}")
 
-    def set_battle_mode(self, api):
-        logger('GUI making new battle...')
-        self.battle = BattleScreen(api)
-        # Recreate menu bar
-        battle_controls = self.battle.get_controls()
-        battle_controls = combine_control_menus({'App': []}, battle_controls)
-        app_controls = self.get_controls()
-        controls = combine_control_menus(battle_controls, app_controls)
-        self.bar = MenuBar(controls)
-        self.register_controls(controls)
-        # Assemble widgets
-        self.main_frame.clear_widgets()
-        self.main_frame.add(self.bar)
-        self.main_frame.add(self.battle)
+    def _activate_current_screen(self, *args):
+        current_screen = self.sm.current
+        for screen_name, frame in self.screen_frames.items():
+            if screen_name == current_screen:
+                frame.activate()
+            else:
+                frame.deactivate()
+        self._hotkey_debug()
 
-    def get_controls(self, include_menu_return=True):
-        return_to_menu = []
-        if include_menu_return:
-            return_to_menu = [Control('Main menu', self.set_menu_mode, 'escape')]
-        controls = {'App': [
-            *return_to_menu,
-            Control('Restart', kex.restart_script, '^+ w'),
-            Control('Quit', quit, '^+ q'),
-            ]}
-        return controls
+    def get_controls(self):
+        """Global app controls."""
+        return [
+            Control(
+                "App",
+                "Main Menu",
+                partial(self.switch_screen, "menu"),
+                ["f1", "escape"],
+            ),
+            Control("App", "Battle", partial(self.switch_screen, "battle"), "f2"),
+            Control("App", "User folder", _show_usrdir, "^+ f"),
+            Control("App", "Debug", self._debug, "!+ d"),
+            Control("App", "Restart", kx.restart_script, "^+ w"),
+            Control("App", "Quit", quit, "^+ q"),
+        ]
 
-    def register_controls(self, control_menu):
-        # Register hotkeys
-        self.im.clear_all()
-        for menu in control_menu.values():
-            for control, callback, key in menu:
-                if key is None:
-                    continue
-                self.im.register(control, key, callback=lambda *a, c=callback: c())
+    def _debug(self, *args):
+        """GUI Debug."""
+        logger("GUI DEBUG")
+        print(f"{self.current_focus=}")
+        self._hotkey_debug()
+
+    def _hotkey_debug(self, *args):
+        """Debug logs."""
+        hotkey_logger(
+            "\n".join(
+                [
+                    "=" * 50,
+                    f"Current screen: {self.sm.current}",
+                    "",
+                    self.im._debug_str,
+                    "",
+                    self.menu.im._debug_str,
+                    "",
+                    self.battle.im._debug_str,
+                    "=" * 50,
+                ]
+            )
+        )
+
+    def overlay_calls(self, overlays: Optional[list[Overlay]]):
+        """Queue calling functions while displaying an overlay."""
+        if overlays is None:
+            return
+        self.queued_overlays.extend(overlays)
+
+
+def _show_usrdir(*args):
+    """Open the user's directory."""
+    usrdir = get_usr_dir("subfolder").parent
+    popen_path(usrdir)

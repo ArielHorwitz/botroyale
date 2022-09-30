@@ -1,5 +1,6 @@
 # flake8: noqa
-from hypothesis import settings, Verbosity as Verb
+
+from hypothesis import settings
 from botroyale.util.code import UNITTEST_PROFILES
 
 

@@ -1,7 +1,7 @@
 """Home of `botroyale.logic.battle_manager.BattleManager`."""
-from typing import Optional, Literal
+from typing import Optional, Literal, Callable
 from botroyale.logic.battle import Battle
-from botroyale.api.gui import BattleAPI, Tile, Control, ControlMenu
+from botroyale.api.gui import BattleAPI, Tile, Control
 from botroyale.util.time import ping, pong
 from botroyale.util import settings
 from botroyale.util.hexagon import Hex, Hexagon
@@ -12,6 +12,7 @@ from botroyale.logic import UNIT_COLORS, get_tile_info, get_tile_info_unit
 STEP_RATE = settings.get("battle.default_step_rate")
 STEP_RATES = settings.get("battle.toggle_step_rates")
 LOGIC_DEBUG = settings.get("logging.battle")
+BOT_CALC_DISCLAIMER = "This may take a while, depending on the map and bots."
 MAP_CENTER = Hex(0, 0)
 
 
@@ -61,10 +62,14 @@ class BattleManager(Battle, BattleAPI):
         index_delta: Optional[int] = None,
         apply_vfx: bool = True,
         disable_autoplay: bool = True,
+        overlay_text: str = "Bots playing...",
+        after: Optional[Callable[[], None]] = None,
+        force_overlay: bool = False,
     ):
         """Set the state index of the replay.
 
         Will play missing states until *index* is reached or the game is over.
+        If playing more than 1 state, will display an overlay.
 
         *index* defaults to the index of the last state in history, unless
         *index_delta* is provided in which case it defaults to the current
@@ -75,29 +80,56 @@ class BattleManager(Battle, BattleAPI):
             index_delta: Number to add to index.
             apply_vfx: Queue vfx of the state we are going to.
             disable_autoplay: Disables autoplay.
+            overlay_text: Text to display on overlay.
+            after: Function to call after.
+            force_overlay: Force displaying an overlay.
         """
         if index is None:
             if index_delta is None:
                 index = self.history_size - 1
             else:
                 index = self.replay_index
-        index = index % self.history_size
+        if index < 0:
+            index = index % self.history_size
         if index_delta:
             index += index_delta
         index = max(0, index)
-        # Play states until we reach the index (and cap index at last state)
+        missing_state_count = index - self.history_size + 1
+        if self.state.game_over:
+            missing_state_count = 0
+
+        if missing_state_count > 1 or force_overlay:
+            overlay_text = f"{overlay_text}\n\n{BOT_CALC_DISCLAIMER}"
+            self.add_overlay(
+                lambda: self._do_set_replay_index(
+                    index,
+                    apply_vfx,
+                    disable_autoplay,
+                    after,
+                ),
+                text=overlay_text,
+            )
+        else:
+            self._do_set_replay_index(index, apply_vfx, disable_autoplay)
+            if after is not None:
+                after()
+
+    def _do_set_replay_index(self, index, apply_vfx, disable_autoplay, after=None):
+        # Play states until we reach the index (and set cap index at last state)
+        missing_state_count = index - self.history_size + 1
         if self.history_size <= index:
-            missing_state_count = index - self.history_size + 1
             self.play_states(missing_state_count)
-            index = min(index, self.history_size - 1)
+        fixed_index = min(index, self.history_size - 1)
         # Set the index
-        apply_vfx = apply_vfx and index != self.__replay_index
-        self.__replay_index = index
-        if apply_vfx:
-            self.add_state_vfx(index, redraw_last_steps=True)
+        do_apply_vfx = apply_vfx and fixed_index != self.__replay_index
+        self.__replay_index = fixed_index
+        if do_apply_vfx:
+            self.add_state_vfx(fixed_index, redraw_last_steps=True)
             self._highlight_current_unit()
         if disable_autoplay:
             self.autoplay = False
+        if after is not None:
+            after()
 
     @property
     def replay_mode(self) -> bool:
@@ -118,14 +150,6 @@ class BattleManager(Battle, BattleAPI):
         """The state at index of `BattleManager.replay_index`."""
         return self.history[self.replay_index]
 
-    def play_all(self, *args, **kwargs):
-        """Overrides the parent method in order to set the replay_index.
-
-        See: `BattleManager.replay_index`.
-        """
-        super().play_all(*args, **kwargs)
-        self.set_replay_index()
-
     def set_to_next_round(self, backwards: bool = False):
         """Set the replay to the next "end of round" state (or game over).
 
@@ -133,20 +157,43 @@ class BattleManager(Battle, BattleAPI):
 
         See: `botroyale.logic.state.State.end_of_round`.
         """
-        delta = 1 if not backwards else -1
-        if self.replay_state.end_of_round:
-            self.set_replay_index(index_delta=1 if not backwards else -1)
-        while not self.replay_state.end_of_round:
-            if self.replay_state.game_over and not backwards:
-                break
-            self.set_replay_index(index_delta=delta)
+        target_exists = True
+        if not backwards and not self.state.game_over:
+            live_round = self.state.round_count + self.state.end_of_round
+            replay_round = (
+                self.replay_state.round_count + self.replay_state.end_of_round
+            )
+            target_exists = live_round > replay_round
+
+        def _do_set_to_next_round():
+            delta = 1 if not backwards else -1
+            if self.replay_state.end_of_round:
+                self.set_replay_index(index_delta=1 if not backwards else -1)
+            while not self.replay_state.end_of_round:
+                if self.replay_state.game_over and not backwards:
+                    break
+                self.set_replay_index(index_delta=delta)
+
+        if target_exists:
+            _do_set_to_next_round()
+        else:
+            self.add_overlay(
+                _do_set_to_next_round,
+                f"Playing to next round...\n\n{BOT_CALC_DISCLAIMER}",
+            )
 
     def preplay(self):
         """Play the entire battle, then set the replay index to the start.
 
         See: `BattleManager.replay_index`.
         """
-        self.play_all()
+        self.set_replay_index(
+            1_000_000,
+            overlay_text="Pre-playing full battle...",
+            after=self._reset_to_start,
+        )
+
+    def _reset_to_start(self, *args):
         self.flush_vfx()
         self.set_replay_index(0)
 
@@ -267,6 +314,8 @@ class BattleManager(Battle, BattleAPI):
             for unit_id in state.next_round_order
             if unit_id in state.round_done_turns
         )
+        if state.current_unit is None:
+            unit_strs.append("")
         unit_strs.append("\n______________ Dead __________________")
         unit_strs.extend(
             self.get_unit_str(unit_id, state_index)
@@ -361,57 +410,87 @@ class BattleManager(Battle, BattleAPI):
         """
         return self.replay_state.step_count
 
-    def get_controls(self) -> ControlMenu:
+    def get_controls(self) -> list[Control]:
         """Return controls for playing, autoplaying, replay index, and more.
 
         Overrides: `botroyale.api.gui.BattleAPI.get_controls`.
         """
-        return {
-            "Battle": [
-                Control("Autoplay", self.toggle_autoplay, "spacebar"),
-                Control("Preplay <!!!>", self.preplay, "^+ p"),
-                *[
-                    Control(
-                        f"Set speed {r}", lambda r=r: self.set_step_rate(r), f"{i + 1}"
-                    )
-                    for i, r in enumerate(STEP_RATES[:5])
-                ],
+        return [
+            Control("Battle", "Autoplay", self.toggle_autoplay, "spacebar"),
+            Control("Battle", "Preplay <!!!>", self.preplay, "^+ p"),
+            *[
+                Control(
+                    "Battle",
+                    f"Set speed {r}",
+                    lambda r=r: self.set_step_rate(r),
+                    f"{i + 1}",
+                )
+                for i, r in enumerate(STEP_RATES[:5])
             ],
-            "Replay": [
-                Control("Battle start", lambda: self.set_replay_index(0), "^+ left"),
-                Control("Battle end <!!!>", lambda: self.play_all(), "^+ right"),
-                Control("Live", lambda: self.set_replay_index(), "^ l"),
-                Control(
-                    "Next step", lambda: self.set_replay_index(index_delta=1), "right"
-                ),
-                Control(
-                    "Prev step", lambda: self.set_replay_index(index_delta=-1), "left"
-                ),
-                Control(
-                    "+10 steps",
-                    lambda: self.set_replay_index(index_delta=10),
-                    "+ right",
-                ),
-                Control(
-                    "-10 steps",
-                    lambda: self.set_replay_index(index_delta=-10),
-                    "+ left",
-                ),
-                Control("Next round", lambda: self.set_to_next_round(), "^ right"),
-                Control(
-                    "Prev round",
-                    lambda: self.set_to_next_round(backwards=True),
-                    "^ left",
-                ),
-            ],
-            "Display": [
-                Control("Turn order", lambda: self.set_panel_mode("turns"), "^ o"),
-                Control(
-                    "Calculation timers", lambda: self.set_panel_mode("timers"), "^ p"
-                ),
-                Control("Map coordinates", self.toggle_coords, "^+ d"),
-            ],
-        }
+            Control(
+                "Replay",
+                "Battle start",
+                lambda: self.set_replay_index(0),
+                "^+ left",
+            ),
+            Control(
+                "Replay",
+                "Battle end <!!!>",
+                lambda: self.set_replay_index(1_000_000),
+                "^+ right",
+            ),
+            Control("Replay", "Live", lambda: self.set_replay_index(), "^ l"),
+            Control(
+                "Replay",
+                "Next step",
+                lambda: self.set_replay_index(index_delta=1),
+                "right",
+            ),
+            Control(
+                "Replay",
+                "Prev step",
+                lambda: self.set_replay_index(index_delta=-1),
+                "left",
+            ),
+            Control(
+                "Replay",
+                "+10 steps",
+                lambda: self.set_replay_index(index_delta=10),
+                "+ right",
+            ),
+            Control(
+                "Replay",
+                "-10 steps",
+                lambda: self.set_replay_index(index_delta=-10),
+                "+ left",
+            ),
+            Control(
+                "Replay",
+                "Next round",
+                lambda: self.set_to_next_round(),
+                "^ right",
+            ),
+            Control(
+                "Replay",
+                "Prev round",
+                lambda: self.set_to_next_round(backwards=True),
+                "^ left",
+            ),
+            Control(
+                "Display", "Turn order", lambda: self.set_panel_mode("turns"), "^ o"
+            ),
+            Control(
+                "Display",
+                "Calculation timers",
+                lambda: self.set_panel_mode("timers"),
+                "^ p",
+            ),
+            Control("Display", "Map coordinates", self.toggle_coords, "^+ d"),
+        ]
+
+    def set_visible(self, visible: bool):
+        """Overrides base method."""
+        self.autoplay = False
 
     # Info panel
     def get_info_panel_text(self) -> str:
@@ -424,18 +503,12 @@ class BattleManager(Battle, BattleAPI):
         """
         return self.get_info_str(self.replay_index)
 
-    def get_info_panel_color(self) -> tuple[float, float, float]:
-        """Green-ish color when live, blue-ish color when in replay mode.
-
-        See: `BattleManager.replay_mode`.
+    def get_info_panel_color(self) -> str:
+        """Changes color depending on `BattleManager.replay_mode`.
 
         Overrides: `botroyale.api.gui.BattleAPI.get_info_panel_color`.
         """
-        if self.replay_mode:
-            # Blue-ish
-            return 0.1, 0.25, 0.2
-        # Green-ish
-        return 0.15, 0.3, 0.05
+        return "default" if self.autoplay else "aux"
 
     # Tile map
     def get_gui_tile_info(self, hex: Hexagon) -> Tile:
