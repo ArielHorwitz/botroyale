@@ -95,6 +95,8 @@ class BattleManager(Battle, BattleAPI):
             index += index_delta
         index = max(0, index)
         missing_state_count = index - self.history_size + 1
+        if self.state.game_over:
+            missing_state_count = 0
 
         if missing_state_count > 1 or force_overlay:
             overlay_text = f"{overlay_text}\n\n{BOT_CALC_DISCLAIMER}"
@@ -312,6 +314,8 @@ class BattleManager(Battle, BattleAPI):
             for unit_id in state.next_round_order
             if unit_id in state.round_done_turns
         )
+        if state.current_unit is None:
+            unit_strs.append("")
         unit_strs.append("\n______________ Dead __________________")
         unit_strs.extend(
             self.get_unit_str(unit_id, state_index)
