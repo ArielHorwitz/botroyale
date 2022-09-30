@@ -194,7 +194,7 @@ class App(kx.App):
         self.queued_overlays.extend(overlays)
 
 
-def _show_usrdir(self, *args):
+def _show_usrdir(*args):
     """Open the user's directory."""
     usrdir = get_usr_dir("subfolder").parent
     popen_path(usrdir)
