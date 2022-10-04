@@ -4,6 +4,10 @@ default_map = "basic"
 default_step_rate = 2
 # Game speed options
 toggle_step_rates = [1, 2, 3, 5, 60]
+# Select these bots automatically (case sensitive)
+auto_select_bots = [
+  # "basic",
+]
 
 [logging]
 global = true
