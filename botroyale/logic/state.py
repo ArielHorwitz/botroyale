@@ -478,6 +478,31 @@ class State:
         assert plate in self.plates
         return plate
 
+    def __repr__(self) -> str:
+        """Repr."""
+        return (
+            f"<State {hex(self._simple_hash())[-4:]} | "
+            f"s{self.step_count} r{self.death_radius} "
+            f"u{sum(self.alive_mask)}/{self.num_of_units}"
+            ">"
+        )
+
+    def _simple_hash(self) -> int:
+        """A quick, non-comprehensive hash.
+
+        The returned hash is a combination of hashes of several attributes that
+        is designed to quickly show if a state has changed. This includes the
+        object ID -- two identical state objects will produce different hashes.
+        """
+        data = (
+            id(self),
+            self.step_count,
+            self.ap.tobytes(),
+            self.alive_mask.tobytes(),
+            *self.positions,
+        )
+        return hash(data)
+
     # Legality methods
     def _check_legal_action(self, action: Action) -> bool:
         """Returns if applying the action is legal."""
