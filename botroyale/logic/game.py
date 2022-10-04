@@ -4,6 +4,7 @@ The the standard implementation of `botroyale.api.gui.GameAPI`.
 """
 from typing import Any, Union, Optional
 from botroyale.gui import logger
+from botroyale.util import settings
 from botroyale.api.gui import GameAPI, InputWidget
 from botroyale.api.bots import BOTS, BotSelection, NotFairError
 from botroyale.logic.maps import MAPS, DEFAULT_MAP_NAME, get_map_state
@@ -12,6 +13,7 @@ from botroyale.logic.map_editor import MapEditor
 
 
 BOT_SENDTO_PREFIX = "╠"
+AUTO_SELECT_BOTS = settings.get("battle.auto_select_bots")
 
 
 def _get_sorted_bots():
@@ -37,7 +39,11 @@ class StandardGameAPI(GameAPI):
     def __init__(self, *args, **kwargs):
         """Initialize the class."""
         super().__init__(*args, **kwargs)
-        self.selected_bots = []
+        self.selected_bots = [
+            BOTS[bot_name]
+            for bot_name in AUTO_SELECT_BOTS
+            if bot_name in BOTS
+        ]
         self.menu_values = dict(
             editor=False,
             map=DEFAULT_MAP_NAME,
