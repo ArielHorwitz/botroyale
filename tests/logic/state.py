@@ -1,6 +1,6 @@
 # flake8: noqa
 
-from hypothesis import settings, given, note, strategies as st
+from hypothesis import settings, given, note, strategies as st, HealthCheck
 from tests.hexagon import st_hex, st_rotation, MAX_DIST
 from tests.logic.maps import st_map
 from botroyale.util.hexagon import Hexagon
@@ -48,6 +48,7 @@ def test_make_plate(plate):
 
 
 @given(st_state)
+@settings(suppress_health_check=[HealthCheck.data_too_large])  # State has too many possible permutations
 def test_make_state(state):
     assert isinstance(state, State)
     assert state.round_count == 0
@@ -58,6 +59,7 @@ def test_make_state(state):
 
 
 @given(st_state)
+@settings(suppress_health_check=[HealthCheck.data_too_large])  # State has too many possible permutations
 def test_increment_round(state):
     next_state = state.increment_round()
     assert isinstance(next_state, State)
