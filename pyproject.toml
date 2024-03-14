@@ -29,9 +29,9 @@ classifiers = [
   "Typing :: Typed",
 ]
 dependencies = [
-  "Kivy>=2.1.0,<3.0",
-  "numpy>=1.22.4,<2.0",
-  "tomlkit>=0.11.4",
+  "Kivy==2.3.0",
+  "numpy==1.22.4",
+  "tomlkit==0.11.4",
 ]
 
 [project.optional-dependencies]
