@@ -6,6 +6,7 @@ from hypothesis import (
     given,
     strategies as st,
 )
+from datetime import timedelta
 import botroyale.util.hexagon
 from botroyale.util.hexagon import Hexagon, ORIGIN
 
@@ -124,6 +125,7 @@ def test_eq(hex1, hex2):
 
 
 @given(st_hex, st_rotation, st.integers(min_value=3, max_value=20))
+@settings(deadline=timedelta(milliseconds=500))  # Hexagon method results are cached, and so are "flaky" in deadline
 def test_ring_range(hex, neighbor_index, distance):
     neighbor = hex.neighbors[neighbor_index]
     target_line = [hex, neighbor, *hex.straight_line(neighbor, distance-2)]
