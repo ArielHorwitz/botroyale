@@ -67,7 +67,7 @@ class CheckPoint:
         self.open_doomed_tiles = self.doomed_tiles - self.obstacles
 
         # Enemy stats
-        enemy_mask = np.ones(state.num_of_units, dtype=np.bool)
+        enemy_mask = np.ones(state.num_of_units, dtype=bool)
         enemy_mask[self.uid] = False
         enemy_mask[friendly_uids] = False
         self.all_enemy_ids = set(np.flatnonzero(enemy_mask))
